@@ -940,25 +940,23 @@ const AssignmentsManagement = () => {
 
   const handleBatchDissolve = async () => {
     console.log('🔥 BATCH DISSOLUTION FUNCTION CALLED!');
-    toast.info('Batch-Auflösung gestartet...');
+    
+    // Double-click protection for batch operations
+    const now = Date.now();
+    if (!window._lastBatchClick || (now - window._lastBatchClick) > 3000) {
+      window._lastBatchClick = now;
+      toast.info(`${filteredAssignments.length} gefilterte Zuordnungen auflösen? Klicken Sie nochmal in 2 Sekunden um zu bestätigen.`);
+      return;
+    }
     
     try {
-      if (filteredAssignments.length === 0) {
-        toast.error('Keine gefilterten Zuordnungen vorhanden');
-        return;
-      }
-      
-      if (!confirm(`${filteredAssignments.length} gefilterte Zuordnungen auflösen?`)) {
-        toast.info('Batch-Auflösung abgebrochen');
-        return;
-      }
-      
       setDissolving(true);
+      toast.info('Löse alle gefilterten Zuordnungen auf...');
+      
       let successCount = 0;
       
       for (const assignment of filteredAssignments) {
         try {
-          console.log('Deleting assignment:', assignment.id);
           const response = await fetch(`${API_BASE_URL}/api/assignments/${assignment.id}`, {
             method: 'DELETE',
             headers: {
@@ -969,16 +967,13 @@ const AssignmentsManagement = () => {
           
           if (response.ok) {
             successCount++;
-            console.log('✅ Deleted:', assignment.student_name);
-          } else {
-            console.error('❌ Failed to delete:', assignment.student_name);
           }
         } catch (error) {
           console.error('❌ Error:', error);
         }
       }
       
-      toast.success(`${successCount} Zuordnungen aufgelöst`);
+      toast.success(`${successCount} Zuordnungen erfolgreich aufgelöst!`);
       await loadAllData();
       
     } catch (error) {
