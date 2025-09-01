@@ -107,27 +107,33 @@ user_problem_statement: "Schüler-Tab erweitern: 1) View-Aktion für Detailansic
 backend:
   - task: "Student detail view API endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Implemented GET /api/students/{student_id} endpoint with complete student details, assignment history, and contracts"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ TESTED SUCCESSFULLY - Student detail view endpoint working correctly. Returns complete student information including personal data, current assignment, assignment history, and related contracts. Properly handles 404 for non-existent student IDs. Fixed JSON serialization issue with ObjectId objects."
 
   - task: "Student cascading delete API endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Implemented DELETE /api/students/{student_id} with complete cascading delete logic (dissolve assignments, delete contracts and history)"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ TESTED SUCCESSFULLY - Student cascading delete working correctly. Successfully tested deletion of student WITH active assignment: dissolved assignment, set iPad status to 'verfügbar', deleted assignment history and contracts. Properly handles 404 for non-existent student IDs. Data integrity verified - no orphaned data remains after deletion."
 
   - task: "Contract validation formula update"
     implemented: true
