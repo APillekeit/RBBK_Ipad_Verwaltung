@@ -42,10 +42,11 @@ sudo docker-compose down --volumes --remove-orphans
 sudo docker system prune -a
 ```
 
-### 2. IP-Adresse konfigurieren
+### 2. Universeller Zugriff (KEINE Konfiguration nötig)
 ```bash
-# Automatische IP-Erkennung und Konfiguration
-./setup-ip.sh
+# Das System ist bereits universell konfiguriert!
+# Einfach starten:
+./start-docker.sh
 ```
 
 ### 3. System neu starten
