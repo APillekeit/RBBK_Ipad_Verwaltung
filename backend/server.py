@@ -580,8 +580,13 @@ async def update_ipad_status(ipad_id: str, status: str, current_user: str = Depe
     )
     
     message = f"iPad status updated to {status}"
-    if status in ["defekt", "gestohlen"]:
-        message += " and assignment dissolved"
+    if status in ["defekt", "gestohlen", "verfügbar"]:
+        active_assignment = await db.assignments.find_one({
+            "ipad_id": ipad_id,
+            "is_active": True
+        })
+        if active_assignment:
+            message += " and assignment dissolved"
     
     return {"message": message}
 
