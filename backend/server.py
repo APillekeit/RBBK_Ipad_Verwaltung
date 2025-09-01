@@ -394,7 +394,10 @@ async def get_assignments(current_user: str = Depends(get_current_user)):
                 
                 # Check validation: Warning appears when (NutzungEinhaltung == NutzungKenntnisnahme) OR (ausgabeNeu == ausgabeGebraucht)
                 nutzung_einhaltung = fields.get('NutzungEinhaltung') == '/Yes'
-                nutzung_kenntnisnahme = fields.get('NutzungKenntnisnahme') == '/Yes'
+                # Note: The actual field name in contracts is 'NutzungKenntnisname', not 'NutzungKenntnisnahme'
+                # Also, this field contains text values, not checkbox values, so we check if it's empty or not
+                nutzung_kenntnisnahme_field = fields.get('NutzungKenntnisnahme') or fields.get('NutzungKenntnisname', '')
+                nutzung_kenntnisnahme = bool(nutzung_kenntnisnahme_field and nutzung_kenntnisnahme_field != '')
                 ausgabe_neu = fields.get('ausgabeNeu') == '/Yes'
                 ausgabe_gebraucht = fields.get('ausgabeGebraucht') == '/Yes'
                 
