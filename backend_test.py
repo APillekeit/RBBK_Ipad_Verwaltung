@@ -498,99 +498,313 @@ class IPadManagementTester:
                 f"Only {successful_tests}/{total_tests} deletion tests passed"
             )
 
-    def test_contract_validation_formula(self):
-        """Test the new contract validation formula for assignments"""
-        print("\n🔍 Testing Contract Validation Formula...")
+    def test_ipad_status_consistency_fix(self):
+        """Test iPad status consistency validation and fix functionality"""
+        print("\n🔍 Testing iPad Status Consistency Fix...")
         
-        # Get current assignments to analyze their validation
+        # Step 1: Check current iPad status consistency
+        print("\n   📊 Step 1: Analyzing current iPad status consistency...")
+        
         success = self.run_api_test(
-            "Get Assignments for Validation Analysis",
+            "Get iPads for Consistency Check",
             "GET",
-            "assignments",
+            "ipads",
             200
         )
         
         if not success:
-            return self.log_result("Contract Validation Formula", False, "Could not get assignments for testing")
+            return self.log_result("iPad Status Consistency Fix", False, "Could not get iPads for testing")
         
-        assignments = self.test_results[-1]['response_data']
-        if not isinstance(assignments, list):
-            return self.log_result("Contract Validation Formula", False, "Invalid assignments response")
+        ipads = self.test_results[-1]['response_data']
+        if not isinstance(ipads, list):
+            return self.log_result("iPad Status Consistency Fix", False, "Invalid iPads response")
         
-        # Analyze existing contracts to verify validation logic
-        validation_results = []
-        contracts_analyzed = 0
+        # Identify inconsistent iPads (status "verfügbar" but current_assignment_id not None)
+        inconsistent_ipads = []
+        consistent_ipads = []
         
-        for assignment in assignments:
-            if assignment.get('contract_id'):
-                contracts_analyzed += 1
-                contract_id = assignment['contract_id']
-                itnr = assignment['itnr']
-                student_name = assignment['student_name']
-                contract_warning = assignment.get('contract_warning', False)
-                
-                print(f"\n   📋 Analyzing Contract for {itnr} -> {student_name}")
-                print(f"      Contract ID: {contract_id}")
-                print(f"      Warning Status: {contract_warning}")
-                
-                # Get contract details to verify validation logic
-                contract_success = self.run_api_test(
-                    f"Get Contract Details - {itnr}",
+        for ipad in ipads:
+            status = ipad.get('status', '')
+            current_assignment_id = ipad.get('current_assignment_id')
+            itnr = ipad.get('itnr', 'Unknown')
+            
+            if status == 'verfügbar' and current_assignment_id is not None:
+                inconsistent_ipads.append(ipad)
+                print(f"      ❌ INCONSISTENT: iPad {itnr} - Status: '{status}' but current_assignment_id: {current_assignment_id}")
+            else:
+                consistent_ipads.append(ipad)
+                print(f"      ✅ CONSISTENT: iPad {itnr} - Status: '{status}', current_assignment_id: {current_assignment_id}")
+        
+        print(f"\n   📈 Consistency Analysis Results:")
+        print(f"      Total iPads: {len(ipads)}")
+        print(f"      Consistent iPads: {len(consistent_ipads)}")
+        print(f"      Inconsistent iPads: {len(inconsistent_ipads)}")
+        
+        # Check for specific iPad "IPAD001" mentioned in the review request
+        ipad001 = next((ipad for ipad in ipads if ipad.get('itnr') == 'IPAD001'), None)
+        if ipad001:
+            print(f"\n   🔍 Special Check - IPAD001 Status:")
+            print(f"      Status: {ipad001.get('status')}")
+            print(f"      Current Assignment ID: {ipad001.get('current_assignment_id')}")
+            if ipad001.get('status') == 'verfügbar' and ipad001.get('current_assignment_id') is not None:
+                print(f"      ❌ IPAD001 has the reported inconsistency!")
+            else:
+                print(f"      ✅ IPAD001 appears consistent")
+        else:
+            print(f"\n   ⚠️  IPAD001 not found in database")
+        
+        # Step 2: Test the fix endpoint
+        print(f"\n   🔧 Step 2: Testing iPad status consistency fix endpoint...")
+        
+        fix_success = self.run_api_test(
+            "iPad Status Consistency Fix",
+            "POST",
+            "ipads/fix-status-consistency",
+            200
+        )
+        
+        if not fix_success:
+            return self.log_result("iPad Status Consistency Fix", False, "Fix endpoint failed")
+        
+        fix_response = self.test_results[-1]['response_data']
+        fixed_count = fix_response.get('fixed_ipads', 0)
+        fix_details = fix_response.get('details', [])
+        
+        print(f"      ✅ Fix Response: {fix_response.get('message', 'N/A')}")
+        print(f"      📊 Fixed iPads Count: {fixed_count}")
+        print(f"      📋 Fix Details: {fix_details}")
+        
+        # Verify the fix worked as expected
+        if len(inconsistent_ipads) > 0:
+            if fixed_count == len(inconsistent_ipads):
+                print(f"      ✅ Fix count matches identified inconsistencies")
+            else:
+                print(f"      ⚠️  Fix count ({fixed_count}) doesn't match identified inconsistencies ({len(inconsistent_ipads)})")
+        
+        # Step 3: Verify consistency after fix
+        print(f"\n   🔍 Step 3: Verifying consistency after fix...")
+        
+        post_fix_success = self.run_api_test(
+            "Get iPads After Fix",
+            "GET",
+            "ipads",
+            200
+        )
+        
+        if not post_fix_success:
+            return self.log_result("iPad Status Consistency Fix", False, "Could not verify iPads after fix")
+        
+        post_fix_ipads = self.test_results[-1]['response_data']
+        post_fix_inconsistent = []
+        
+        for ipad in post_fix_ipads:
+            status = ipad.get('status', '')
+            current_assignment_id = ipad.get('current_assignment_id')
+            itnr = ipad.get('itnr', 'Unknown')
+            
+            if status == 'verfügbar' and current_assignment_id is not None:
+                post_fix_inconsistent.append(ipad)
+                print(f"      ❌ STILL INCONSISTENT: iPad {itnr} - Status: '{status}' but current_assignment_id: {current_assignment_id}")
+        
+        if len(post_fix_inconsistent) == 0:
+            print(f"      ✅ All iPads are now consistent!")
+        else:
+            print(f"      ❌ {len(post_fix_inconsistent)} iPads still inconsistent after fix")
+        
+        # Step 4: Test status update logic
+        print(f"\n   🧪 Step 4: Testing corrected status update logic...")
+        
+        # Find an iPad to test with
+        test_ipad = None
+        for ipad in post_fix_ipads:
+            if ipad.get('status') == 'verfügbar':
+                test_ipad = ipad
+                break
+        
+        if not test_ipad:
+            print(f"      ⚠️  No available iPad found for status update testing")
+            status_update_results = [False]
+        else:
+            ipad_id = test_ipad['id']
+            itnr = test_ipad['itnr']
+            print(f"      🧪 Testing with iPad: {itnr}")
+            
+            status_update_results = []
+            
+            # Test updating to "defekt" - should clear current_assignment_id
+            defekt_success = self.run_api_test(
+                f"Update iPad {itnr} to defekt",
+                "PUT",
+                f"ipads/{ipad_id}/status?status=defekt",
+                200
+            )
+            
+            if defekt_success:
+                # Verify the iPad status and current_assignment_id
+                verify_success = self.run_api_test(
+                    "Verify iPad After Defekt Update",
                     "GET",
-                    f"contracts/{contract_id}",
+                    "ipads",
                     200
                 )
                 
-                if contract_success:
-                    contract_data = self.test_results[-1]['response_data']
-                    form_fields = contract_data.get('form_fields', {})
+                if verify_success:
+                    updated_ipads = self.test_results[-1]['response_data']
+                    updated_ipad = next((ipad for ipad in updated_ipads if ipad['id'] == ipad_id), None)
                     
-                    # Apply the same validation logic as the backend
-                    nutzung_einhaltung = form_fields.get('NutzungEinhaltung') == '/Yes'
-                    # Handle both field name variations
-                    nutzung_kenntnisnahme_field = form_fields.get('NutzungKenntnisnahme') or form_fields.get('NutzungKenntnisname', '')
-                    nutzung_kenntnisnahme = bool(nutzung_kenntnisnahme_field and nutzung_kenntnisnahme_field != '')
-                    ausgabe_neu = form_fields.get('ausgabeNeu') == '/Yes'
-                    ausgabe_gebraucht = form_fields.get('ausgabeGebraucht') == '/Yes'
-                    
-                    # Calculate expected warning
-                    expected_warning = (nutzung_einhaltung == nutzung_kenntnisnahme) or (ausgabe_neu == ausgabe_gebraucht)
-                    
-                    print(f"      Form Fields Analysis:")
-                    print(f"        NutzungEinhaltung: {form_fields.get('NutzungEinhaltung')} -> {nutzung_einhaltung}")
-                    print(f"        NutzungKenntnisnahme: {nutzung_kenntnisnahme_field} -> {nutzung_kenntnisnahme}")
-                    print(f"        ausgabeNeu: {form_fields.get('ausgabeNeu')} -> {ausgabe_neu}")
-                    print(f"        ausgabeGebraucht: {form_fields.get('ausgabeGebraucht')} -> {ausgabe_gebraucht}")
-                    print(f"      Expected Warning: {expected_warning}")
-                    print(f"      Actual Warning: {contract_warning}")
-                    
-                    if expected_warning == contract_warning:
-                        validation_results.append(True)
-                        print(f"      ✅ VALIDATION CORRECT")
+                    if updated_ipad:
+                        if updated_ipad['status'] == 'defekt' and updated_ipad.get('current_assignment_id') is None:
+                            print(f"        ✅ Status 'defekt' correctly clears current_assignment_id")
+                            status_update_results.append(True)
+                        else:
+                            print(f"        ❌ Status 'defekt' failed - Status: {updated_ipad['status']}, Assignment: {updated_ipad.get('current_assignment_id')}")
+                            status_update_results.append(False)
                     else:
-                        validation_results.append(False)
-                        print(f"      ❌ VALIDATION INCORRECT - Expected {expected_warning}, got {contract_warning}")
+                        status_update_results.append(False)
                 else:
-                    validation_results.append(False)
-                    print(f"      ❌ Could not retrieve contract details")
+                    status_update_results.append(False)
+            else:
+                status_update_results.append(False)
+            
+            # Test updating to "gestohlen" - should clear current_assignment_id
+            gestohlen_success = self.run_api_test(
+                f"Update iPad {itnr} to gestohlen",
+                "PUT",
+                f"ipads/{ipad_id}/status?status=gestohlen",
+                200
+            )
+            
+            if gestohlen_success:
+                verify_success = self.run_api_test(
+                    "Verify iPad After Gestohlen Update",
+                    "GET",
+                    "ipads",
+                    200
+                )
+                
+                if verify_success:
+                    updated_ipads = self.test_results[-1]['response_data']
+                    updated_ipad = next((ipad for ipad in updated_ipads if ipad['id'] == ipad_id), None)
+                    
+                    if updated_ipad:
+                        if updated_ipad['status'] == 'gestohlen' and updated_ipad.get('current_assignment_id') is None:
+                            print(f"        ✅ Status 'gestohlen' correctly clears current_assignment_id")
+                            status_update_results.append(True)
+                        else:
+                            print(f"        ❌ Status 'gestohlen' failed - Status: {updated_ipad['status']}, Assignment: {updated_ipad.get('current_assignment_id')}")
+                            status_update_results.append(False)
+                    else:
+                        status_update_results.append(False)
+                else:
+                    status_update_results.append(False)
+            else:
+                status_update_results.append(False)
+            
+            # Test updating back to "verfügbar" - should clear current_assignment_id
+            verfuegbar_success = self.run_api_test(
+                f"Update iPad {itnr} to verfügbar",
+                "PUT",
+                f"ipads/{ipad_id}/status?status=verfügbar",
+                200
+            )
+            
+            if verfuegbar_success:
+                verify_success = self.run_api_test(
+                    "Verify iPad After Verfügbar Update",
+                    "GET",
+                    "ipads",
+                    200
+                )
+                
+                if verify_success:
+                    updated_ipads = self.test_results[-1]['response_data']
+                    updated_ipad = next((ipad for ipad in updated_ipads if ipad['id'] == ipad_id), None)
+                    
+                    if updated_ipad:
+                        if updated_ipad['status'] == 'verfügbar' and updated_ipad.get('current_assignment_id') is None:
+                            print(f"        ✅ Status 'verfügbar' correctly clears current_assignment_id")
+                            status_update_results.append(True)
+                        else:
+                            print(f"        ❌ Status 'verfügbar' failed - Status: {updated_ipad['status']}, Assignment: {updated_ipad.get('current_assignment_id')}")
+                            status_update_results.append(False)
+                    else:
+                        status_update_results.append(False)
+                else:
+                    status_update_results.append(False)
+            else:
+                status_update_results.append(False)
+        
+        # Step 5: Test iPad history consistency
+        print(f"\n   📚 Step 5: Testing iPad history consistency...")
+        
+        # Test iPad history endpoint for consistency
+        if test_ipad:
+            history_success = self.run_api_test(
+                f"Get iPad {test_ipad['itnr']} History",
+                "GET",
+                f"ipads/{test_ipad['id']}/history",
+                200
+            )
+            
+            if history_success:
+                history_data = self.test_results[-1]['response_data']
+                history_ipad = history_data.get('ipad', {})
+                
+                # Compare status between main list and history
+                main_status = test_ipad.get('status')
+                history_status = history_ipad.get('status') if isinstance(history_ipad, dict) else None
+                
+                if main_status == history_status:
+                    print(f"        ✅ iPad status consistent between main list and history: {main_status}")
+                    history_consistent = True
+                else:
+                    print(f"        ❌ iPad status inconsistent - Main: {main_status}, History: {history_status}")
+                    history_consistent = False
+            else:
+                history_consistent = False
+        else:
+            history_consistent = True  # No iPad to test with
         
         # Calculate overall success
-        if contracts_analyzed == 0:
-            return self.log_result("Contract Validation Formula", False, "No contracts found to test validation")
+        test_results = []
         
-        successful_validations = sum(validation_results)
+        # 1. Fix endpoint worked
+        test_results.append(fix_success)
         
-        if successful_validations == contracts_analyzed:
+        # 2. All inconsistencies were resolved
+        test_results.append(len(post_fix_inconsistent) == 0)
+        
+        # 3. Status update logic works correctly
+        if len(status_update_results) > 0:
+            test_results.append(all(status_update_results))
+        else:
+            test_results.append(True)  # No tests to run
+        
+        # 4. History consistency
+        test_results.append(history_consistent)
+        
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        # Final summary
+        print(f"\n   📊 iPad Status Consistency Fix Summary:")
+        print(f"      Initial inconsistent iPads: {len(inconsistent_ipads)}")
+        print(f"      iPads fixed by endpoint: {fixed_count}")
+        print(f"      Remaining inconsistent iPads: {len(post_fix_inconsistent)}")
+        print(f"      Status update tests passed: {sum(status_update_results)}/{len(status_update_results) if status_update_results else 0}")
+        print(f"      History consistency: {'✅' if history_consistent else '❌'}")
+        
+        if successful_tests == total_tests:
             return self.log_result(
-                "Contract Validation Formula", 
+                "iPad Status Consistency Fix", 
                 True, 
-                f"All {contracts_analyzed} contract validations are correct"
+                f"All {total_tests} consistency tests passed. Fixed {fixed_count} inconsistent iPads."
             )
         else:
             return self.log_result(
-                "Contract Validation Formula", 
+                "iPad Status Consistency Fix", 
                 False, 
-                f"Only {successful_validations}/{contracts_analyzed} contract validations are correct"
+                f"Only {successful_tests}/{total_tests} consistency tests passed"
             )
     
     def create_test_contract_with_fields(self, form_fields):
