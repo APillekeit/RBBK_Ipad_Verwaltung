@@ -277,13 +277,18 @@ const IPadsManagement = () => {
 const StudentsManagement = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   const loadStudents = async () => {
+    setLoading(true);
     try {
       const response = await api.get('/api/students');
-      setStudents(response.data);
+      console.log('Students API response:', response.data); // Debug log
+      setStudents(response.data || []);
     } catch (error) {
-      toast.error('Failed to load students');
+      console.error('Failed to load students:', error);
+      toast.error('Fehler beim Laden der Schüler');
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -296,15 +301,19 @@ const StudentsManagement = () => {
   const handleUpload = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
+    setUploading(true);
 
     try {
       const response = await api.post('/api/students/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(response.data.message);
-      loadStudents();
+      await loadStudents(); // Reload students after upload
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Upload failed');
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.detail || 'Upload fehlgeschlagen');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -323,10 +332,22 @@ const StudentsManagement = () => {
             <Users className="h-5 w-5" />
             Schüler Übersicht ({students.length})
           </CardTitle>
+          <CardDescription>
+            {loading ? 'Lade Daten...' : `${students.length} Schüler in der Datenbank`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">Lade Schüler...</div>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2">Lade Schüler...</p>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>Keine Schüler vorhanden.</p>
+              <p className="text-sm">Laden Sie eine Excel-Datei hoch, um Schüler hinzuzufügen.</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -341,11 +362,11 @@ const StudentsManagement = () => {
                 </TableHeader>
                 <TableBody>
                   {students.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell>{student.sus_vorn}</TableCell>
-                      <TableCell className="font-medium">{student.sus_nachn}</TableCell>
-                      <TableCell>{student.sus_kl}</TableCell>
-                      <TableCell>{student.sus_ort}</TableCell>
+                    <TableRow key={student.id} className="hover:bg-gray-50">
+                      <TableCell>{student.sus_vorn || 'N/A'}</TableCell>
+                      <TableCell className="font-medium">{student.sus_nachn || 'N/A'}</TableCell>
+                      <TableCell>{student.sus_kl || 'N/A'}</TableCell>
+                      <TableCell>{student.sus_ort || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge className={student.current_assignment_id ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
                           {student.current_assignment_id ? 'Zugewiesen' : 'Verfügbar'}
