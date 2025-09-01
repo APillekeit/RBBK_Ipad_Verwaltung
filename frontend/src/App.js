@@ -1544,17 +1544,7 @@ const ContractsManagement = () => {
         </CardContent>
       </Card>
 
-      <Alert>
-        <AlertDescription>
-          <strong>Hinweise zum Upload:</strong>
-          <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Verträge mit ITNr, SuSVorn und SuSNachn werden automatisch zugeordnet</li>
-            <li>Verträge ohne diese Felder werden als unzugewiesen markiert</li>
-            <li>Unzugewiesene Verträge können manuell über die Dropdown-Liste zugeordnet werden</li>
-            <li>Maximal 20 Dateien gleichzeitig hochladbar</li>
-          </ul>
-        </AlertDescription>
-      </Alert>
+
     </div>
   );
 };
