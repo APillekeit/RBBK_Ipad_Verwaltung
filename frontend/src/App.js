@@ -932,49 +932,47 @@ const AssignmentsManagement = () => {
 
   const handleDissolveAssignment = async (assignment) => {
     console.log('🔥 DISSOLUTION FUNCTION CALLED!');
-    toast.info('Auflösungsfunktion gestartet...');
+    console.log('Assignment:', assignment);
     
-    // Use custom dialog instead of browser confirm
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Zuordnung auflösen',
-      message: `Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`,
-      onConfirm: async () => {
-        console.log('✅ Custom dialog confirmed!');
-        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null });
-        
-        try {
-          toast.info('Löse Zuordnung auf...');
-          
-          const apiUrl = `${API_BASE_URL}/api/assignments/${assignment.id}`;
-          console.log('📡 Making API call to:', apiUrl);
-          
-          const response = await fetch(apiUrl, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          console.log('📡 API Response status:', response.status);
-          
-          if (response.ok) {
-            const data = await response.json();
-            console.log('✅ API Success:', data);
-            toast.success('Zuordnung erfolgreich aufgelöst!');
-            await loadAllData();
-          } else {
-            console.error('❌ API Error:', response.status);
-            toast.error(`API Fehler: ${response.status}`);
-          }
-          
-        } catch (error) {
-          console.error('❌ Exception:', error);
-          toast.error(`Fehler: ${error.message}`);
+    try {
+      // DIRECT API CALL WITHOUT CONFIRMATION FOR TESTING
+      console.log('⚡ BYPASSING CONFIRMATION FOR TESTING');
+      toast.info('Löse Zuordnung direkt auf...');
+      
+      const apiUrl = `${API_BASE_URL}/api/assignments/${assignment.id}`;
+      console.log('📡 API URL:', apiUrl);
+      console.log('📡 Assignment ID:', assignment.id);
+      console.log('📡 Token:', localStorage.getItem('token') ? 'EXISTS' : 'MISSING');
+      
+      const response = await fetch(apiUrl, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
         }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Success data:', data);
+        toast.success('Zuordnung erfolgreich aufgelöst!');
+        
+        console.log('🔄 Reloading data...');
+        await loadAllData();
+        console.log('✅ Data reloaded');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ API Error:', response.status, errorText);
+        toast.error(`API Fehler: ${response.status} - ${errorText}`);
       }
-    });
+      
+    } catch (error) {
+      console.error('❌ Exception:', error);
+      toast.error(`Fehler: ${error.message}`);
+    }
   };
 
   const handleBatchDissolve = async () => {
