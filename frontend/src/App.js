@@ -873,21 +873,57 @@ const AssignmentsManagement = () => {
     console.log('Assignment ID:', assignment.id);
     console.log('API Base URL:', API_BASE_URL);
     
-    if (window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`)) {
+    const confirmResult = window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`);
+    console.log('Confirm result:', confirmResult);
+    
+    if (confirmResult) {
+      console.log('User confirmed, proceeding with deletion...');
+      
       try {
         const url = `/api/assignments/${assignment.id}`;
         console.log('Making DELETE request to:', url);
         console.log('Full URL:', `${API_BASE_URL}${url}`);
         
-        const response = await api.delete(url);
+        // Add timeout to the request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await api.delete(url, { 
+          signal: controller.signal,
+          timeout: 10000 
+        });
+        
+        clearTimeout(timeoutId);
+        
         console.log('DELETE response status:', response.status);
         console.log('DELETE response data:', response.data);
         
         if (response.status === 200) {
+          console.log('API call successful, showing toast...');
           toast.success('Zuordnung erfolgreich aufgelöst');
-          console.log('Success! Reloading data...');
-          await loadAllData();
-          console.log('Data reloaded successfully');
+          
+          console.log('Starting data reload...');
+          
+          // Force reload of assignments
+          try {
+            const assignmentsRes = await api.get('/api/assignments');
+            console.log('New assignments loaded:', assignmentsRes.data);
+            setAssignments(assignmentsRes.data);
+            setFilteredAssignments(assignmentsRes.data);
+            
+            // Also reload other data
+            const [ipadsRes, studentsRes] = await Promise.all([
+              api.get('/api/ipads'),
+              api.get('/api/students')
+            ]);
+            setIPads(ipadsRes.data);
+            setStudents(studentsRes.data);
+            
+            console.log('Data reload completed successfully');
+          } catch (reloadError) {
+            console.error('Error reloading data:', reloadError);
+            toast.error('Daten konnten nicht neu geladen werden. Seite neu laden empfohlen.');
+          }
         } else {
           throw new Error(`Unexpected status: ${response.status}`);
         }
@@ -896,12 +932,16 @@ const AssignmentsManagement = () => {
         console.error('Error object:', error);
         console.error('Error message:', error.message);
         console.error('Error response:', error.response);
-        console.error('Error status:', error.response?.status);
-        console.error('Error data:', error.response?.data);
         
-        const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Unbekannter Fehler';
-        toast.error(`Fehler beim Auflösen der Zuordnung: ${errorMessage}`);
+        if (error.name === 'AbortError') {
+          toast.error('Anfrage wurde abgebrochen (Timeout)');
+        } else {
+          const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Unbekannter Fehler';
+          toast.error(`Fehler beim Auflösen der Zuordnung: ${errorMessage}`);
+        }
       }
+    } else {
+      console.log('User cancelled the operation');
     }
     console.log('=== DISSOLVE ASSIGNMENT END ===');
   };
