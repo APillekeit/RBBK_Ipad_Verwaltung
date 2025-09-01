@@ -107,15 +107,18 @@ user_problem_statement: "Änderung der Validierungsformel für Vertragsvalidieru
 backend:
   - task: "Contract validation formula update"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Successfully implemented new validation logic: warning appears when (NutzungEinhaltung == NutzungKenntnisnahme) OR (ausgabeNeu == ausgabeGebraucht)"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ COMPREHENSIVE TESTING COMPLETED - Contract validation formula working correctly. Tested all scenarios: 1) Both NutzungEinhaltung and NutzungKenntnisnahme same (both ON/OFF) triggers warning ✅ 2) Both ausgabeNeu and ausgabeGebraucht same (both ON/OFF) triggers warning ✅ 3) Different checkbox combinations do not trigger warning ✅ 4) All 5 existing contracts validated correctly with expected warning behavior ✅ 5) Backend API /api/assignments endpoint properly returns contract_warning field ✅ Minor issue: Warning dismissal functionality needs database field initialization but core validation logic is perfect."
 
 frontend:
   - task: "No frontend changes needed"
