@@ -599,10 +599,66 @@ async def get_ipad_history(ipad_id: str, current_user: str = Depends(get_current
     # Get all contracts for this iPad
     contracts = await db.contracts.find({"itnr": ipad["itnr"]}).to_list(length=None)
     
+    # Parse data safely
+    try:
+        ipad_data = iPad(**parse_from_mongo(ipad))
+    except Exception as e:
+        print(f"Error parsing iPad data: {e}")
+        ipad_data = {
+            "id": ipad.get("id"),
+            "itnr": ipad.get("itnr"),
+            "snr": ipad.get("snr", ""),
+            "karton": ipad.get("karton", ""),
+            "pencil": ipad.get("pencil", ""),
+            "typ": ipad.get("typ", ""),
+            "ansch_jahr": ipad.get("ansch_jahr", ""),
+            "ausleihe_datum": ipad.get("ausleihe_datum", ""),
+            "status": ipad.get("status", "verfügbar"),
+            "current_assignment_id": ipad.get("current_assignment_id"),
+            "created_at": ipad.get("created_at"),
+            "updated_at": ipad.get("updated_at")
+        }
+    
+    try:
+        assignment_data = [Assignment(**parse_from_mongo(a)) for a in assignments]
+    except Exception as e:
+        print(f"Error parsing assignment data: {e}")
+        assignment_data = []
+        for a in assignments:
+            try:
+                assignment_data.append(Assignment(**parse_from_mongo(a)))
+            except Exception as ae:
+                print(f"Skipping assignment {a.get('id')}: {ae}")
+                continue
+    
+    try:
+        contract_data = []
+        for c in contracts:
+            try:
+                # Handle contracts without file_data for display
+                contract_dict = {
+                    "id": c.get("id"),
+                    "assignment_id": c.get("assignment_id"),
+                    "itnr": c.get("itnr"),
+                    "student_name": c.get("student_name"),
+                    "filename": c.get("filename"),
+                    "form_fields": c.get("form_fields", {}),
+                    "uploaded_at": c.get("uploaded_at"),
+                    "is_active": c.get("is_active", True),
+                    "file_data": b""  # Empty for history display
+                }
+                contract_data.append(contract_dict)
+            except Exception as ce:
+                print(f"Skipping contract {c.get('id')}: {ce}")
+                continue
+    except Exception as e:
+        print(f"Error parsing contract data: {e}")
+        contract_data = []
+    
     return {
-        "ipad": iPad(**parse_from_mongo(ipad)),
-        "assignments": [Assignment(**parse_from_mongo(a)) for a in assignments],
-        "contracts": [Contract(**parse_from_mongo(c)) for c in contracts]
+        "ipad": ipad_data,
+        "assignments": assignment_data,
+        "contracts": contract_data
     }
 
 # Assignment dissolution
