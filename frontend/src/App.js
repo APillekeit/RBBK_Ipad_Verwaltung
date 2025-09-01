@@ -1196,14 +1196,35 @@ const AssignmentsManagement = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredAssignments.map((assignment) => (
-                    <TableRow key={assignment.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{assignment.itnr}</TableCell>
+                    <TableRow 
+                      key={assignment.id} 
+                      className={`hover:bg-gray-50 ${assignment.contract_warning && !assignment.warning_dismissed ? 'bg-orange-50 border-l-4 border-orange-400' : ''}`}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {assignment.contract_warning && !assignment.warning_dismissed && (
+                            <AlertTriangle 
+                              className="h-4 w-4 text-orange-500 cursor-pointer hover:text-orange-700" 
+                              title="Vertragsvalidierung fehlgeschlagen - Doppelklick zum Entfernen"
+                              onClick={() => handleDismissWarning(assignment)}
+                            />
+                          )}
+                          {assignment.itnr}
+                        </div>
+                      </TableCell>
                       <TableCell>{assignment.student_name}</TableCell>
                       <TableCell>{new Date(assignment.assigned_at).toLocaleDateString('de-DE')}</TableCell>
                       <TableCell>
-                        <Badge className={assignment.contract_id ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                          {assignment.contract_id ? 'Vorhanden' : 'Fehlend'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={assignment.contract_id ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {assignment.contract_id ? 'Vorhanden' : 'Fehlend'}
+                          </Badge>
+                          {assignment.contract_warning && !assignment.warning_dismissed && (
+                            <span className="text-xs text-orange-600" title="Validierungsfehler: Nutzung/Kenntnisnahme oder Ausgabe-Option nicht korrekt">
+                              ⚠️ Validation
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
