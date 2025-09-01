@@ -166,18 +166,7 @@ frontend:
         - agent: "main"
         - comment: "Need to add delete button with double-click protection"
 
-frontend:
-  - task: "No frontend changes needed"
-    implemented: true
-    working: true
-    file: "frontend/src/App.js"
-    stuck_count: 0
-    priority: "low"
-    needs_retesting: false
-    status_history:
-        - working: true
-        - agent: "main"
-        - comment: "Frontend contract warning display already implemented"
+
 
 metadata:
   created_by: "main_agent"
