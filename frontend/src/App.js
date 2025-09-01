@@ -1243,6 +1243,7 @@ const ContractsManagement = () => {
   const [unassignedContracts, setUnassignedContracts] = useState([]);
   const [availableAssignments, setAvailableAssignments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [dataProtectionCleanup, setDataProtectionCleanup] = useState(false);
 
   const loadUnassignedContracts = async () => {
     try {
