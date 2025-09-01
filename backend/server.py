@@ -812,30 +812,44 @@ async def get_filtered_assignments(
     sus_kl: Optional[str] = None,
     current_user: str = Depends(get_current_user)
 ):
-    # Build filter query
-    student_filter = {}
-    if sus_vorn:
-        student_filter["sus_vorn"] = {"$regex": sus_vorn, "$options": "i"}
-    if sus_nachn:
-        student_filter["sus_nachn"] = {"$regex": sus_nachn, "$options": "i"}
-    if sus_kl:
-        student_filter["sus_kl"] = {"$regex": sus_kl, "$options": "i"}
-    
-    if student_filter:
-        # Get matching students
-        students = await db.students.find(student_filter).to_list(length=None)
-        student_ids = [s["id"] for s in students]
+    try:
+        # Build filter query
+        student_filter = {}
+        if sus_vorn:
+            student_filter["sus_vorn"] = {"$regex": sus_vorn, "$options": "i"}
+        if sus_nachn:
+            student_filter["sus_nachn"] = {"$regex": sus_nachn, "$options": "i"}
+        if sus_kl:
+            student_filter["sus_kl"] = {"$regex": sus_kl, "$options": "i"}
         
-        # Get assignments for these students
-        assignments = await db.assignments.find({
-            "is_active": True,
-            "student_id": {"$in": student_ids}
-        }).to_list(length=None)
-    else:
-        # No filter, get all assignments
-        assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
-    
-    return [Assignment(**parse_from_mongo(assignment)) for assignment in assignments]
+        if student_filter:
+            # Get matching students
+            students = await db.students.find(student_filter).to_list(length=None)
+            student_ids = [s["id"] for s in students]
+            
+            # Get assignments for these students
+            assignments = await db.assignments.find({
+                "is_active": True,
+                "student_id": {"$in": student_ids}
+            }).to_list(length=None)
+        else:
+            # No filter, get all assignments
+            assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
+        
+        # Safe parsing
+        result = []
+        for assignment in assignments:
+            try:
+                result.append(Assignment(**parse_from_mongo(assignment)))
+            except Exception as e:
+                print(f"Error parsing assignment {assignment.get('id')}: {e}")
+                continue
+        
+        return result
+        
+    except Exception as e:
+        print(f"Filter error: {e}")
+        raise HTTPException(status_code=500, detail=f"Filter error: {str(e)}")
 
 # Include the router
 app.include_router(api_router)
