@@ -59,13 +59,19 @@ sudo docker system prune -a
 
 ### Von lokalem Computer:
 ```bash
+curl http://localhost/health
+# ODER
 curl http://192.168.99.72/health
+# ODER  
+curl http://[BELIEBIGE-IP]/health
 # Erwartete Antwort: "healthy"
 ```
 
 ### Von anderem Computer im Netzwerk:
 ```bash
 curl http://192.168.99.72/api/auth/setup
+# ODER
+curl http://[BELIEBIGE-IP]/api/auth/setup
 # Sollte JSON-Response zurückgeben
 ```
 
