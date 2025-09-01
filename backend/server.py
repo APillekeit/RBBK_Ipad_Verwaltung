@@ -390,7 +390,7 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
     processed_count = 0
     unassigned_count = 0
     
-    for file in files[:20]:  # Limit to 20 files max
+    for file in files[:50]:  # Limit to 50 files max
         if not file.filename.endswith('.pdf'):
             results.append({"filename": file.filename, "status": "error", "message": "Only .pdf files are allowed"})
             continue
