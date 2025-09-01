@@ -801,14 +801,19 @@ const AssignmentsManagement = () => {
 
   const loadAllData = async () => {
     try {
+      console.log('Loading all data...'); // Debug log
       const [assignmentsRes, ipadsRes, studentsRes] = await Promise.all([
         api.get('/api/assignments'),
         api.get('/api/ipads'),
         api.get('/api/students')
       ]);
       
+      console.log('Assignments loaded:', assignmentsRes.data); // Debug log
+      console.log('iPads loaded:', ipadsRes.data); // Debug log
+      console.log('Students loaded:', studentsRes.data); // Debug log
+      
       setAssignments(assignmentsRes.data);
-      setFilteredAssignments(assignmentsRes.data);
+      setFilteredAssignments(assignmentsRes.data);  
       setIPads(ipadsRes.data);
       setStudents(studentsRes.data);
     } catch (error) {
