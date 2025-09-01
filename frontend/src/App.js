@@ -832,14 +832,17 @@ const AssignmentsManagement = () => {
   };
 
   const handleDissolveAssignment = async (assignment) => {
+    console.log('Dissolving assignment:', assignment); // Debug log
     if (window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`)) {
       try {
-        await api.delete(`/api/assignments/${assignment.id}`);
+        console.log('Making DELETE request to:', `/api/assignments/${assignment.id}`); // Debug log
+        const response = await api.delete(`/api/assignments/${assignment.id}`);
+        console.log('DELETE response:', response); // Debug log
         toast.success('Zuordnung erfolgreich aufgelöst');
         await loadAllData();
       } catch (error) {
-        toast.error('Fehler beim Auflösen der Zuordnung');
         console.error('Dissolution error:', error);
+        toast.error(`Fehler beim Auflösen der Zuordnung: ${error.response?.data?.detail || error.message}`);
       }
     }
   };
