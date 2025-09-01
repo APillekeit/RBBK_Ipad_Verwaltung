@@ -179,11 +179,15 @@ const IPadsManagement = () => {
   const [loading, setLoading] = useState(true);
 
   const loadIPads = async () => {
+    setLoading(true);
     try {
       const response = await api.get('/api/ipads');
-      setIPads(response.data);
+      console.log('iPads API response:', response.data); // Debug log
+      setIPads(response.data || []);
     } catch (error) {
-      toast.error('Failed to load iPads');
+      console.error('Failed to load iPads:', error);
+      toast.error('Fehler beim Laden der iPads');
+      setIPads([]);
     } finally {
       setLoading(false);
     }
@@ -202,9 +206,10 @@ const IPadsManagement = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(response.data.message);
-      loadIPads();
+      await loadIPads(); // Reload iPads after upload
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Upload failed');
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.detail || 'Upload fehlgeschlagen');
     }
   };
 
@@ -217,6 +222,11 @@ const IPadsManagement = () => {
     };
     return <Badge className={variants[status] || 'bg-gray-100 text-gray-800'}>{status}</Badge>;
   };
+
+  const statusCounts = ipads.reduce((acc, ipad) => {
+    acc[ipad.status] = (acc[ipad.status] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <div className="space-y-6">
@@ -233,10 +243,43 @@ const IPadsManagement = () => {
             <Tablet className="h-5 w-5" />
             iPads Übersicht ({ipads.length})
           </CardTitle>
+          <CardDescription>
+            {loading ? 'Lade Daten...' : `${ipads.length} iPads in der Datenbank`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
+          {!loading && ipads.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-green-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-green-800">Verfügbar</div>
+                <div className="text-2xl font-bold text-green-600">{statusCounts.verfügbar || 0}</div>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-blue-800">Zugewiesen</div>
+                <div className="text-2xl font-bold text-blue-600">{statusCounts.zugewiesen || 0}</div>
+              </div>
+              <div className="bg-red-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-red-800">Defekt</div>
+                <div className="text-2xl font-bold text-red-600">{statusCounts.defekt || 0}</div>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-sm font-medium text-gray-800">Gestohlen</div>
+                <div className="text-2xl font-bold text-gray-600">{statusCounts.gestohlen || 0}</div>
+              </div>
+            </div>
+          )}
+          
           {loading ? (
-            <div className="text-center py-8">Lade iPads...</div>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2">Lade iPads...</p>
+            </div>
+          ) : ipads.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Tablet className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>Keine iPads vorhanden.</p>
+              <p className="text-sm">Laden Sie eine Excel-Datei hoch, um iPads hinzuzufügen.</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -253,14 +296,14 @@ const IPadsManagement = () => {
                 </TableHeader>
                 <TableBody>
                   {ipads.map((ipad) => (
-                    <TableRow key={ipad.id}>
-                      <TableCell className="font-medium">{ipad.itnr}</TableCell>
-                      <TableCell>{ipad.snr}</TableCell>
-                      <TableCell>{ipad.typ}</TableCell>
-                      <TableCell>{ipad.ansch_jahr}</TableCell>
+                    <TableRow key={ipad.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{ipad.itnr || 'N/A'}</TableCell>
+                      <TableCell>{ipad.snr || 'N/A'}</TableCell>
+                      <TableCell>{ipad.typ || 'N/A'}</TableCell>
+                      <TableCell>{ipad.ansch_jahr || 'N/A'}</TableCell>
                       <TableCell>{getStatusBadge(ipad.status)}</TableCell>
-                      <TableCell>{ipad.pencil}</TableCell>
-                      <TableCell>{ipad.karton}</TableCell>
+                      <TableCell>{ipad.pencil || 'N/A'}</TableCell>
+                      <TableCell>{ipad.karton || 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
