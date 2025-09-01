@@ -107,15 +107,18 @@ user_problem_statement: "Vertrag-Upload für Zuordnungen mit Validierungsfehlern
 backend:
   - task: "Assignment-specific contract upload API endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Implemented POST /api/assignments/{assignment_id}/upload-contract endpoint with validation logic, contract replacement, and warning status calculation"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Assignment-specific contract upload functionality working perfectly! Tested all 6 scenarios: 1) PDF with form fields triggering validation warning (NutzungEinhaltung == NutzungKenntnisnahme OR ausgabeNeu == ausgabeGebraucht), 2) PDF without form fields (clears validation warning), 3) PDF with form fields passing validation, 4) Non-existent assignment ID (404), 5) Non-PDF file (400), 6) End-to-end verification. Contract replacement works correctly - old contracts marked inactive, new contracts linked to assignment. Response validation confirmed - proper message, contract_id, has_form_fields, validation_status fields. Contract warning status correctly updated in assignments endpoint. All validation logic working as specified."
 
 frontend:
   - task: "Contract upload button for assignments with validation warnings"
