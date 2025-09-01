@@ -834,23 +834,52 @@ const AssignmentsManagement = () => {
   }, [assignments, vornameFilter, nachnameFilter, klasseFilter]);
 
   const applyFilters = async () => {
+    console.log('=== APPLYING FILTERS ===');
+    console.log('Vorname filter:', vornameFilter);
+    console.log('Nachname filter:', nachnameFilter);
+    console.log('Klasse filter:', klasseFilter);
+    
     if (!vornameFilter && !nachnameFilter && !klasseFilter) {
+      console.log('No filters active, showing all assignments');
       setFilteredAssignments(assignments);
       return;
     }
 
     try {
       const params = new URLSearchParams();
-      if (vornameFilter) params.append('sus_vorn', vornameFilter);
-      if (nachnameFilter) params.append('sus_nachn', nachnameFilter);
-      if (klasseFilter) params.append('sus_kl', klasseFilter);
+      if (vornameFilter) {
+        params.append('sus_vorn', vornameFilter);
+        console.log('Added vorname filter:', vornameFilter);
+      }
+      if (nachnameFilter) {
+        params.append('sus_nachn', nachnameFilter);
+        console.log('Added nachname filter:', nachnameFilter);
+      }
+      if (klasseFilter) {
+        params.append('sus_kl', klasseFilter);
+        console.log('Added klasse filter:', klasseFilter);
+      }
 
-      const response = await api.get(`/api/assignments/filtered?${params.toString()}`);
+      const url = `/api/assignments/filtered?${params.toString()}`;
+      console.log('Filter API URL:', url);
+      console.log('Full URL:', `${API_BASE_URL}${url}`);
+
+      const response = await api.get(url);
+      console.log('Filter API response:', response.data);
+      console.log('Number of filtered assignments:', response.data.length);
+      
       setFilteredAssignments(response.data);
+      
+      console.log('Filtered assignments set successfully');
     } catch (error) {
+      console.error('=== FILTER ERROR ===');
       console.error('Filter error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       toast.error('Fehler beim Filtern der Zuordnungen');
     }
+    
+    console.log('=== FILTER APPLICATION END ===');
   };
 
   const handleAutoAssign = async () => {
