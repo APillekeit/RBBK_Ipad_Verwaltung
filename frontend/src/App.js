@@ -599,37 +599,173 @@ const AssignmentsManagement = () => {
 
 // Contracts Management Component
 const ContractsManagement = () => {
-  const handleUpload = async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
+  const [unassignedContracts, setUnassignedContracts] = useState([]);
+  const [availableAssignments, setAvailableAssignments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
+  const loadUnassignedContracts = async () => {
     try {
-      const response = await api.post('/api/contracts/upload', formData, {
+      const response = await api.get('/api/contracts/unassigned');
+      setUnassignedContracts(response.data);
+    } catch (error) {
+      console.error('Failed to load unassigned contracts:', error);
+    }
+  };
+
+  const loadAvailableAssignments = async () => {
+    try {
+      const response = await api.get('/api/assignments/available-for-contracts');
+      setAvailableAssignments(response.data);
+    } catch (error) {
+      console.error('Failed to load available assignments:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadUnassignedContracts();
+    loadAvailableAssignments();
+  }, []);
+
+  const handleMultipleUpload = async (files) => {
+    if (!files || files.length === 0) return;
+    
+    const formData = new FormData();
+    Array.from(files).forEach(file => {
+      formData.append('files', file);
+    });
+
+    setLoading(true);
+    try {
+      const response = await api.post('/api/contracts/upload-multiple', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(response.data.message);
+      
+      // Show detailed results
+      response.data.results.forEach(result => {
+        if (result.status === 'assigned') {
+          toast.success(`${result.filename}: ${result.message}`);
+        } else if (result.status === 'unassigned') {
+          toast.info(`${result.filename}: ${result.message}`);
+        } else if (result.status === 'error') {
+          toast.error(`${result.filename}: ${result.message}`);
+        }
+      });
+      
+      await loadUnassignedContracts();
+      await loadAvailableAssignments();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Contract upload failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssignContract = async (contractId, assignmentId) => {
+    try {
+      await api.post(`/api/contracts/${contractId}/assign/${assignmentId}`);
+      toast.success('Vertrag erfolgreich zugeordnet');
+      await loadUnassignedContracts();
+      await loadAvailableAssignments();
+    } catch (error) {
+      toast.error('Fehler bei der Zuordnung des Vertrags');
     }
   };
 
   return (
     <div className="space-y-6">
-      <FileUpload
-        onUpload={handleUpload}
-        acceptedTypes=".pdf"
-        title="Vertrag hochladen"
-        description="PDF-Vertrag mit ausgefüllten Formularfeldern hochladen (.pdf)"
-      />
-      
+      {/* Multiple Upload */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            Mehrere Verträge hochladen
+          </CardTitle>
+          <CardDescription>
+            PDF-Verträge gleichzeitig hochladen. Verträge mit Feldern werden automatisch zugeordnet, andere als unzugewiesen markiert.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+            <Input
+              type="file"
+              accept=".pdf"
+              multiple
+              onChange={(e) => handleMultipleUpload(e.target.files)}
+              className="mb-4"
+              disabled={loading}
+            />
+            {loading && (
+              <div className="text-sm text-gray-600 mb-4">
+                Verträge werden hochgeladen und verarbeitet...
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Unassigned Contracts */}
+      {unassignedContracts.length > 0 && (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Unzugewiesene Verträge ({unassignedContracts.length})
+            </CardTitle>
+            <CardDescription>
+              Verträge ohne automatische Zuordnung - manuelle Zuweisung erforderlich
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Dateiname</TableHead>
+                    <TableHead>Hochgeladen am</TableHead>
+                    <TableHead>Zuordnung</TableHead>
+                    <TableHead>Aktionen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {unassignedContracts.map((contract) => (
+                    <TableRow key={contract.id}>
+                      <TableCell className="font-medium">{contract.filename}</TableCell>
+                      <TableCell>{new Date(contract.uploaded_at).toLocaleDateString('de-DE')}</TableCell>
+                      <TableCell>
+                        <Select onValueChange={(assignmentId) => handleAssignContract(contract.id, assignmentId)}>
+                          <SelectTrigger className="w-[300px]">
+                            <SelectValue placeholder="iPad und Schüler auswählen..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableAssignments.map((assignment) => (
+                              <SelectItem key={assignment.assignment_id} value={assignment.assignment_id}>
+                                {assignment.itnr} → {assignment.student_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-orange-100 text-orange-800">Unzugewiesen</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Alert>
         <AlertDescription>
-          <strong>Validierungsregeln:</strong>
+          <strong>Hinweise zum Upload:</strong>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>ITNr muss einem zugewiesenen iPad entsprechen</li>
-            <li>SuSVorn und SuSNachn müssen der aktuellen Zuordnung entsprechen</li>
-            <li>NutzungEinhaltung und NutzungKenntnisnahme müssen angekreuzt sein</li>
-            <li>Genau eine Option (ausgabeNeu ODER ausgabeGebraucht) muss angekreuzt sein</li>
+            <li>Verträge mit ITNr, SuSVorn und SuSNachn werden automatisch zugeordnet</li>
+            <li>Verträge ohne diese Felder werden als unzugewiesen markiert</li>
+            <li>Unzugewiesene Verträge können manuell über die Dropdown-Liste zugeordnet werden</li>
+            <li>Maximal 20 Dateien gleichzeitig hochladbar</li>
           </ul>
         </AlertDescription>
       </Alert>
