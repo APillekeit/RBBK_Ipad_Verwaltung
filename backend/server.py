@@ -650,6 +650,35 @@ async def dissolve_assignment(assignment_id: str, current_user: str = Depends(ge
     
     return {"message": "Assignment dissolved successfully"}
 
+# Contract viewing
+@api_router.get("/contracts/{contract_id}")
+async def get_contract(contract_id: str, current_user: str = Depends(get_current_user)):
+    contract = await db.contracts.find_one({"id": contract_id})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    return {
+        "id": contract["id"],
+        "filename": contract["filename"],
+        "student_name": contract.get("student_name"),
+        "itnr": contract.get("itnr"),
+        "uploaded_at": contract["uploaded_at"],
+        "form_fields": contract.get("form_fields", {}),
+        "is_active": contract.get("is_active", True)
+    }
+
+@api_router.get("/contracts/{contract_id}/download")
+async def download_contract(contract_id: str, current_user: str = Depends(get_current_user)):
+    contract = await db.contracts.find_one({"id": contract_id})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    return StreamingResponse(
+        io.BytesIO(contract["file_data"]),
+        media_type='application/pdf',
+        headers={"Content-Disposition": f"attachment; filename={contract['filename']}"}
+    )
+
 # Export functionality
 @api_router.get("/assignments/export")
 async def export_assignments(current_user: str = Depends(get_current_user)):
