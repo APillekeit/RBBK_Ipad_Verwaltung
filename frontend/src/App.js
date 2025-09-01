@@ -897,60 +897,58 @@ const AssignmentsManagement = () => {
   };
 
   const handleDissolveAssignment = async (assignment) => {
+    console.log('🔥 DISSOLUTION FUNCTION CALLED!');
+    console.log('Assignment received:', assignment);
+    
+    // Immediate user feedback that function was called
+    toast.info('Auflösungsfunktion gestartet...');
+    
     try {
-      console.log('=== DISSOLVE ASSIGNMENT START ===');
-      console.log('Assignment to dissolve:', assignment);
-      console.log('Assignment ID:', assignment.id);
-      console.log('API Base URL:', API_BASE_URL);
-      
       if (!assignment || !assignment.id) {
-        console.error('❌ Invalid assignment object:', assignment);
+        console.error('❌ Invalid assignment:', assignment);
         toast.error('Fehler: Ungültiges Zuordnungsobjekt');
         return;
       }
       
-      console.log('About to show confirmation dialog...');
-      const confirmResult = window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`);
-      console.log('Confirm result:', confirmResult);
+      console.log('✅ Assignment valid, showing confirmation...');
       
-      if (!confirmResult) {
-        console.log('User cancelled the operation');
-        console.log('=== DISSOLVE ASSIGNMENT END (CANCELLED) ===');
+      // Simple confirmation
+      if (!confirm(`Zuordnung auflösen: ${assignment.student_name} (${assignment.itnr})?`)) {
+        console.log('❌ User cancelled');
+        toast.info('Auflösung abgebrochen');
         return;
       }
       
-      console.log('User confirmed, proceeding with deletion...');
+      console.log('✅ User confirmed, making API call...');
+      toast.info('Löse Zuordnung auf...');
       
-      const url = `/api/assignments/${assignment.id}`;
-      console.log('Making DELETE request to:', url);
-      console.log('Full URL:', `${API_BASE_URL}${url}`);
+      // Direct API call
+      const response = await fetch(`${API_BASE_URL}/api/assignments/${assignment.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
       
-      const response = await api.delete(url);
+      console.log('API Response status:', response.status);
       
-      console.log('DELETE response status:', response.status);
-      console.log('DELETE response data:', response.data);
-      
-      if (response.status === 200 || response.status === 204) {
-        console.log('API call successful, showing toast...');
-        toast.success('Zuordnung erfolgreich aufgelöst');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Success:', data);
+        toast.success('Zuordnung erfolgreich aufgelöst!');
         
-        console.log('Starting data reload...');
+        // Reload data
         await loadAllData();
-        console.log('Data reload completed successfully');
       } else {
-        throw new Error(`Unexpected status: ${response.status}`);
+        const errorData = await response.text();
+        console.error('❌ API Error:', response.status, errorData);
+        toast.error(`API Fehler: ${response.status}`);
       }
       
     } catch (error) {
-      console.error('=== DISSOLUTION ERROR ===');
-      console.error('Error object:', error);
-      console.error('Error message:', error.message);
-      console.error('Error response:', error.response);
-      
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Unbekannter Fehler';
-      toast.error(`Fehler beim Auflösen der Zuordnung: ${errorMessage}`);
-    } finally {
-      console.log('=== DISSOLVE ASSIGNMENT END ===');
+      console.error('❌ Exception:', error);
+      toast.error(`Fehler: ${error.message}`);
     }
   };
 
