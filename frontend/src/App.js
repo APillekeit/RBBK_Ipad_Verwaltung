@@ -1067,8 +1067,9 @@ const AssignmentsManagement = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => toast.info(`iPad ${assignment.itnr} ist zugewiesen an ${assignment.student_name}`)}
-                            title="Details anzeigen"
+                            onClick={() => handleViewContract(assignment)}
+                            title={assignment.contract_id ? "Vertrag anzeigen" : "Kein Vertrag vorhanden"}
+                            className={assignment.contract_id ? "hover:bg-blue-50" : "opacity-50"}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
