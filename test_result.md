@@ -143,7 +143,7 @@ backend:
 
 frontend:
   - task: "Student detail view modal"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "frontend/src/App.js"
     stuck_count: 0
@@ -152,10 +152,10 @@ frontend:
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "Need to add view button and detail modal in StudentsManagement"
+        - comment: "Implemented StudentDetailViewer modal component with comprehensive student details display including personal data, assignments, and contracts"
 
   - task: "Student delete functionality"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "frontend/src/App.js"
     stuck_count: 0
@@ -164,7 +164,7 @@ frontend:
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "Need to add delete button with double-click protection"
+        - comment: "Added delete button with double-click protection and enhanced StudentsManagement table with view/delete actions"
 
 
 
