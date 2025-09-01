@@ -796,13 +796,7 @@ const AssignmentsManagement = () => {
   const [dissolving, setDissolving] = useState(false);
   const [selectedContractId, setSelectedContractId] = useState(null);
   
-  // Confirmation dialog states
-  const [confirmDialog, setConfirmDialog] = useState({ 
-    isOpen: false, 
-    title: '', 
-    message: '', 
-    onConfirm: null 
-  });
+  // Removed confirmation dialog states for testing
   
   // Filter states
   const [vornameFilter, setVornameFilter] = useState('');
