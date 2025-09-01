@@ -502,7 +502,7 @@ startxref
             ("Get Students", self.test_get_students),
             ("Auto Assignment", self.test_auto_assign),
             ("Get Assignments", self.test_get_assignments),
-            ("Contract Validation", self.test_contract_upload_validation),
+            ("Contract Validation Formula", self.test_contract_validation_formula),
         ]
         
         for test_name, test_func in tests:
