@@ -750,7 +750,7 @@ async def update_ipad_status(ipad_id: str, status: str, current_user: str = Depe
         {"id": ipad_id},
         {"$set": {
             "status": status, 
-            "current_assignment_id": None if status in ["defekt", "gestohlen"] else ipad.get("current_assignment_id"),
+            "current_assignment_id": None if status in ["defekt", "gestohlen", "verfügbar"] else ipad.get("current_assignment_id"),
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
