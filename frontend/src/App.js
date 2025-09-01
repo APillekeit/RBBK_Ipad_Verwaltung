@@ -1437,6 +1437,7 @@ const ContractsManagement = () => {
                     <TableHead>Dateiname</TableHead>
                     <TableHead>Hochgeladen am</TableHead>
                     <TableHead>Zuordnung</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1462,6 +1463,27 @@ const ContractsManagement = () => {
                       <TableCell>
                         <Badge className="bg-orange-100 text-orange-800">Unzugewiesen</Badge>
                       </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewContract(contract)}
+                            title="Vertrag anzeigen/herunterladen"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDeleteContract(contract)}
+                            title="Vertrag löschen"
+                            className="hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1470,6 +1492,44 @@ const ContractsManagement = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Data Protection Section */}
+      <Card className="shadow-lg border-red-200 bg-red-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-700">
+            <Shield className="h-5 w-5" />
+            Datenschutz-Verwaltung
+          </CardTitle>
+          <CardDescription className="text-red-600">
+            Automatische Bereinigung alter Daten gemäß Datenschutzbestimmungen
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-white p-4 rounded-lg">
+            <div className="mb-4">
+              <h4 className="font-medium text-gray-900 mb-2">Automatische Datenlöschung</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Löscht automatisch alle Schüler- und Vertragsdaten, die älter als 5 Jahre sind. 
+                Aktive Zuordnungen bleiben erhalten.
+              </p>
+            </div>
+            
+            <Button 
+              onClick={handleDataProtectionCleanup}
+              disabled={dataProtectionCleanup}
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              {dataProtectionCleanup ? 'Bereinigung läuft...' : 'Datenschutz-Bereinigung starten'}
+            </Button>
+            
+            <div className="mt-3 text-xs text-gray-500">
+              ⚠️ Doppelklick erforderlich - Klicken Sie zweimal innerhalb von 2 Sekunden zur Bestätigung
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Alert>
         <AlertDescription>
