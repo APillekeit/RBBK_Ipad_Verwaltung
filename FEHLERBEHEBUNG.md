@@ -9,7 +9,14 @@
 
 **Lösung:** Frontend-Dockerfile aktualisiert - Yarn-Installation entfernt
 
-## 🌐 UNIVERSELLE IP-UNTERSTÜTZUNG ✅ IMPLEMENTIERT
+### Problem 5: Node.js Version-Inkompatibilität ✅ BEHOBEN
+**Fehler:** `react-router-dom@7.8.2: The engine "node" is incompatible with this module. Expected version ">=20.0.0". Got "18.20.8"`
+
+**Ursache:** React Router DOM 7.8.2 benötigt Node.js 20+, Docker-Image verwendete Node.js 18
+
+**Lösung:** 
+- Frontend-Dockerfile auf `node:20-alpine` aktualisiert
+- Yarn.lock entfernt für sauberen Dependency-Build
 
 **Das System funktioniert jetzt automatisch mit JEDER IP-Adresse!**
 
