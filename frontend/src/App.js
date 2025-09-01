@@ -953,81 +953,53 @@ const AssignmentsManagement = () => {
   };
 
   const handleBatchDissolve = async () => {
+    console.log('🔥 BATCH DISSOLUTION FUNCTION CALLED!');
+    toast.info('Batch-Auflösung gestartet...');
+    
     try {
-      console.log('=== BATCH DISSOLVE START ===');
-      console.log('Filtered assignments for batch dissolve:', filteredAssignments);
-      console.log('Number of filtered assignments:', filteredAssignments.length);
-      
       if (filteredAssignments.length === 0) {
-        console.log('No filtered assignments found');
-        toast.error('Keine gefilterten Zuordnungen zum Auflösen vorhanden');
+        toast.error('Keine gefilterten Zuordnungen vorhanden');
         return;
       }
-
-      const assignmentsList = filteredAssignments.map(a => `• ${a.itnr} → ${a.student_name}`).join('\n');
-      const confirmMessage = `Möchten Sie alle ${filteredAssignments.length} gefilterten Zuordnungen wirklich auflösen?\n\nDies wird folgende Zuordnungen betreffen:\n${assignmentsList}`;
       
-      console.log('Showing confirmation dialog for batch dissolve...');
-      console.log('Assignments to dissolve:', assignmentsList);
-      
-      const confirmed = window.confirm(confirmMessage);
-      console.log('User confirmation result:', confirmed);
-      
-      if (!confirmed) {
-        console.log('User cancelled batch dissolution');
-        console.log('=== BATCH DISSOLVE END (CANCELLED) ===');
+      if (!confirm(`${filteredAssignments.length} gefilterte Zuordnungen auflösen?`)) {
+        toast.info('Batch-Auflösung abgebrochen');
         return;
       }
       
       setDissolving(true);
-      console.log('Starting batch dissolution process...');
-      
       let successCount = 0;
-      let errorCount = 0;
       
-      for (let i = 0; i < filteredAssignments.length; i++) {
-        const assignment = filteredAssignments[i];
-        console.log(`Processing assignment ${i + 1}/${filteredAssignments.length}:`, assignment);
-        
-        if (!assignment || !assignment.id) {
-          console.error(`❌ Invalid assignment at index ${i}:`, assignment);
-          errorCount++;
-          continue;
-        }
-        
+      for (const assignment of filteredAssignments) {
         try {
-          console.log(`Making DELETE request for assignment ID: ${assignment.id}`);
-          const response = await api.delete(`/api/assignments/${assignment.id}`);
-          console.log(`DELETE response for ${assignment.id}:`, response.status, response.data);
-          successCount++;
-          console.log(`✅ Successfully dissolved assignment ${assignment.id} (${assignment.student_name})`);
+          console.log('Deleting assignment:', assignment.id);
+          const response = await fetch(`${API_BASE_URL}/api/assignments/${assignment.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            successCount++;
+            console.log('✅ Deleted:', assignment.student_name);
+          } else {
+            console.error('❌ Failed to delete:', assignment.student_name);
+          }
         } catch (error) {
-          console.error(`❌ Error dissolving assignment ${assignment.id}:`, error);
-          console.error('Error details:', error.response?.data);
-          errorCount++;
+          console.error('❌ Error:', error);
         }
       }
       
-      console.log(`Batch dissolution completed: ${successCount} success, ${errorCount} errors`);
-      
-      if (successCount > 0) {
-        toast.success(`${successCount} Zuordnungen erfolgreich aufgelöst`);
-      }
-      if (errorCount > 0) {
-        toast.error(`${errorCount} Zuordnungen konnten nicht aufgelöst werden`);
-      }
-      
-      console.log('Reloading all data after batch dissolution...');
+      toast.success(`${successCount} Zuordnungen aufgelöst`);
       await loadAllData();
-      console.log('Data reload after batch dissolution completed');
       
     } catch (error) {
-      console.error('=== BATCH DISSOLUTION OUTER ERROR ===');
-      console.error('Error:', error);
-      toast.error('Fehler beim Batch-Auflösen der Zuordnungen');
+      console.error('Batch error:', error);
+      toast.error('Batch-Fehler');
     } finally {
       setDissolving(false);
-      console.log('=== BATCH DISSOLVE END ===');
     }
   };
 
