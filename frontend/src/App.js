@@ -932,71 +932,49 @@ const AssignmentsManagement = () => {
 
   const handleDissolveAssignment = async (assignment) => {
     console.log('🔥 DISSOLUTION FUNCTION CALLED!');
-    console.log('Assignment received:', assignment);
-    
     toast.info('Auflösungsfunktion gestartet...');
     
-    try {
-      if (!assignment || !assignment.id) {
-        console.error('❌ Invalid assignment:', assignment);
-        toast.error('Fehler: Ungültiges Zuordnungsobjekt');
-        return;
-      }
-      
-      console.log('✅ Assignment valid, preparing confirmation...');
-      
-      // Debug the confirm dialog
-      const confirmMessage = `Zuordnung auflösen: ${assignment.student_name} (${assignment.itnr})?`;
-      console.log('📝 Confirmation message:', confirmMessage);
-      console.log('🔍 About to show confirm dialog...');
-      
-      // Try different confirmation approach
-      const userConfirmed = window.confirm(confirmMessage);
-      console.log('📋 Confirm dialog result:', userConfirmed);
-      console.log('📋 Confirm dialog type:', typeof userConfirmed);
-      
-      if (userConfirmed !== true) {
-        console.log('❌ User did not confirm (result was not true)');
-        toast.info('Auflösung abgebrochen');
-        return;
-      }
-      
-      console.log('✅ User confirmed! Proceeding with API call...');
-      toast.info('Löse Zuordnung auf...');
-      
-      // Direct API call
-      const apiUrl = `${API_BASE_URL}/api/assignments/${assignment.id}`;
-      console.log('📡 Making API call to:', apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('📡 API Response status:', response.status);
-      console.log('📡 API Response ok:', response.ok);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ API Success:', data);
-        toast.success('Zuordnung erfolgreich aufgelöst!');
+    // Use custom dialog instead of browser confirm
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Zuordnung auflösen',
+      message: `Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`,
+      onConfirm: async () => {
+        console.log('✅ Custom dialog confirmed!');
+        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null });
         
-        console.log('🔄 Reloading data...');
-        await loadAllData();
-        console.log('✅ Data reloaded');
-      } else {
-        const errorData = await response.text();
-        console.error('❌ API Error:', response.status, errorData);
-        toast.error(`API Fehler: ${response.status}`);
+        try {
+          toast.info('Löse Zuordnung auf...');
+          
+          const apiUrl = `${API_BASE_URL}/api/assignments/${assignment.id}`;
+          console.log('📡 Making API call to:', apiUrl);
+          
+          const response = await fetch(apiUrl, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          console.log('📡 API Response status:', response.status);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ API Success:', data);
+            toast.success('Zuordnung erfolgreich aufgelöst!');
+            await loadAllData();
+          } else {
+            console.error('❌ API Error:', response.status);
+            toast.error(`API Fehler: ${response.status}`);
+          }
+          
+        } catch (error) {
+          console.error('❌ Exception:', error);
+          toast.error(`Fehler: ${error.message}`);
+        }
       }
-      
-    } catch (error) {
-      console.error('❌ Exception in dissolution:', error);
-      toast.error(`Fehler: ${error.message}`);
-    }
+    });
   };
 
   const handleBatchDissolve = async () => {
