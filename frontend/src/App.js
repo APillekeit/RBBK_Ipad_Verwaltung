@@ -868,19 +868,42 @@ const AssignmentsManagement = () => {
   };
 
   const handleDissolveAssignment = async (assignment) => {
-    console.log('Dissolving assignment:', assignment); // Debug log
+    console.log('=== DISSOLVE ASSIGNMENT START ===');
+    console.log('Assignment to dissolve:', assignment);
+    console.log('Assignment ID:', assignment.id);
+    console.log('API Base URL:', API_BASE_URL);
+    
     if (window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`)) {
       try {
-        console.log('Making DELETE request to:', `/api/assignments/${assignment.id}`); // Debug log
-        const response = await api.delete(`/api/assignments/${assignment.id}`);
-        console.log('DELETE response:', response); // Debug log
-        toast.success('Zuordnung erfolgreich aufgelöst');
-        await loadAllData();
+        const url = `/api/assignments/${assignment.id}`;
+        console.log('Making DELETE request to:', url);
+        console.log('Full URL:', `${API_BASE_URL}${url}`);
+        
+        const response = await api.delete(url);
+        console.log('DELETE response status:', response.status);
+        console.log('DELETE response data:', response.data);
+        
+        if (response.status === 200) {
+          toast.success('Zuordnung erfolgreich aufgelöst');
+          console.log('Success! Reloading data...');
+          await loadAllData();
+          console.log('Data reloaded successfully');
+        } else {
+          throw new Error(`Unexpected status: ${response.status}`);
+        }
       } catch (error) {
-        console.error('Dissolution error:', error);
-        toast.error(`Fehler beim Auflösen der Zuordnung: ${error.response?.data?.detail || error.message}`);
+        console.error('=== DISSOLUTION ERROR ===');
+        console.error('Error object:', error);
+        console.error('Error message:', error.message);
+        console.error('Error response:', error.response);
+        console.error('Error status:', error.response?.status);
+        console.error('Error data:', error.response?.data);
+        
+        const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Unbekannter Fehler';
+        toast.error(`Fehler beim Auflösen der Zuordnung: ${errorMessage}`);
       }
     }
+    console.log('=== DISSOLVE ASSIGNMENT END ===');
   };
 
   const handleBatchDissolve = async () => {
