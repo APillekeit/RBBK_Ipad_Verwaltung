@@ -67,11 +67,16 @@ done
 
 # Teste Backend-Bibliotheken
 echo "📚 Teste Backend-Bibliotheken..."
-if docker exec ipad_backend python test-docker-libs.py > /dev/null 2>&1; then
-    echo "✅ Alle PDF/Excel-Bibliotheken funktionieren!"
+BACKEND_CONTAINER=$(docker-compose ps -q backend)
+if [ ! -z "$BACKEND_CONTAINER" ]; then
+    if docker exec $BACKEND_CONTAINER python test-docker-libs.py > /dev/null 2>&1; then
+        echo "✅ Alle PDF/Excel-Bibliotheken funktionieren!"
+    else
+        echo "⚠️  Bibliotheken-Test fehlgeschlagen - Detaillierte Logs:"
+        docker exec $BACKEND_CONTAINER python test-docker-libs.py
+    fi
 else
-    echo "⚠️  Bibliotheken-Test fehlgeschlagen - Detaillierte Logs:"
-    docker exec ipad_backend python test-docker-libs.py
+    echo "⚠️  Backend-Container nicht gefunden"
 fi
 
 # Teste Frontend-Verfügbarkeit
