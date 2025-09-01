@@ -542,6 +542,116 @@ async def dismiss_contract_warning(assignment_id: str, current_user: str = Depen
     
     return {"message": "Warning dismissed"}
 
+@api_router.post("/assignments/{assignment_id}/upload-contract")
+async def upload_contract_for_assignment(
+    assignment_id: str, 
+    file: UploadFile = File(...), 
+    current_user: str = Depends(get_current_user)
+):
+    """Upload a new contract for a specific assignment (replaces existing contract)"""
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only .pdf files are allowed")
+    
+    # Get the assignment
+    assignment = await db.assignments.find_one({"id": assignment_id})
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    try:
+        contents = await file.read()
+        
+        # Extract form fields from PDF
+        reader = PyPDF2.PdfReader(io.BytesIO(contents))
+        form_fields = {}
+        
+        try:
+            if '/AcroForm' in reader.trailer['/Root']:
+                form = reader.trailer['/Root']['/AcroForm']
+                if '/Fields' in form:
+                    for field in form['/Fields']:
+                        field_obj = field.get_object()
+                        field_name = field_obj.get('/T')
+                        field_value = field_obj.get('/V')
+                        
+                        if field_name:
+                            form_fields[field_name] = field_value
+        except:
+            form_fields = {}
+        
+        # If assignment has an existing contract, mark it as inactive
+        if assignment.get("contract_id"):
+            await db.contracts.update_one(
+                {"id": assignment["contract_id"]},
+                {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+        
+        # Create new contract
+        new_contract = Contract(
+            assignment_id=assignment_id,
+            itnr=assignment["itnr"],
+            student_name=assignment["student_name"],
+            filename=file.filename,
+            file_data=contents,
+            form_fields=form_fields
+        )
+        
+        contract_dict = prepare_for_mongo(new_contract.dict())
+        await db.contracts.insert_one(contract_dict)
+        
+        # Update assignment with new contract reference
+        await db.assignments.update_one(
+            {"id": assignment_id},
+            {"$set": {"contract_id": new_contract.id}}
+        )
+        
+        # Apply validation logic to determine if warning should be shown
+        contract_warning = False
+        warning_dismissed = False
+        
+        if form_fields:
+            # Apply the same validation logic as in get_assignments
+            nutzung_einhaltung = form_fields.get('NutzungEinhaltung') == '/Yes'
+            nutzung_kenntnisnahme_field = form_fields.get('NutzungKenntnisnahme') or form_fields.get('NutzungKenntnisname', '')
+            nutzung_kenntnisnahme = bool(nutzung_kenntnisnahme_field and nutzung_kenntnisnahme_field != '')
+            ausgabe_neu = form_fields.get('ausgabeNeu') == '/Yes'
+            ausgabe_gebraucht = form_fields.get('ausgabeGebraucht') == '/Yes'
+            
+            # New validation logic: warning appears when checkboxes are same
+            warning_needed = (nutzung_einhaltung == nutzung_kenntnisnahme) or (ausgabe_neu == ausgabe_gebraucht)
+            
+            if warning_needed:
+                contract_warning = True
+        else:
+            # No form fields = no validation issues (triangle disappears)
+            contract_warning = False
+        
+        # Reset warning dismissed status for new contract
+        await db.assignments.update_one(
+            {"id": assignment_id},
+            {"$set": {"warning_dismissed": False}}
+        )
+        
+        validation_status = "validation_warning" if contract_warning else "no_validation_issues"
+        message = f"Contract uploaded successfully for assignment {assignment['itnr']} → {assignment['student_name']}"
+        
+        if not form_fields:
+            message += " (No form fields found - validation warning cleared)"
+        elif contract_warning:
+            message += " (Validation warning: checkbox validation failed)"
+        else:
+            message += " (Contract validation passed)"
+        
+        return {
+            "message": message,
+            "contract_id": new_contract.id,
+            "has_form_fields": bool(form_fields),
+            "validation_status": validation_status,
+            "contract_warning": contract_warning
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing contract: {str(e)}")
+
 # Contract endpoints
 @api_router.post("/contracts/upload-multiple")
 async def upload_multiple_contracts(files: List[UploadFile] = File(...), current_user: str = Depends(get_current_user)):
