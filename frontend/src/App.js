@@ -49,42 +49,53 @@ const Login = ({ onLogin }) => {
       onLogin();
       toast.success('Successfully logged in!');
     } catch (error) {
-      toast.error('Login failed. Please check your credentials.');
+      toast.error(error.response?.data?.detail || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const setupAdmin = async () => {
+  const checkSetup = async () => {
     try {
-      const response = await api.post('/api/auth/setup');
-      toast.success(response.data.message);
-      if (response.data.username) {
-        toast.info(`Username: ${response.data.username}, Password: ${response.data.password}`);
+      const response = await api.post('/auth/setup');
+      if (response.data.message.includes('Admin user created')) {
+        toast.success('Setup completed! Please login with admin/admin123');
       }
     } catch (error) {
-      toast.error('Failed to setup admin user');
+      // Setup likely already done
     }
   };
 
+  useEffect(() => {
+    checkSetup();
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-xl border-0">
-        <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-          <CardTitle className="text-2xl font-bold">iPad Verwaltung</CardTitle>
-          <CardDescription className="text-blue-100">Admin Login</CardDescription>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-teal-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-2xl">
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Tablet className="h-8 w-8 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            iPad-Verwaltung
+          </CardTitle>
+          <CardDescription className="text-gray-600">
+            Melden Sie sich an, um fortzufahren
+          </CardDescription>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username">Benutzername</Label>
               <Input
                 id="username"
                 type="text"
+                placeholder="Benutzername eingeben"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full"
+                className="transition-all duration-200 focus:ring-2 focus:ring-purple-500"
               />
             </div>
             <div className="space-y-2">
@@ -92,20 +103,27 @@ const Login = ({ onLogin }) => {
               <Input
                 id="password"
                 type="password"
+                placeholder="Passwort eingeben"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full"
+                className="transition-all duration-200 focus:ring-2 focus:ring-purple-500"
               />
             </div>
-            <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-              {loading ? 'Anmelden...' : 'Anmelden'}
+            <Button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 transition-all duration-200"
+              disabled={loading}
+            >
+              {loading ? 'Anmeldung läuft...' : 'Anmelden'}
             </Button>
           </form>
-          <div className="mt-4 pt-4 border-t">
-            <Button variant="outline" onClick={setupAdmin} className="w-full">
-              Admin-Benutzer einrichten
-            </Button>
+          <div className="mt-6 text-center">
+            <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
+              <div className="font-medium text-gray-700 mb-1">Standard-Anmeldedaten:</div>
+              <div>Benutzername: <span className="font-mono bg-gray-200 px-1 rounded">admin</span></div>
+              <div>Passwort: <span className="font-mono bg-gray-200 px-1 rounded">admin123</span></div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -113,262 +131,254 @@ const Login = ({ onLogin }) => {
   );
 };
 
-// File Upload Component
-const FileUpload = ({ onUpload, acceptedTypes, title, description }) => {
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const handleUpload = async () => {
-    if (!file) return;
-    
-    setUploading(true);
-    try {
-      await onUpload(file);
-      setFile(null);
-      const input = document.querySelector('input[type="file"]');
-      if (input) input.value = '';
-    } catch (error) {
-      console.error('Upload failed:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <Card className="shadow-lg">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-          <Input
-            type="file"
-            accept={acceptedTypes}
-            onChange={handleFileChange}
-            className="mb-4"
-          />
-          {file && (
-            <div className="text-sm text-gray-600 mb-4">
-              Ausgewählte Datei: {file.name}
-            </div>
-          )}
-          <Button 
-            onClick={handleUpload} 
-            disabled={!file || uploading}
-            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-          >
-            {uploading ? 'Hochladen...' : 'Datei hochladen'}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// iPad Detail Component
-const IPadDetail = ({ ipadId, onClose }) => {
-  const [ipadHistory, setIPadHistory] = useState(null);
+// iPad Detail Viewer Component
+const IPadDetailViewer = ({ ipadId, onClose }) => {
+  const [ipadData, setIPadData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadIPadHistory = async () => {
+    const loadIPadDetails = async () => {
       try {
-        const response = await api.get(`/api/ipads/${ipadId}/history`);
-        setIPadHistory(response.data);
+        const response = await api.get(`/ipads/${ipadId}/history`);
+        setIPadData(response.data);
       } catch (error) {
-        toast.error('Fehler beim Laden der iPad-Historie');
+        toast.error('Fehler beim Laden der iPad-Details');
+        console.error('iPad details error:', error);
       } finally {
         setLoading(false);
       }
     };
 
     if (ipadId) {
-      loadIPadHistory();
+      loadIPadDetails();
     }
   }, [ipadId]);
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-2">Lade iPad-Historie...</p>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg">
+          <div className="text-center">Lade iPad-Details...</div>
+        </div>
       </div>
     );
   }
 
-  if (!ipadHistory) return null;
+  if (!ipadData) {
+    return null;
+  }
 
-  const { ipad, assignments, contracts } = ipadHistory;
+  const { ipad, current_assignment, assignment_history, current_contract, contract_history } = ipadData;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">iPad Details: {ipad.itnr}</h2>
-        <Button variant="outline" onClick={onClose}>
-          Zurück zur Übersicht
-        </Button>
-      </div>
-
-      {/* iPad Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>iPad Informationen</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div><strong>ITNr:</strong> {ipad.itnr}</div>
-            <div><strong>SNr:</strong> {ipad.snr || 'N/A'}</div>
-            <div><strong>Typ:</strong> {ipad.typ || 'N/A'}</div>
-            <div><strong>Anschaffungsjahr:</strong> {ipad.ansch_jahr || 'N/A'}</div>
-            <div><strong>Pencil:</strong> {ipad.pencil || 'N/A'}</div>
-            <div><strong>Karton:</strong> {ipad.karton || 'N/A'}</div>
-            <div><strong>Status:</strong> 
-              <Badge className={`ml-2 ${
-                ipad.status === 'verfügbar' ? 'bg-green-100 text-green-800' :
-                ipad.status === 'zugewiesen' ? 'bg-blue-100 text-blue-800' :
-                ipad.status === 'defekt' ? 'bg-red-100 text-red-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {ipad.status}
-              </Badge>
-            </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">
+              iPad Details: {ipad.itnr}
+            </h2>
+            <Button variant="outline" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Assignment History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Zuordnungshistorie ({assignments.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {assignments.length === 0 ? (
-            <p className="text-gray-500">Keine Zuordnungen vorhanden</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Schüler</TableHead>
-                  <TableHead>Zugewiesen am</TableHead>
-                  <TableHead>Aufgelöst am</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assignments.map((assignment) => (
-                  <TableRow key={assignment.id}>
-                    <TableCell>{assignment.student_name}</TableCell>
-                    <TableCell>{new Date(assignment.assigned_at).toLocaleDateString('de-DE')}</TableCell>
-                    <TableCell>
-                      {assignment.unassigned_at 
-                        ? new Date(assignment.unassigned_at).toLocaleDateString('de-DE')
-                        : '-'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={assignment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                        {assignment.is_active ? 'Aktiv' : 'Aufgelöst'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          {/* iPad Information */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tablet className="h-5 w-5" />
+                iPad Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                <div><strong>ITNr:</strong> {ipad.itnr}</div>
+                <div><strong>Modell:</strong> {ipad.modell || 'N/A'}</div>
+                <div><strong>Speicher:</strong> {ipad.speicher || 'N/A'}</div>
+                <div><strong>Status:</strong> 
+                  <Badge className={`ml-2 ${
+                    ipad.status === 'verfügbar' ? 'bg-green-100 text-green-800' :
+                    ipad.status === 'zugewiesen' ? 'bg-blue-100 text-blue-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {ipad.status}
+                  </Badge>
+                </div>
+                <div><strong>Hülle:</strong> {ipad.huelle || 'N/A'}</div>
+                <div><strong>Stift:</strong> {ipad.stift || 'N/A'}</div>
+                <div><strong>Erstellt am:</strong> {ipad.created_at ? new Date(ipad.created_at).toLocaleDateString('de-DE') : 'N/A'}</div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Contract History */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Vertragshistorie ({contracts.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {contracts.length === 0 ? (
-            <p className="text-gray-500">Keine Verträge vorhanden</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Dateiname</TableHead>
-                  <TableHead>Schüler</TableHead>
-                  <TableHead>Hochgeladen am</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contracts.map((contract) => (
-                  <TableRow key={contract.id}>
-                    <TableCell>{contract.filename}</TableCell>
-                    <TableCell>{contract.student_name || 'Unzugewiesen'}</TableCell>
-                    <TableCell>{new Date(contract.uploaded_at).toLocaleDateString('de-DE')}</TableCell>
-                    <TableCell>
-                      <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                        {contract.is_active ? 'Aktiv' : 'Historisch'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            const response = await api.get(`/api/contracts/${contract.id}/download`, {
-                              responseType: 'blob'
-                            });
-                            
-                            const blob = new Blob([response.data], { type: 'application/pdf' });
-                            const url = window.URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = contract.filename;
-                            document.body.appendChild(link);
-                            link.click();
-                            window.URL.revokeObjectURL(url);
-                            document.body.removeChild(link);
-                            
-                            toast.success('Vertrag heruntergeladen');
-                          } catch (error) {
-                            toast.error('Fehler beim Herunterladen des Vertrags');
-                          }
-                        }}
-                        title="Vertrag herunterladen"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          {/* Current Assignment */}
+          {current_assignment && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Aktuelle Zuordnung
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><strong>Schüler:</strong> {current_assignment.student_name}</div>
+                    <div><strong>Zugewiesen am:</strong> {new Date(current_assignment.assigned_at).toLocaleDateString('de-DE')}</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Current Contract */}
+          {current_contract && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Aktueller Vertrag
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-sm"><strong>Datei:</strong> {current_contract.filename}</div>
+                      <div className="text-sm"><strong>Hochgeladen:</strong> {new Date(current_contract.uploaded_at).toLocaleDateString('de-DE')}</div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const response = await api.get(`/contracts/${current_contract.id}/download`, {
+                            responseType: 'blob'
+                          });
+                          const url = window.URL.createObjectURL(new Blob([response.data]));
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.setAttribute('download', current_contract.filename);
+                          document.body.appendChild(link);
+                          link.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(link);
+                        } catch (error) {
+                          toast.error('Fehler beim Download');
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assignment History */}
+          {assignment_history.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Zuordnungshistorie ({assignment_history.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {assignment_history.map((assignment) => (
+                    <div key={assignment.id} className={`p-3 rounded-lg text-sm ${assignment.is_active ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-50 border-l-4 border-gray-400'}`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div><strong>Schüler:</strong> {assignment.student_name}</div>
+                          <div><strong>Zugewiesen:</strong> {new Date(assignment.assigned_at).toLocaleDateString('de-DE')}</div>
+                          {assignment.unassigned_at && (
+                            <div><strong>Aufgelöst:</strong> {new Date(assignment.unassigned_at).toLocaleDateString('de-DE')}</div>
+                          )}
+                        </div>
+                        <Badge className={assignment.is_active ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
+                          {assignment.is_active ? 'Aktiv' : 'Historisch'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Contract History */}
+          {contract_history.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Vertragshistorie ({contract_history.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {contract_history.map((contract) => (
+                    <div key={contract.id} className="p-3 rounded-lg text-sm bg-gray-50 border-l-4 border-gray-400">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div><strong>Datei:</strong> {contract.filename}</div>
+                          <div><strong>Hochgeladen:</strong> {new Date(contract.uploaded_at).toLocaleDateString('de-DE')}</div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Badge className="bg-gray-100 text-gray-800">Historisch</Badge>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const response = await api.get(`/contracts/${contract.id}/download`, {
+                                  responseType: 'blob'
+                                });
+                                const url = window.URL.createObjectURL(new Blob([response.data]));
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', contract.filename);
+                                document.body.appendChild(link);
+                                link.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(link);
+                              } catch (error) {
+                                toast.error('Fehler beim Download');
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex justify-end">
+            <Button onClick={onClose} className="flex-1 md:flex-none">
+              Schließen
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-// iPads Management Component
+// iPad Management Component
 const IPadsManagement = () => {
   const [ipads, setIPads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [selectedIPadId, setSelectedIPadId] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('Alle');
 
   const loadIPads = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/api/ipads');
-      console.log('iPads API response:', response.data);
+      const response = await api.get('/ipads');
+      console.log('iPads API response:', response.data); // Debug log
       setIPads(response.data || []);
     } catch (error) {
       console.error('Failed to load iPads:', error);
@@ -386,37 +396,47 @@ const IPadsManagement = () => {
   const handleUpload = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
+    setUploading(true);
 
     try {
-      const response = await api.post('/api/ipads/upload', formData, {
+      const response = await api.post('/ipads/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(response.data.message);
+      response.data.details.forEach(detail => {
+        toast.info(detail);
+      });
       await loadIPads();
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(error.response?.data?.detail || 'Upload fehlgeschlagen');
+      toast.error(error.response?.data?.detail || 'iPad upload failed');
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleStatusChange = async (ipadId, newStatus) => {
     try {
-      const response = await api.put(`/api/ipads/${ipadId}/status?status=${newStatus}`);
+      const response = await api.put(`/ipads/${ipadId}/status?status=${newStatus}`);
       toast.success(response.data.message);
       await loadIPads();
     } catch (error) {
-      toast.error('Fehler beim Ändern des Status');
+      toast.error(error.response?.data?.detail || 'Status update failed');
     }
   };
 
-  const getStatusBadge = (status) => {
-    const variants = {
-      'verfügbar': 'bg-green-100 text-green-800',
-      'zugewiesen': 'bg-blue-100 text-blue-800',
-      'defekt': 'bg-red-100 text-red-800',
-      'gestohlen': 'bg-gray-100 text-gray-800'
-    };
-    return <Badge className={variants[status] || 'bg-gray-100 text-gray-800'}>{status}</Badge>;
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'verfügbar':
+        return 'bg-green-100 text-green-800';
+      case 'zugewiesen':
+        return 'bg-blue-100 text-blue-800';
+      case 'defekt':
+        return 'bg-red-100 text-red-800';
+      case 'gestohlen':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   const statusCounts = ipads.reduce((acc, ipad) => {
@@ -424,83 +444,78 @@ const IPadsManagement = () => {
     return acc;
   }, {});
 
-  const filteredIPads = statusFilter === 'Alle' 
-    ? ipads 
-    : ipads.filter(ipad => ipad.status === statusFilter.toLowerCase());
-
-  if (selectedIPadId) {
-    return <IPadDetail ipadId={selectedIPadId} onClose={() => setSelectedIPadId(null)} />;
-  }
-
   return (
     <div className="space-y-6">
-      <FileUpload
-        onUpload={handleUpload}
-        acceptedTypes=".xlsx"
-        title="iPads hochladen"
-        description="Excel-Datei mit iPad-Informationen hochladen (.xlsx)"
-      />
-      
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            iPads hochladen
+          </CardTitle>
+          <CardDescription>
+            Excel-Datei mit iPad-Daten hochladen (ipads.xlsx Format)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+            <Input
+              type="file"
+              accept=".xlsx"
+              onChange={(e) => e.target.files[0] && handleUpload(e.target.files[0])}
+              className="mb-4"
+              disabled={uploading}
+            />
+            {uploading && (
+              <div className="text-sm text-gray-600">
+                iPads werden hochgeladen und verarbeitet...
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Tablet className="h-5 w-5" />
-            iPads Übersicht ({filteredIPads.length})
+            iPad-Status Übersicht
           </CardTitle>
-          <CardDescription>
-            {loading ? 'Lade Daten...' : `${ipads.length} iPads in der Datenbank`}
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          {!loading && ipads.length > 0 && (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <div className="text-sm font-medium text-green-800">Verfügbar</div>
-                  <div className="text-2xl font-bold text-green-600">{statusCounts.verfügbar || 0}</div>
-                </div>
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <div className="text-sm font-medium text-blue-800">Zugewiesen</div>
-                  <div className="text-2xl font-bold text-blue-600">{statusCounts.zugewiesen || 0}</div>
-                </div>
-                <div className="bg-red-50 p-3 rounded-lg">
-                  <div className="text-sm font-medium text-red-800">Defekt</div>
-                  <div className="text-2xl font-bold text-red-600">{statusCounts.defekt || 0}</div>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-sm font-medium text-gray-800">Gestohlen</div>
-                  <div className="text-2xl font-bold text-gray-600">{statusCounts.gestohlen || 0}</div>
-                </div>
-              </div>
-              
-              <div className="mb-4">
-                <Label htmlFor="status-filter">Filter nach Status:</Label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[200px] mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Alle">Alle</SelectItem>
-                    <SelectItem value="Verfügbar">Verfügbar</SelectItem>
-                    <SelectItem value="Zugewiesen">Zugewiesen</SelectItem>
-                    <SelectItem value="Defekt">Defekt</SelectItem>
-                    <SelectItem value="Gestohlen">Gestohlen</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-          
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2">Lade iPads...</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="bg-green-50 p-3 rounded-lg">
+              <div className="font-medium text-green-800">Verfügbar</div>
+              <div className="text-2xl font-bold text-green-600">{statusCounts.verfügbar || 0}</div>
             </div>
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="font-medium text-blue-800">Zugewiesen</div>
+              <div className="text-2xl font-bold text-blue-600">{statusCounts.zugewiesen || 0}</div>
+            </div>
+            <div className="bg-red-50 p-3 rounded-lg">
+              <div className="font-medium text-red-800">Defekt</div>
+              <div className="text-2xl font-bold text-red-600">{statusCounts.defekt || 0}</div>
+            </div>
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <div className="font-medium text-purple-800">Gestohlen</div>
+              <div className="text-2xl font-bold text-purple-600">{statusCounts.gestohlen || 0}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Tablet className="h-5 w-5" />
+            iPads verwalten ({ipads.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">Lade iPads...</div>
           ) : ipads.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <Tablet className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Keine iPads vorhanden.</p>
-              <p className="text-sm">Laden Sie eine Excel-Datei hoch, um iPads hinzuzufügen.</p>
+              Keine iPads vorhanden. Laden Sie zuerst eine Excel-Datei hoch.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -508,49 +523,54 @@ const IPadsManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ITNr</TableHead>
-                    <TableHead>SNr</TableHead>
-                    <TableHead>Typ</TableHead>
-                    <TableHead>Anschaffungsjahr</TableHead>
+                    <TableHead>Modell</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Pencil</TableHead>
-                    <TableHead>Karton</TableHead>
+                    <TableHead>Zugewiesen</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredIPads.map((ipad) => (
+                  {ipads.map((ipad) => (
                     <TableRow key={ipad.id} className="hover:bg-gray-50">
-                      <TableCell className="font-medium">{ipad.itnr || 'N/A'}</TableCell>
-                      <TableCell>{ipad.snr || 'N/A'}</TableCell>
-                      <TableCell>{ipad.typ || 'N/A'}</TableCell>
-                      <TableCell>{ipad.ansch_jahr || 'N/A'}</TableCell>
+                      <TableCell className="font-medium">{ipad.itnr}</TableCell>
+                      <TableCell>{ipad.modell || 'N/A'}</TableCell>
                       <TableCell>
-                        <Select 
-                          value={ipad.status} 
-                          onValueChange={(newStatus) => handleStatusChange(ipad.id, newStatus)}
-                        >
-                          <SelectTrigger className="w-[120px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="verfügbar">Verfügbar</SelectItem>
-                            <SelectItem value="zugewiesen">Zugewiesen</SelectItem>
-                            <SelectItem value="defekt">Defekt</SelectItem>
-                            <SelectItem value="gestohlen">Gestohlen</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Badge className={getStatusColor(ipad.status)}>
+                          {ipad.status}
+                        </Badge>
                       </TableCell>
-                      <TableCell>{ipad.pencil || 'N/A'}</TableCell>
-                      <TableCell>{ipad.karton || 'N/A'}</TableCell>
                       <TableCell>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedIPadId(ipad.id)}
-                          title="Details und Historie anzeigen"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        {ipad.current_assignment_id ? (
+                          <Badge className="bg-blue-100 text-blue-800">Ja</Badge>
+                        ) : (
+                          <Badge className="bg-gray-100 text-gray-800">Nein</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedIPadId(ipad.id)}
+                            title="iPad Details anzeigen"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Select
+                            value={ipad.status}
+                            onValueChange={(newStatus) => handleStatusChange(ipad.id, newStatus)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="verfügbar">Verfügbar</SelectItem>
+                              <SelectItem value="zugewiesen">Zugewiesen</SelectItem>
+                              <SelectItem value="defekt">Defekt</SelectItem>
+                              <SelectItem value="gestohlen">Gestohlen</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -560,6 +580,14 @@ const IPadsManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* iPad Detail Viewer Modal */}
+      {selectedIPadId && (
+        <IPadDetailViewer 
+          ipadId={selectedIPadId} 
+          onClose={() => setSelectedIPadId(null)} 
+        />
+      )}
     </div>
   );
 };
@@ -574,7 +602,7 @@ const StudentsManagement = () => {
   const loadStudents = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/api/students');
+      const response = await api.get('/students');
       console.log('Students API response:', response.data); // Debug log
       setStudents(response.data || []);
     } catch (error) {
@@ -596,7 +624,7 @@ const StudentsManagement = () => {
     setUploading(true);
 
     try {
-      const response = await api.post('/api/students/upload', formData, {
+      const response = await api.post('/students/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(response.data.message);
@@ -625,7 +653,7 @@ const StudentsManagement = () => {
     try {
       toast.info('Lösche Schüler und alle zugehörigen Daten...');
       
-      const response = await api.delete(`/api/students/${student.id}`);
+      const response = await api.delete(`/students/${student.id}`);
       
       toast.success(`${response.data.message}. Gelöscht: ${response.data.deleted_assignments} Zuordnungen, ${response.data.deleted_contracts} Verträge`);
       
@@ -751,18 +779,21 @@ const StudentsManagement = () => {
   );
 };
 
-// Contract Viewer Component
+// Contract View Component
 const ContractViewer = ({ contractId, onClose }) => {
-  const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pdfUrl, setPdfUrl] = useState(null);
 
   useEffect(() => {
     const loadContract = async () => {
       try {
-        const response = await api.get(`/api/contracts/${contractId}`);
-        setContract(response.data);
+        const response = await api.get(`/contracts/${contractId}`);
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        setPdfUrl(url);
       } catch (error) {
         toast.error('Fehler beim Laden des Vertrags');
+        console.error('Contract loading error:', error);
       } finally {
         setLoading(false);
       }
@@ -771,87 +802,66 @@ const ContractViewer = ({ contractId, onClose }) => {
     if (contractId) {
       loadContract();
     }
-  }, [contractId]);
+
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [contractId, pdfUrl]);
 
   const handleDownload = async () => {
     try {
-      const response = await api.get(`/api/contracts/${contractId}/download`, {
+      const response = await api.get(`/contracts/${contractId}/download`, {
         responseType: 'blob'
       });
-      
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.download = contract?.filename || 'vertrag.pdf';
+      link.setAttribute('download', `contract_${contractId}.pdf`);
       document.body.appendChild(link);
       link.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(link);
-      
-      toast.success('Vertrag heruntergeladen');
     } catch (error) {
-      toast.error('Fehler beim Herunterladen des Vertrags');
+      toast.error('Fehler beim Download');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2">Lade Vertrag...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!contract) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Vertrag Details</h3>
-          <Button variant="outline" size="sm" onClick={onClose}>
-            ✕
-          </Button>
-        </div>
-        
-        <div className="space-y-3">
-          <div><strong>Dateiname:</strong> {contract.filename}</div>
-          <div><strong>Schüler:</strong> {contract.student_name || 'Unzugewiesen'}</div>
-          <div><strong>iPad ITNr:</strong> {contract.itnr || 'Unzugewiesen'}</div>
-          <div><strong>Hochgeladen am:</strong> {new Date(contract.uploaded_at).toLocaleDateString('de-DE')}</div>
-          <div><strong>Status:</strong> 
-            <Badge className={`ml-2 ${contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-              {contract.is_active ? 'Aktiv' : 'Historisch'}
-            </Badge>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-4xl h-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="text-xl font-bold">Vertrag anzeigen</h2>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+            <Button variant="outline" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          
-          {contract.form_fields && Object.keys(contract.form_fields).length > 0 && (
-            <div>
-              <strong>Formularfelder:</strong>
-              <div className="mt-2 max-h-32 overflow-y-auto text-sm bg-gray-50 p-2 rounded">
-                {Object.entries(contract.form_fields).map(([key, value]) => (
-                  <div key={key} className="flex justify-between">
-                    <span className="font-medium">{key}:</span>
-                    <span>{value || 'leer'}</span>
-                  </div>
-                ))}
+        </div>
+        <div className="flex-1 p-4">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+                <p className="mt-4">Lade Vertrag...</p>
               </div>
             </div>
+          ) : pdfUrl ? (
+            <iframe
+              src={pdfUrl}
+              className="w-full h-full border-0 rounded"
+              title="PDF Viewer"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p>Vertrag konnte nicht geladen werden.</p>
+            </div>
           )}
-        </div>
-        
-        <div className="flex gap-2 mt-6">
-          <Button onClick={handleDownload} className="flex-1">
-            <Download className="h-4 w-4 mr-2" />
-            PDF herunterladen
-          </Button>
-          <Button variant="outline" onClick={onClose} className="flex-1">
-            Schließen
-          </Button>
         </div>
       </div>
     </div>
@@ -866,7 +876,7 @@ const StudentDetailViewer = ({ studentId, onClose }) => {
   useEffect(() => {
     const loadStudentDetails = async () => {
       try {
-        const response = await api.get(`/api/students/${studentId}`);
+        const response = await api.get(`/students/${studentId}`);
         setStudentData(response.data);
       } catch (error) {
         toast.error('Fehler beim Laden der Schülerdetails');
@@ -1051,8 +1061,6 @@ const StudentDetailViewer = ({ studentId, onClose }) => {
   );
 };
 
-// Removed confirmation dialog for testing
-
 // Assignments Management Component
 const AssignmentsManagement = () => {
   const [assignments, setAssignments] = useState([]);
@@ -1075,9 +1083,9 @@ const AssignmentsManagement = () => {
     try {
       console.log('Loading all data...'); // Debug log
       const [assignmentsRes, ipadsRes, studentsRes] = await Promise.all([
-        api.get('/api/assignments'),
-        api.get('/api/ipads'),
-        api.get('/api/students')
+        api.get('/assignments'),
+        api.get('/ipads'),
+        api.get('/students')
       ]);
       
       console.log('Assignments loaded:', assignmentsRes.data); // Debug log
@@ -1132,7 +1140,7 @@ const AssignmentsManagement = () => {
         console.log('Added klasse filter:', klasseFilter);
       }
 
-      const url = `/api/assignments/filtered?${params.toString()}`;
+      const url = `/assignments/filtered?${params.toString()}`;
       console.log('Filter API URL:', url);
       console.log('Full URL:', `${API_BASE_URL}${url}`);
 
@@ -1157,7 +1165,7 @@ const AssignmentsManagement = () => {
   const handleAutoAssign = async () => {
     setAssigning(true);
     try {
-      const response = await api.post('/api/assignments/auto-assign');
+      const response = await api.post('/assignments/auto-assign');
       toast.success(response.data.message);
       await loadAllData();
     } catch (error) {
@@ -1184,7 +1192,7 @@ const AssignmentsManagement = () => {
     try {
       toast.info('Löse Zuordnung auf...');
       
-      const response = await fetch(`${API_BASE_URL}/api/assignments/${assignment.id}`, {
+      const response = await fetch(`${API_BASE_URL}/assignments/${assignment.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -1225,7 +1233,7 @@ const AssignmentsManagement = () => {
       
       for (const assignment of filteredAssignments) {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/assignments/${assignment.id}`, {
+          const response = await fetch(`${API_BASE_URL}/assignments/${assignment.id}`, {
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -1270,7 +1278,7 @@ const AssignmentsManagement = () => {
     }
 
     try {
-      await api.post(`/api/assignments/${assignment.id}/dismiss-warning`);
+      await api.post(`/assignments/${assignment.id}/dismiss-warning`);
       toast.success('Vertragswarnung entfernt');
       await loadAllData();
     } catch (error) {
@@ -1290,7 +1298,7 @@ const AssignmentsManagement = () => {
       
       toast.info(`Lade neuen Vertrag für ${assignment.student_name} hoch...`);
       
-      const response = await api.post(`/api/assignments/${assignment.id}/upload-contract`, formData, {
+      const response = await api.post(`/assignments/${assignment.id}/upload-contract`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
@@ -1310,7 +1318,7 @@ const AssignmentsManagement = () => {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const response = await api.get('/api/assignments/export', {
+      const response = await api.get('/assignments/export', {
         responseType: 'blob'
       });
       
@@ -1610,207 +1618,167 @@ const AssignmentsManagement = () => {
 const ContractsManagement = () => {
   const [unassignedContracts, setUnassignedContracts] = useState([]);
   const [availableAssignments, setAvailableAssignments] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [dataProtectionCleanup, setDataProtectionCleanup] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
-  const loadUnassignedContracts = async () => {
-    try {
-      const response = await api.get('/api/contracts/unassigned');
-      setUnassignedContracts(response.data);
-    } catch (error) {
-      console.error('Failed to load unassigned contracts:', error);
-    }
-  };
-
-  const loadAvailableAssignments = async () => {
-    try {
-      const response = await api.get('/api/assignments/available-for-contracts');
-      setAvailableAssignments(response.data);
-    } catch (error) {
-      console.error('Failed to load available assignments:', error);
-    }
-  };
-
-  useEffect(() => {
-    loadUnassignedContracts();
-    loadAvailableAssignments();
-  }, []);
-
-  const handleMultipleUpload = async (files) => {
-    if (!files || files.length === 0) return;
-    
-    const formData = new FormData();
-    Array.from(files).forEach(file => {
-      formData.append('files', file);
-    });
-
+  const loadData = async () => {
     setLoading(true);
     try {
-      const response = await api.post('/api/contracts/upload-multiple', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      toast.success(response.data.message);
-      
-      // Show detailed results
-      response.data.results.forEach(result => {
-        if (result.status === 'assigned') {
-          toast.success(`${result.filename}: ${result.message}`);
-        } else if (result.status === 'unassigned') {
-          toast.info(`${result.filename}: ${result.message}`);
-        } else if (result.status === 'error') {
-          toast.error(`${result.filename}: ${result.message}`);
-        }
-      });
-      
-      await loadUnassignedContracts();
-      await loadAvailableAssignments();
+      const [contractsRes, assignmentsRes] = await Promise.all([
+        api.get('/contracts/unassigned'),
+        api.get('/assignments/available-for-contracts')
+      ]);
+      setUnassignedContracts(contractsRes.data);
+      setAvailableAssignments(assignmentsRes.data);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Contract upload failed');
+      toast.error('Fehler beim Laden der Vertragsdaten');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAssignContract = async (contractId, assignmentId) => {
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleMultipleUpload = async (files) => {
+    if (files.length === 0) return;
+    
+    // Limit to 50 files as specified in requirements
+    if (files.length > 50) {
+      toast.error('Maximal 50 Dateien können gleichzeitig hochgeladen werden');
+      return;
+    }
+
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
+    
+    setUploading(true);
     try {
-      await api.post(`/api/contracts/${contractId}/assign/${assignmentId}`);
-      toast.success('Vertrag erfolgreich zugeordnet');
-      await loadUnassignedContracts();
-      await loadAvailableAssignments();
+      const response = await api.post('/contracts/upload-multiple', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      toast.success(response.data.message);
+      if (response.data.details && response.data.details.length > 0) {
+        response.data.details.forEach(detail => {
+          toast.info(detail);
+        });
+      }
+      
+      await loadData();
     } catch (error) {
-      toast.error('Fehler bei der Zuordnung des Vertrags');
+      toast.error(error.response?.data?.detail || 'Fehler beim Upload der Verträge');
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleViewContract = async (contract) => {
+  const handleAssignContract = async (contractId, assignmentId) => {
     try {
-      const response = await api.get(`/api/contracts/${contract.id}/download`, {
+      await api.post(`/contracts/${contractId}/assign/${assignmentId}`);
+      toast.success('Vertrag erfolgreich zugeordnet');
+      await loadData();
+    } catch (error) {
+      toast.error('Fehler bei der Zuordnung');
+    }
+  };
+
+  const handleDownloadContract = async (contract) => {
+    try {
+      const response = await api.get(`/contracts/${contract.id}/download`, {
         responseType: 'blob'
       });
-      
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.download = contract.filename;
+      link.setAttribute('download', contract.filename);
       document.body.appendChild(link);
       link.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(link);
-      
-      toast.success('Vertrag heruntergeladen');
     } catch (error) {
-      toast.error('Fehler beim Herunterladen des Vertrags');
+      toast.error('Fehler beim Download');
     }
   };
 
   const handleDeleteContract = async (contract) => {
     // Double-click protection
     const now = Date.now();
-    if (!contract._lastDeleteClick || (now - contract._lastDeleteClick) > 2000) {
+    if (!contract._lastDeleteClick || (now - contract._lastDeleteClick) > 3000) {
       contract._lastDeleteClick = now;
-      toast.info(`Vertrag ${contract.filename} löschen? Klicken Sie nochmal in 2 Sekunden um zu bestätigen.`);
+      toast.info(`Vertrag ${contract.filename} löschen? Klicken Sie nochmal in 3 Sekunden um zu bestätigen.`);
       return;
     }
 
     try {
-      await api.delete(`/api/contracts/${contract.id}`);
+      await api.delete(`/contracts/${contract.id}`);
       toast.success('Vertrag erfolgreich gelöscht');
-      await loadUnassignedContracts();
+      await loadData();
     } catch (error) {
       toast.error('Fehler beim Löschen des Vertrags');
     }
   };
 
-  const handleDataProtectionCleanup = async () => {
-    console.log('🛡️ Data Protection Cleanup called');
-    
-    // Double-click protection
-    const now = Date.now();
-    if (!window._lastDataProtectionClick || (now - window._lastDataProtectionClick) > 2000) {
-      window._lastDataProtectionClick = now;
-      toast.info('DATENSCHUTZ: Alle Daten älter als 5 Jahre löschen? Klicken Sie nochmal in 2 Sekunden um zu bestätigen.');
-      return;
-    }
-
-    try {
-      setDataProtectionCleanup(true);
-      toast.info('Führe Datenschutz-Bereinigung durch...');
-      
-      const response = await api.post('/api/data-protection/cleanup-old-data');
-      
-      toast.success(`Datenschutz-Bereinigung abgeschlossen: ${response.data.deleted_students} Schüler und ${response.data.deleted_contracts} Verträge gelöscht`);
-      
-      // Reload data
-      await loadUnassignedContracts();
-      await loadAvailableAssignments();
-      
-    } catch (error) {
-      console.error('Data protection cleanup error:', error);
-      toast.error('Fehler bei der Datenschutz-Bereinigung');
-    } finally {
-      setDataProtectionCleanup(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Multiple Upload */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            Mehrere Verträge hochladen
+            Verträge hochladen
           </CardTitle>
           <CardDescription>
-            PDF-Verträge gleichzeitig hochladen. Verträge mit Feldern werden automatisch zugeordnet, andere als unzugewiesen markiert.
+            PDF-Verträge hochladen (bis zu 50 Dateien gleichzeitig)
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
             <Input
               type="file"
               accept=".pdf"
               multiple
-              onChange={(e) => handleMultipleUpload(e.target.files)}
+              onChange={(e) => handleMultipleUpload(Array.from(e.target.files))}
               className="mb-4"
-              disabled={loading}
+              disabled={uploading}
             />
-            {loading && (
-              <div className="text-sm text-gray-600 mb-4">
+            {uploading && (
+              <div className="text-sm text-gray-600">
                 Verträge werden hochgeladen und verarbeitet...
               </div>
             )}
+            
+            {/* Upload Guidelines */}
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg text-left">
+              <h4 className="font-medium text-blue-800 mb-2">Upload-Hinweise:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• PDF-Verträge mit Formularfeldern werden automatisch zugeordnet</li>
+                <li>• Verträge ohne Felder werden als "unzugewiesen" markiert</li>
+                <li>• Maximale Upload-Anzahl: 50 Dateien gleichzeitig</li>
+                <li>• Erwartete Felder: ITNr, SuSVorn, SuSNachn</li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Upload Guidelines */}
-      <Alert>
-        <AlertDescription>
-          <strong>Hinweise zum Upload:</strong>
-          <ul className="list-disc list-inside mt-2 space-y-1">
-            <li>Verträge mit ITNr, SuSVorn und SuSNachn werden automatisch zugeordnet</li>
-            <li>Verträge ohne diese Felder werden als unzugewiesen markiert</li>
-            <li>Unzugewiesene Verträge können manuell über die Dropdown-Liste zugeordnet werden</li>
-            <li>Maximal 50 Dateien gleichzeitig hochladbar</li>
-          </ul>
-        </AlertDescription>
-      </Alert>
-
-      {/* Unassigned Contracts */}
-      {unassignedContracts.length > 0 && (
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Unzugewiesene Verträge ({unassignedContracts.length})
-            </CardTitle>
-            <CardDescription>
-              Verträge ohne automatische Zuordnung - manuelle Zuweisung erforderlich
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Unzugewiesene Verträge ({unassignedContracts.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">Lade Verträge...</div>
+          ) : unassignedContracts.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Keine unzugewiesenen Verträge vorhanden.
+            </div>
+          ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -1818,23 +1786,26 @@ const ContractsManagement = () => {
                     <TableHead>Dateiname</TableHead>
                     <TableHead>Hochgeladen am</TableHead>
                     <TableHead>Zuordnung</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {unassignedContracts.map((contract) => (
-                    <TableRow key={contract.id}>
+                    <TableRow key={contract.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">{contract.filename}</TableCell>
-                      <TableCell>{new Date(contract.uploaded_at).toLocaleDateString('de-DE')}</TableCell>
                       <TableCell>
-                        <Select onValueChange={(assignmentId) => handleAssignContract(contract.id, assignmentId)}>
-                          <SelectTrigger className="w-[300px]">
-                            <SelectValue placeholder="iPad und Schüler auswählen..." />
+                        {new Date(contract.uploaded_at).toLocaleDateString('de-DE')}
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          onValueChange={(assignmentId) => handleAssignContract(contract.id, assignmentId)}
+                        >
+                          <SelectTrigger className="w-64">
+                            <SelectValue placeholder="Zuordnung auswählen..." />
                           </SelectTrigger>
                           <SelectContent>
                             {availableAssignments.map((assignment) => (
-                              <SelectItem key={assignment.assignment_id} value={assignment.assignment_id}>
+                              <SelectItem key={assignment.id} value={assignment.id}>
                                 {assignment.itnr} → {assignment.student_name}
                               </SelectItem>
                             ))}
@@ -1842,17 +1813,15 @@ const ContractsManagement = () => {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-orange-100 text-orange-800">Unzugewiesen</Badge>
-                      </TableCell>
-                      <TableCell>
                         <div className="flex gap-2">
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleViewContract(contract)}
-                            title="Vertrag anzeigen/herunterladen"
+                            onClick={() => handleDownloadContract(contract)}
+                            title="Vertrag herunterladen"
+                            className="hover:bg-green-50"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Download className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="outline" 
@@ -1870,101 +1839,144 @@ const ContractsManagement = () => {
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
-      {/* Data Protection Section */}
-      <Card className="shadow-lg border-red-200 bg-red-50">
+// Settings Component
+const Settings = () => {
+  const [cleaning, setCleaning] = useState(false);
+
+  const handleDataProtectionCleanup = async () => {
+    // Double-click protection
+    const now = Date.now();
+    if (!window._lastCleanupClick || (now - window._lastCleanupClick) > 3000) {
+      window._lastCleanupClick = now;
+      toast.info('Datenschutz-Bereinigung starten? WARNUNG: Alle Schüler- und Vertragsdaten älter als 5 Jahre werden gelöscht! Klicken Sie nochmal in 3 Sekunden um zu bestätigen.');
+      return;
+    }
+
+    setCleaning(true);
+    try {
+      const response = await api.post('/data-protection/cleanup-old-data');
+      toast.success(response.data.message);
+      if (response.data.details) {
+        response.data.details.forEach(detail => {
+          toast.info(detail);
+        });
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Fehler bei der Datenschutz-Bereinigung');
+    } finally {
+      setCleaning(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-700">
+          <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Datenschutz-Verwaltung
+            Datenschutz-Einstellungen
           </CardTitle>
-          <CardDescription className="text-red-600">
-            Automatische Bereinigung alter Daten gemäß Datenschutzbestimmungen
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="bg-white p-4 rounded-lg">
-            <div className="mb-4">
-              <h4 className="font-medium text-gray-900 mb-2">Automatische Datenlöschung</h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Löscht automatisch alle Schüler- und Vertragsdaten, die älter als 5 Jahre sind. 
-                Aktive Zuordnungen bleiben erhalten.
+          <div className="space-y-4">
+            <div className="border-l-4 border-blue-400 bg-blue-50 p-4 rounded">
+              <h4 className="font-medium text-blue-800 mb-2">Automatisches Daten-Cleanup</h4>
+              <p className="text-sm text-blue-700 mb-4">
+                Löscht automatisch alle Schüler- und Vertragsdaten, die älter als 5 Jahre sind, 
+                um DSGVO-Compliance sicherzustellen.
               </p>
+              <Button 
+                onClick={handleDataProtectionCleanup}
+                disabled={cleaning}
+                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                {cleaning ? 'Bereinigung läuft...' : 'Datenschutz-Bereinigung starten'}
+              </Button>
             </div>
             
-            <Button 
-              onClick={handleDataProtectionCleanup}
-              disabled={dataProtectionCleanup}
-              variant="destructive"
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
-            >
-              <Shield className="h-4 w-4 mr-2" />
-              {dataProtectionCleanup ? 'Bereinigung läuft...' : 'Datenschutz-Bereinigung starten'}
-            </Button>
-            
-            <div className="mt-3 text-xs text-gray-500">
-              ⚠️ Doppelklick erforderlich - Klicken Sie zweimal innerhalb von 2 Sekunden zur Bestätigung
+            <div className="border-l-4 border-gray-400 bg-gray-50 p-4 rounded">
+              <h4 className="font-medium text-gray-800 mb-2">System-Information</h4>
+              <div className="text-sm text-gray-700 space-y-1">
+                <div>Version: 1.0.0</div>
+                <div>Datenbank: iPadDatabase</div>
+                <div>Umgebung: Produktion</div>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-
     </div>
   );
 };
 
 // Main Dashboard Component
 const Dashboard = ({ onLogout }) => {
-  const [activeTab, setActiveTab] = useState('ipads');
+  const [activeTab, setActiveTab] = useState('students');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <header className="bg-white shadow-lg border-b">
+    <div className="min-h-screen bg-gray-50">
+      <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">iPad Verwaltungssystem</h1>
-              <p className="text-gray-600">Verwalten Sie iPads, Schüler und Zuordnungen</p>
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 flex items-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                  <Tablet className="h-5 w-5 text-white" />
+                </div>
+                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  iPad-Verwaltung
+                </span>
+              </div>
             </div>
-            <Button variant="outline" onClick={onLogout} className="flex items-center gap-2">
-              <LogOut className="h-4 w-4" />
-              Abmelden
-            </Button>
+            <div className="flex items-center">
+              <Button variant="outline" onClick={onLogout} className="flex items-center gap-2">
+                <LogOut className="h-4 w-4" />
+                Abmelden
+              </Button>
+            </div>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white shadow-lg rounded-lg p-1">
-            <TabsTrigger value="ipads" className="flex items-center gap-2">
-              <Tablet className="h-4 w-4" />
-              iPads
-            </TabsTrigger>
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="students" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Schüler
+            </TabsTrigger>
+            <TabsTrigger value="ipads" className="flex items-center gap-2">
+              <Tablet className="h-4 w-4" />
+              iPads
             </TabsTrigger>
             <TabsTrigger value="assignments" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Zuordnungen
             </TabsTrigger>
             <TabsTrigger value="contracts" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
+              <FileText className="h-4 w-4" />
               Verträge
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Einstellungen
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="ipads">
-            <IPadsManagement />
-          </TabsContent>
-
           <TabsContent value="students">
             <StudentsManagement />
+          </TabsContent>
+
+          <TabsContent value="ipads">
+            <IPadsManagement />
           </TabsContent>
 
           <TabsContent value="assignments">
@@ -1974,8 +1986,12 @@ const Dashboard = ({ onLogout }) => {
           <TabsContent value="contracts">
             <ContractsManagement />
           </TabsContent>
+
+          <TabsContent value="settings">
+            <Settings />
+          </TabsContent>
         </Tabs>
-      </main>
+      </div>
     </div>
   );
 };
@@ -2004,8 +2020,11 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="text-lg">Lade...</div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-teal-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Lade Anwendung...</p>
+        </div>
       </div>
     );
   }
@@ -2013,12 +2032,20 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <Toaster position="top-right" />
-        {isAuthenticated ? (
-          <Dashboard onLogout={handleLogout} />
-        ) : (
-          <Login onLogin={handleLogin} />
-        )}
+        <Toaster richColors position="top-right" />
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              isAuthenticated ? (
+                <Dashboard onLogout={handleLogout} />
+              ) : (
+                <Login onLogin={handleLogin} />
+              )
+            } 
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </div>
     </Router>
   );
