@@ -182,7 +182,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Contract validation formula update"
+    - "Student detail view API endpoint"
+    - "Student cascading delete API endpoint"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -192,3 +193,5 @@ agent_communication:
     - message: "Implementing new contract validation formula: warning appears when (NutzungEinhaltung == NutzungKenntnisnahme) OR (ausgabeNeu == ausgabeGebraucht)"
     - agent: "testing"
     - message: "✅ CONTRACT VALIDATION TESTING COMPLETE - All validation scenarios working perfectly! The new formula correctly identifies contracts that should show warnings. Tested 5 existing contracts and all validation logic is accurate. The /api/assignments endpoint properly returns contract_warning=true for contracts where checkboxes match the warning criteria. Core functionality is working as requested. Minor: Warning dismissal needs database field initialization but this doesn't affect the main validation logic."
+    - agent: "testing"
+    - message: "✅ STUDENT MANAGEMENT TESTING COMPLETE - Both student detail view and cascading delete endpoints are working correctly. Fixed JSON serialization issue in detail view endpoint. Student detail view returns comprehensive data including personal info, assignments, and contracts. Cascading delete properly dissolves assignments, frees iPads, and removes all related data. All core functionality tested and verified working."
