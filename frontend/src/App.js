@@ -1017,14 +1017,15 @@ const AssignmentsManagement = () => {
               {exporting ? 'Exportiere...' : 'Alle Zuordnungen exportieren'}
             </Button>
             
-            {filteredAssignments.length > 0 && filteredAssignments.length < assignments.length && (
+            {filteredAssignments.length > 0 && (vornameFilter || nachnameFilter || klasseFilter) && (
               <Button 
                 onClick={handleBatchDissolve}
+                disabled={dissolving}
                 variant="destructive"
-                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Gefilterte Zuordnungen auflösen ({filteredAssignments.length})
+                {dissolving ? 'Löse auf...' : `Gefilterte Zuordnungen auflösen (${filteredAssignments.length})`}
               </Button>
             )}
           </div>
