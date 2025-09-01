@@ -173,16 +173,171 @@ const FileUpload = ({ onUpload, acceptedTypes, title, description }) => {
   );
 };
 
+// iPad Detail Component
+const IPadDetail = ({ ipadId, onClose }) => {
+  const [ipadHistory, setIPadHistory] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadIPadHistory = async () => {
+      try {
+        const response = await api.get(`/api/ipads/${ipadId}/history`);
+        setIPadHistory(response.data);
+      } catch (error) {
+        toast.error('Fehler beim Laden der iPad-Historie');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (ipadId) {
+      loadIPadHistory();
+    }
+  }, [ipadId]);
+
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-2">Lade iPad-Historie...</p>
+      </div>
+    );
+  }
+
+  if (!ipadHistory) return null;
+
+  const { ipad, assignments, contracts } = ipadHistory;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">iPad Details: {ipad.itnr}</h2>
+        <Button variant="outline" onClick={onClose}>
+          Zurück zur Übersicht
+        </Button>
+      </div>
+
+      {/* iPad Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>iPad Informationen</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div><strong>ITNr:</strong> {ipad.itnr}</div>
+            <div><strong>SNr:</strong> {ipad.snr || 'N/A'}</div>
+            <div><strong>Typ:</strong> {ipad.typ || 'N/A'}</div>
+            <div><strong>Anschaffungsjahr:</strong> {ipad.ansch_jahr || 'N/A'}</div>
+            <div><strong>Pencil:</strong> {ipad.pencil || 'N/A'}</div>
+            <div><strong>Karton:</strong> {ipad.karton || 'N/A'}</div>
+            <div><strong>Status:</strong> 
+              <Badge className={`ml-2 ${
+                ipad.status === 'verfügbar' ? 'bg-green-100 text-green-800' :
+                ipad.status === 'zugewiesen' ? 'bg-blue-100 text-blue-800' :
+                ipad.status === 'defekt' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {ipad.status}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Assignment History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Zuordnungshistorie ({assignments.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {assignments.length === 0 ? (
+            <p className="text-gray-500">Keine Zuordnungen vorhanden</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Schüler</TableHead>
+                  <TableHead>Zugewiesen am</TableHead>
+                  <TableHead>Aufgelöst am</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assignments.map((assignment) => (
+                  <TableRow key={assignment.id}>
+                    <TableCell>{assignment.student_name}</TableCell>
+                    <TableCell>{new Date(assignment.assigned_at).toLocaleDateString('de-DE')}</TableCell>
+                    <TableCell>
+                      {assignment.unassigned_at 
+                        ? new Date(assignment.unassigned_at).toLocaleDateString('de-DE')
+                        : '-'
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={assignment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                        {assignment.is_active ? 'Aktiv' : 'Aufgelöst'}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Contract History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Vertragshistorie ({contracts.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {contracts.length === 0 ? (
+            <p className="text-gray-500">Keine Verträge vorhanden</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Dateiname</TableHead>
+                  <TableHead>Schüler</TableHead>
+                  <TableHead>Hochgeladen am</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contracts.map((contract) => (
+                  <TableRow key={contract.id}>
+                    <TableCell>{contract.filename}</TableCell>
+                    <TableCell>{contract.student_name || 'Unzugewiesen'}</TableCell>
+                    <TableCell>{new Date(contract.uploaded_at).toLocaleDateString('de-DE')}</TableCell>
+                    <TableCell>
+                      <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                        {contract.is_active ? 'Aktiv' : 'Historisch'}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // iPads Management Component
 const IPadsManagement = () => {
   const [ipads, setIPads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIPadId, setSelectedIPadId] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('Alle');
 
   const loadIPads = async () => {
     setLoading(true);
     try {
       const response = await api.get('/api/ipads');
-      console.log('iPads API response:', response.data); // Debug log
+      console.log('iPads API response:', response.data);
       setIPads(response.data || []);
     } catch (error) {
       console.error('Failed to load iPads:', error);
@@ -206,10 +361,20 @@ const IPadsManagement = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(response.data.message);
-      await loadIPads(); // Reload iPads after upload
+      await loadIPads();
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(error.response?.data?.detail || 'Upload fehlgeschlagen');
+    }
+  };
+
+  const handleStatusChange = async (ipadId, newStatus) => {
+    try {
+      await api.put(`/api/ipads/${ipadId}/status?status=${newStatus}`);
+      toast.success(`iPad Status auf "${newStatus}" geändert`);
+      await loadIPads();
+    } catch (error) {
+      toast.error('Fehler beim Ändern des Status');
     }
   };
 
@@ -228,6 +393,14 @@ const IPadsManagement = () => {
     return acc;
   }, {});
 
+  const filteredIPads = statusFilter === 'Alle' 
+    ? ipads 
+    : ipads.filter(ipad => ipad.status === statusFilter.toLowerCase());
+
+  if (selectedIPadId) {
+    return <IPadDetail ipadId={selectedIPadId} onClose={() => setSelectedIPadId(null)} />;
+  }
+
   return (
     <div className="space-y-6">
       <FileUpload
@@ -241,7 +414,7 @@ const IPadsManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Tablet className="h-5 w-5" />
-            iPads Übersicht ({ipads.length})
+            iPads Übersicht ({filteredIPads.length})
           </CardTitle>
           <CardDescription>
             {loading ? 'Lade Daten...' : `${ipads.length} iPads in der Datenbank`}
@@ -249,24 +422,42 @@ const IPadsManagement = () => {
         </CardHeader>
         <CardContent>
           {!loading && ipads.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-green-50 p-3 rounded-lg">
-                <div className="text-sm font-medium text-green-800">Verfügbar</div>
-                <div className="text-2xl font-bold text-green-600">{statusCounts.verfügbar || 0}</div>
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-green-50 p-3 rounded-lg">
+                  <div className="text-sm font-medium text-green-800">Verfügbar</div>
+                  <div className="text-2xl font-bold text-green-600">{statusCounts.verfügbar || 0}</div>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <div className="text-sm font-medium text-blue-800">Zugewiesen</div>
+                  <div className="text-2xl font-bold text-blue-600">{statusCounts.zugewiesen || 0}</div>
+                </div>
+                <div className="bg-red-50 p-3 rounded-lg">
+                  <div className="text-sm font-medium text-red-800">Defekt</div>
+                  <div className="text-2xl font-bold text-red-600">{statusCounts.defekt || 0}</div>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="text-sm font-medium text-gray-800">Gestohlen</div>
+                  <div className="text-2xl font-bold text-gray-600">{statusCounts.gestohlen || 0}</div>
+                </div>
               </div>
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <div className="text-sm font-medium text-blue-800">Zugewiesen</div>
-                <div className="text-2xl font-bold text-blue-600">{statusCounts.zugewiesen || 0}</div>
+              
+              <div className="mb-4">
+                <Label htmlFor="status-filter">Filter nach Status:</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[200px] mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Alle">Alle</SelectItem>
+                    <SelectItem value="Verfügbar">Verfügbar</SelectItem>
+                    <SelectItem value="Zugewiesen">Zugewiesen</SelectItem>
+                    <SelectItem value="Defekt">Defekt</SelectItem>
+                    <SelectItem value="Gestohlen">Gestohlen</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="bg-red-50 p-3 rounded-lg">
-                <div className="text-sm font-medium text-red-800">Defekt</div>
-                <div className="text-2xl font-bold text-red-600">{statusCounts.defekt || 0}</div>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-sm font-medium text-gray-800">Gestohlen</div>
-                <div className="text-2xl font-bold text-gray-600">{statusCounts.gestohlen || 0}</div>
-              </div>
-            </div>
+            </>
           )}
           
           {loading ? (
@@ -292,18 +483,44 @@ const IPadsManagement = () => {
                     <TableHead>Status</TableHead>
                     <TableHead>Pencil</TableHead>
                     <TableHead>Karton</TableHead>
+                    <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ipads.map((ipad) => (
+                  {filteredIPads.map((ipad) => (
                     <TableRow key={ipad.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">{ipad.itnr || 'N/A'}</TableCell>
                       <TableCell>{ipad.snr || 'N/A'}</TableCell>
                       <TableCell>{ipad.typ || 'N/A'}</TableCell>
                       <TableCell>{ipad.ansch_jahr || 'N/A'}</TableCell>
-                      <TableCell>{getStatusBadge(ipad.status)}</TableCell>
+                      <TableCell>
+                        <Select 
+                          value={ipad.status} 
+                          onValueChange={(newStatus) => handleStatusChange(ipad.id, newStatus)}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="verfügbar">Verfügbar</SelectItem>
+                            <SelectItem value="zugewiesen">Zugewiesen</SelectItem>
+                            <SelectItem value="defekt">Defekt</SelectItem>
+                            <SelectItem value="gestohlen">Gestohlen</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
                       <TableCell>{ipad.pencil || 'N/A'}</TableCell>
                       <TableCell>{ipad.karton || 'N/A'}</TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedIPadId(ipad.id)}
+                          title="Details und Historie anzeigen"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
