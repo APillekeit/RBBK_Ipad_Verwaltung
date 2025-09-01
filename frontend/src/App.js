@@ -1314,6 +1314,77 @@ const ContractsManagement = () => {
     }
   };
 
+  const handleViewContract = async (contract) => {
+    try {
+      const response = await api.get(`/api/contracts/${contract.id}/download`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = contract.filename;
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      toast.success('Vertrag heruntergeladen');
+    } catch (error) {
+      toast.error('Fehler beim Herunterladen des Vertrags');
+    }
+  };
+
+  const handleDeleteContract = async (contract) => {
+    // Double-click protection
+    const now = Date.now();
+    if (!contract._lastDeleteClick || (now - contract._lastDeleteClick) > 2000) {
+      contract._lastDeleteClick = now;
+      toast.info(`Vertrag ${contract.filename} löschen? Klicken Sie nochmal in 2 Sekunden um zu bestätigen.`);
+      return;
+    }
+
+    try {
+      await api.delete(`/api/contracts/${contract.id}`);
+      toast.success('Vertrag erfolgreich gelöscht');
+      await loadUnassignedContracts();
+    } catch (error) {
+      toast.error('Fehler beim Löschen des Vertrags');
+    }
+  };
+
+  const handleDataProtectionCleanup = async () => {
+    console.log('🛡️ Data Protection Cleanup called');
+    
+    // Double-click protection
+    const now = Date.now();
+    if (!window._lastDataProtectionClick || (now - window._lastDataProtectionClick) > 2000) {
+      window._lastDataProtectionClick = now;
+      toast.info('DATENSCHUTZ: Alle Daten älter als 5 Jahre löschen? Klicken Sie nochmal in 2 Sekunden um zu bestätigen.');
+      return;
+    }
+
+    try {
+      setDataProtectionCleanup(true);
+      toast.info('Führe Datenschutz-Bereinigung durch...');
+      
+      const response = await api.post('/api/data-protection/cleanup-old-data');
+      
+      toast.success(`Datenschutz-Bereinigung abgeschlossen: ${response.data.deleted_students} Schüler und ${response.data.deleted_contracts} Verträge gelöscht`);
+      
+      // Reload data
+      await loadUnassignedContracts();
+      await loadAvailableAssignments();
+      
+    } catch (error) {
+      console.error('Data protection cleanup error:', error);
+      toast.error('Fehler bei der Datenschutz-Bereinigung');
+    } finally {
+      setDataProtectionCleanup(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Multiple Upload */}
