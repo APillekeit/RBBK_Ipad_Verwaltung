@@ -1,0 +1,23 @@
+# Development Override für Docker Compose
+# Verwendung: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  backend:
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=true
+    command: uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+
+  mongodb:
+    ports:
+      - "27017:27017"
+    command: mongod  # Ohne --auth für Entwicklung
+
+  nginx:
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+    ports:
+      - "3000:80"  # Anderer Port für Entwicklung
