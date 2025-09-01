@@ -198,8 +198,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Student detail view API endpoint"
-    - "Student cascading delete API endpoint"
+    - "Fix iPad status consistency issue"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
