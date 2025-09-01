@@ -850,7 +850,10 @@ const AssignmentsManagement = () => {
       return;
     }
 
-    if (window.confirm(`Möchten Sie alle ${filteredAssignments.length} gefilterten Zuordnungen wirklich auflösen?`)) {
+    const confirmMessage = `Möchten Sie alle ${filteredAssignments.length} gefilterten Zuordnungen wirklich auflösen?\n\nDies wird folgende Zuordnungen betreffen:\n${filteredAssignments.map(a => `• ${a.itnr} → ${a.student_name}`).join('\n')}`;
+    
+    if (window.confirm(confirmMessage)) {
+      setDissolving(true);
       try {
         const promises = filteredAssignments.map(assignment => 
           api.delete(`/api/assignments/${assignment.id}`)
@@ -862,7 +865,17 @@ const AssignmentsManagement = () => {
       } catch (error) {
         toast.error('Fehler beim Batch-Auflösen der Zuordnungen');
         console.error('Batch dissolution error:', error);
+      } finally {
+        setDissolving(false);
       }
+    }
+  };
+
+  const handleViewContract = (assignment) => {
+    if (assignment.contract_id) {
+      setSelectedContractId(assignment.contract_id);
+    } else {
+      toast.info(`Kein Vertrag für iPad ${assignment.itnr} vorhanden`);
     }
   };
 
