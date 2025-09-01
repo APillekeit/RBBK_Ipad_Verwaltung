@@ -992,6 +992,25 @@ const AssignmentsManagement = () => {
     }
   };
 
+  const handleDismissWarning = async (assignment) => {
+    // Double-click protection for warning dismissal
+    const now = Date.now();
+    if (!assignment._lastWarningClick || (now - assignment._lastWarningClick) > 2000) {
+      assignment._lastWarningClick = now;
+      toast.info(`Vertragswarnung für ${assignment.student_name} entfernen? Klicken Sie nochmal in 2 Sekunden um zu bestätigen.`);
+      return;
+    }
+
+    try {
+      await api.post(`/api/assignments/${assignment.id}/dismiss-warning`);
+      toast.success('Vertragswarnung entfernt');
+      await loadAllData();
+    } catch (error) {
+      toast.error('Fehler beim Entfernen der Warnung');
+      console.error('Warning dismissal error:', error);
+    }
+  };
+
   const handleExport = async () => {
     setExporting(true);
     try {
