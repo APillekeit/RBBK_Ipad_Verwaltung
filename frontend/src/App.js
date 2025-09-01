@@ -925,34 +925,51 @@ const AssignmentsManagement = () => {
   };
 
   const handleBatchDissolve = async () => {
-    console.log('Filtered assignments for batch dissolve:', filteredAssignments); // Debug log
+    console.log('=== BATCH DISSOLVE START ===');
+    console.log('Filtered assignments for batch dissolve:', filteredAssignments);
+    console.log('Number of filtered assignments:', filteredAssignments.length);
     
     if (filteredAssignments.length === 0) {
+      console.log('No filtered assignments found');
       toast.error('Keine gefilterten Zuordnungen zum Auflösen vorhanden');
       return;
     }
 
-    const confirmMessage = `Möchten Sie alle ${filteredAssignments.length} gefilterten Zuordnungen wirklich auflösen?\n\nDies wird folgende Zuordnungen betreffen:\n${filteredAssignments.map(a => `• ${a.itnr} → ${a.student_name}`).join('\n')}`;
+    const assignmentsList = filteredAssignments.map(a => `• ${a.itnr} → ${a.student_name}`).join('\n');
+    const confirmMessage = `Möchten Sie alle ${filteredAssignments.length} gefilterten Zuordnungen wirklich auflösen?\n\nDies wird folgende Zuordnungen betreffen:\n${assignmentsList}`;
     
-    if (window.confirm(confirmMessage)) {
+    console.log('Showing confirmation dialog for batch dissolve...');
+    console.log('Assignments to dissolve:', assignmentsList);
+    
+    const confirmed = window.confirm(confirmMessage);
+    console.log('User confirmation result:', confirmed);
+    
+    if (confirmed) {
       setDissolving(true);
+      console.log('Starting batch dissolution process...');
+      
       try {
-        console.log('Starting batch dissolution...'); // Debug log
-        
-        // Process assignments one by one for better error handling
         let successCount = 0;
         let errorCount = 0;
         
-        for (const assignment of filteredAssignments) {
+        for (let i = 0; i < filteredAssignments.length; i++) {
+          const assignment = filteredAssignments[i];
+          console.log(`Processing assignment ${i + 1}/${filteredAssignments.length}:`, assignment);
+          
           try {
-            console.log(`Dissolving assignment ${assignment.id}...`); // Debug log
-            await api.delete(`/api/assignments/${assignment.id}`);
+            console.log(`Making DELETE request for assignment ID: ${assignment.id}`);
+            const response = await api.delete(`/api/assignments/${assignment.id}`);
+            console.log(`DELETE response for ${assignment.id}:`, response.status, response.data);
             successCount++;
+            console.log(`✅ Successfully dissolved assignment ${assignment.id} (${assignment.student_name})`);
           } catch (error) {
-            console.error(`Error dissolving assignment ${assignment.id}:`, error);
+            console.error(`❌ Error dissolving assignment ${assignment.id}:`, error);
+            console.error('Error details:', error.response?.data);
             errorCount++;
           }
         }
+        
+        console.log(`Batch dissolution completed: ${successCount} success, ${errorCount} errors`);
         
         if (successCount > 0) {
           toast.success(`${successCount} Zuordnungen erfolgreich aufgelöst`);
@@ -961,14 +978,23 @@ const AssignmentsManagement = () => {
           toast.error(`${errorCount} Zuordnungen konnten nicht aufgelöst werden`);
         }
         
+        console.log('Reloading all data after batch dissolution...');
         await loadAllData();
+        console.log('Data reload after batch dissolution completed');
+        
       } catch (error) {
+        console.error('=== BATCH DISSOLUTION OUTER ERROR ===');
+        console.error('Error:', error);
         toast.error('Fehler beim Batch-Auflösen der Zuordnungen');
-        console.error('Batch dissolution error:', error);
       } finally {
         setDissolving(false);
+        console.log('Batch dissolution process finished');
       }
+    } else {
+      console.log('User cancelled batch dissolution');
     }
+    
+    console.log('=== BATCH DISSOLVE END ===');
   };
 
   const handleViewContract = (assignment) => {
