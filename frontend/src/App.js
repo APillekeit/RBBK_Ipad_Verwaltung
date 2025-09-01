@@ -897,12 +897,18 @@ const AssignmentsManagement = () => {
   };
 
   const handleDissolveAssignment = async (assignment) => {
-    console.log('=== DISSOLVE ASSIGNMENT START ===');
-    console.log('Assignment to dissolve:', assignment);
-    console.log('Assignment ID:', assignment.id);
-    console.log('API Base URL:', API_BASE_URL);
-    
     try {
+      console.log('=== DISSOLVE ASSIGNMENT START ===');
+      console.log('Assignment to dissolve:', assignment);
+      console.log('Assignment ID:', assignment.id);
+      console.log('API Base URL:', API_BASE_URL);
+      
+      if (!assignment || !assignment.id) {
+        console.error('❌ Invalid assignment object:', assignment);
+        toast.error('Fehler: Ungültiges Zuordnungsobjekt');
+        return;
+      }
+      
       console.log('About to show confirmation dialog...');
       const confirmResult = window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`);
       console.log('Confirm result:', confirmResult);
@@ -929,10 +935,7 @@ const AssignmentsManagement = () => {
         toast.success('Zuordnung erfolgreich aufgelöst');
         
         console.log('Starting data reload...');
-        
-        // Use the existing loadAllData function
         await loadAllData();
-        
         console.log('Data reload completed successfully');
       } else {
         throw new Error(`Unexpected status: ${response.status}`);
@@ -943,14 +946,12 @@ const AssignmentsManagement = () => {
       console.error('Error object:', error);
       console.error('Error message:', error.message);
       console.error('Error response:', error.response);
-      console.error('Error status:', error.response?.status);
-      console.error('Error data:', error.response?.data);
       
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message || 'Unbekannter Fehler';
       toast.error(`Fehler beim Auflösen der Zuordnung: ${errorMessage}`);
+    } finally {
+      console.log('=== DISSOLVE ASSIGNMENT END ===');
     }
-    
-    console.log('=== DISSOLVE ASSIGNMENT END ===');
   };
 
   const handleBatchDissolve = async () => {
