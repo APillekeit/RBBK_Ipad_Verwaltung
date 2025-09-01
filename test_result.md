@@ -106,7 +106,7 @@ user_problem_statement: "Schüler-Tab erweitern: 1) View-Aktion für Detailansic
 
 backend:
   - task: "Student detail view API endpoint"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "backend/server.py"
     stuck_count: 0
@@ -115,10 +115,10 @@ backend:
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "Need to implement GET /api/students/{student_id} endpoint"
+        - comment: "Implemented GET /api/students/{student_id} endpoint with complete student details, assignment history, and contracts"
 
   - task: "Student cascading delete API endpoint"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "backend/server.py"
     stuck_count: 0
@@ -127,7 +127,7 @@ backend:
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "Need to implement DELETE /api/students/{student_id} with cascading delete logic"
+        - comment: "Implemented DELETE /api/students/{student_id} with complete cascading delete logic (dissolve assignments, delete contracts and history)"
 
   - task: "Contract validation formula update"
     implemented: true
