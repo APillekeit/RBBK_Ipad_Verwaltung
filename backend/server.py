@@ -381,7 +381,45 @@ async def auto_assign_ipads(current_user: str = Depends(get_current_user)):
 @api_router.get("/assignments", response_model=List[Assignment])
 async def get_assignments(current_user: str = Depends(get_current_user)):
     assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
+    
+    # Add contract validation warnings
+    for assignment in assignments:
+        assignment["contract_warning"] = False
+        assignment["warning_dismissed"] = False
+        
+        if assignment.get("contract_id"):
+            contract = await db.contracts.find_one({"id": assignment["contract_id"]})
+            if contract and contract.get("form_fields"):
+                fields = contract["form_fields"]
+                
+                # Check validation: (NutzungEinhaltung ON) AND (NutzungKenntnisnahme ON) AND ((ausgabeNeu ON) XOR (ausgabeGebraucht ON))
+                nutzung_einhaltung = fields.get('NutzungEinhaltung') == '/Yes'
+                nutzung_kenntnisnahme = fields.get('NutzungKenntnisnahme') == '/Yes'
+                ausgabe_neu = fields.get('ausgabeNeu') == '/Yes'
+                ausgabe_gebraucht = fields.get('ausgabeGebraucht') == '/Yes'
+                
+                # Validation logic
+                valid = (nutzung_einhaltung and 
+                        nutzung_kenntnisnahme and 
+                        (ausgabe_neu != ausgabe_gebraucht))  # XOR: exactly one must be true
+                
+                if not valid:
+                    assignment["contract_warning"] = True
+                    assignment["warning_dismissed"] = assignment.get("warning_dismissed", False)
+    
     return [Assignment(**parse_from_mongo(assignment)) for assignment in assignments]
+
+@api_router.post("/assignments/{assignment_id}/dismiss-warning")
+async def dismiss_contract_warning(assignment_id: str, current_user: str = Depends(get_current_user)):
+    result = await db.assignments.update_one(
+        {"id": assignment_id},
+        {"$set": {"warning_dismissed": True}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    return {"message": "Warning dismissed"}
 
 # Contract endpoints
 @api_router.post("/contracts/upload-multiple")
