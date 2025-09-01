@@ -1151,12 +1151,8 @@ const AssignmentsManagement = () => {
             
             {filteredAssignments.length > 0 && filteredAssignments.length < assignments.length && (
               <Button 
-                onClick={(e) => {
-                  console.log('🔥 Batch dissolve button clicked!');
-                  console.log('Filtered assignments:', filteredAssignments);
-                  console.log('Total assignments:', assignments);
-                  e.preventDefault();
-                  e.stopPropagation();
+                onClick={() => {
+                  console.log('🔥 BATCH BUTTON CLICKED!');
                   handleBatchDissolve();
                 }}
                 disabled={dissolving}
