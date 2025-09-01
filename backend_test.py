@@ -718,6 +718,8 @@ startxref
             ("Get Students", self.test_get_students),
             ("Auto Assignment", self.test_auto_assign),
             ("Get Assignments", self.test_get_assignments),
+            ("Student Detail View", self.test_student_detail_view),
+            ("Student Cascading Delete", self.test_student_cascading_delete),
             ("Contract Validation Formula", self.test_contract_validation_formula),
         ]
         
