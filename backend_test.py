@@ -208,25 +208,281 @@ class IPadManagementTester:
             return True
         return False
 
-    def test_contract_upload_validation(self):
-        """Test contract upload validation (should fail without proper PDF)"""
-        # This test expects to fail since we don't have a proper contract PDF
-        try:
-            # Create a dummy PDF-like file for testing validation
-            dummy_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 1\n0000000000 65535 f \ntrailer\n<<\n/Size 1\n/Root 1 0 R\n>>\nstartxref\n9\n%%EOF"
-            files = {'file': ('test_contract.pdf', dummy_content, 'application/pdf')}
+    def test_contract_validation_formula(self):
+        """Test the new contract validation formula for assignments"""
+        print("\n🔍 Testing Contract Validation Formula...")
+        
+        # First, get current assignments to work with
+        success = self.run_api_test(
+            "Get Assignments for Validation Test",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if not success:
+            return self.log_result("Contract Validation Formula", False, "Could not get assignments for testing")
+        
+        assignments = self.test_results[-1]['response_data']
+        if not isinstance(assignments, list) or len(assignments) == 0:
+            return self.log_result("Contract Validation Formula", False, "No assignments found for testing")
+        
+        # Test scenarios for contract validation
+        test_scenarios = [
+            {
+                "name": "Both Nutzung ON (should trigger warning)",
+                "form_fields": {
+                    "NutzungEinhaltung": "/Yes",
+                    "NutzungKenntnisnahme": "/Yes", 
+                    "ausgabeNeu": "/Yes",
+                    "ausgabeGebraucht": "/Off",
+                    "ITNr": "TEST001",
+                    "SuSVorn": "Max",
+                    "SuSNachn": "Mustermann"
+                },
+                "should_warn": True,
+                "reason": "NutzungEinhaltung == NutzungKenntnisnahme (both ON)"
+            },
+            {
+                "name": "Both Nutzung OFF (should trigger warning)",
+                "form_fields": {
+                    "NutzungEinhaltung": "/Off",
+                    "NutzungKenntnisnahme": "/Off",
+                    "ausgabeNeu": "/Yes", 
+                    "ausgabeGebraucht": "/Off",
+                    "ITNr": "TEST002",
+                    "SuSVorn": "Anna",
+                    "SuSNachn": "Schmidt"
+                },
+                "should_warn": True,
+                "reason": "NutzungEinhaltung == NutzungKenntnisnahme (both OFF)"
+            },
+            {
+                "name": "Both Ausgabe ON (should trigger warning)",
+                "form_fields": {
+                    "NutzungEinhaltung": "/Yes",
+                    "NutzungKenntnisnahme": "/Off",
+                    "ausgabeNeu": "/Yes",
+                    "ausgabeGebraucht": "/Yes",
+                    "ITNr": "TEST003", 
+                    "SuSVorn": "Peter",
+                    "SuSNachn": "Mueller"
+                },
+                "should_warn": True,
+                "reason": "ausgabeNeu == ausgabeGebraucht (both ON)"
+            },
+            {
+                "name": "Both Ausgabe OFF (should trigger warning)",
+                "form_fields": {
+                    "NutzungEinhaltung": "/Yes",
+                    "NutzungKenntnisnahme": "/Off",
+                    "ausgabeNeu": "/Off",
+                    "ausgabeGebraucht": "/Off",
+                    "ITNr": "TEST004",
+                    "SuSVorn": "Lisa",
+                    "SuSNachn": "Weber"
+                },
+                "should_warn": True,
+                "reason": "ausgabeNeu == ausgabeGebraucht (both OFF)"
+            },
+            {
+                "name": "Different Nutzung, Different Ausgabe (should NOT trigger warning)",
+                "form_fields": {
+                    "NutzungEinhaltung": "/Yes",
+                    "NutzungKenntnisnahme": "/Off",
+                    "ausgabeNeu": "/Yes",
+                    "ausgabeGebraucht": "/Off",
+                    "ITNr": "TEST005",
+                    "SuSVorn": "Tom",
+                    "SuSNachn": "Fischer"
+                },
+                "should_warn": False,
+                "reason": "All checkboxes are different"
+            },
+            {
+                "name": "Mixed scenario - Nutzung same, Ausgabe different (should trigger warning)",
+                "form_fields": {
+                    "NutzungEinhaltung": "/Off",
+                    "NutzungKenntnisnahme": "/Off",
+                    "ausgabeNeu": "/Yes",
+                    "ausgabeGebraucht": "/Off",
+                    "ITNr": "TEST006",
+                    "SuSVorn": "Sarah",
+                    "SuSNachn": "Klein"
+                },
+                "should_warn": True,
+                "reason": "NutzungEinhaltung == NutzungKenntnisnahme (both OFF)"
+            }
+        ]
+        
+        validation_results = []
+        
+        for scenario in test_scenarios:
+            print(f"\n   🧪 Testing: {scenario['name']}")
+            print(f"      Expected: {'WARNING' if scenario['should_warn'] else 'NO WARNING'}")
+            print(f"      Reason: {scenario['reason']}")
             
-            # This should fail validation
-            success = self.run_api_test(
-                "Contract Upload (Expected Fail)",
-                "POST",
-                "contracts/upload",
-                400,  # Expecting 400 due to missing form fields
-                files=files
+            # Create a test contract with the scenario's form fields
+            contract_result = self.create_test_contract_with_fields(scenario['form_fields'])
+            
+            if contract_result:
+                # Get assignments again to check validation
+                assignments_response = self.run_api_test(
+                    f"Check Validation - {scenario['name']}",
+                    "GET", 
+                    "assignments",
+                    200
+                )
+                
+                if assignments_response:
+                    current_assignments = self.test_results[-1]['response_data']
+                    
+                    # Find assignment with contract warning
+                    warning_found = False
+                    for assignment in current_assignments:
+                        if assignment.get('contract_warning') == True:
+                            warning_found = True
+                            break
+                    
+                    # Check if result matches expectation
+                    if warning_found == scenario['should_warn']:
+                        validation_results.append(True)
+                        status = "✅ CORRECT"
+                        print(f"      Result: {status} - Warning {'found' if warning_found else 'not found'} as expected")
+                    else:
+                        validation_results.append(False)
+                        status = "❌ INCORRECT"
+                        print(f"      Result: {status} - Expected {'warning' if scenario['should_warn'] else 'no warning'}, got {'warning' if warning_found else 'no warning'}")
+                else:
+                    validation_results.append(False)
+                    print(f"      Result: ❌ FAILED - Could not retrieve assignments")
+            else:
+                validation_results.append(False)
+                print(f"      Result: ❌ FAILED - Could not create test contract")
+        
+        # Calculate overall success
+        successful_tests = sum(validation_results)
+        total_tests = len(validation_results)
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Contract Validation Formula", 
+                True, 
+                f"All {total_tests} validation scenarios passed correctly"
             )
-            return success
+        else:
+            return self.log_result(
+                "Contract Validation Formula", 
+                False, 
+                f"Only {successful_tests}/{total_tests} validation scenarios passed"
+            )
+    
+    def create_test_contract_with_fields(self, form_fields):
+        """Helper method to create a test contract with specific form fields"""
+        try:
+            # Create a minimal PDF structure with form fields
+            pdf_content = self.create_pdf_with_form_fields(form_fields)
+            
+            files = {'files': ('test_contract.pdf', pdf_content, 'application/pdf')}
+            
+            # Upload the contract
+            url = f"{self.base_url}/api/contracts/upload-multiple"
+            headers = {}
+            if self.token:
+                headers['Authorization'] = f'Bearer {self.token}'
+            
+            response = requests.post(url, files=files, headers=headers, timeout=30)
+            
+            return response.status_code in [200, 201]
+            
         except Exception as e:
-            return self.log_result("Contract Upload (Expected Fail)", False, f"Error: {str(e)}")
+            print(f"      Error creating test contract: {str(e)}")
+            return False
+    
+    def create_pdf_with_form_fields(self, form_fields):
+        """Create a simple PDF with form fields for testing"""
+        # This creates a minimal PDF structure
+        # In a real scenario, you'd use a proper PDF library
+        pdf_header = b"%PDF-1.4\n"
+        
+        # Create a simple PDF object structure
+        pdf_body = b"""1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+/AcroForm <<
+/Fields [3 0 R 4 0 R 5 0 R 6 0 R 7 0 R 8 0 R 9 0 R]
+>>
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [10 0 R]
+/Count 1
+>>
+endobj
+
+"""
+        
+        # Add form field objects
+        field_objects = b""
+        obj_num = 3
+        
+        for field_name, field_value in form_fields.items():
+            field_obj = f"""{obj_num} 0 obj
+<<
+/T ({field_name})
+/V ({field_value})
+/FT /Tx
+>>
+endobj
+
+""".encode()
+            field_objects += field_obj
+            obj_num += 1
+        
+        # Add page object
+        page_obj = f"""{obj_num} 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+>>
+endobj
+
+""".encode()
+        
+        # Create xref table
+        xref_start = len(pdf_header) + len(pdf_body) + len(field_objects) + len(page_obj)
+        
+        xref = f"""xref
+0 {obj_num + 1}
+0000000000 65535 f 
+0000000009 00000 n 
+0000000074 00000 n 
+""".encode()
+        
+        # Add xref entries for form fields and page
+        current_pos = len(pdf_header) + len(pdf_body)
+        for i in range(len(form_fields)):
+            xref += f"{current_pos:010d} 00000 n \n".encode()
+            # Estimate object size (this is approximate)
+            current_pos += 50
+        
+        xref += f"{current_pos:010d} 00000 n \n".encode()  # Page object
+        
+        trailer = f"""trailer
+<<
+/Size {obj_num + 1}
+/Root 1 0 R
+>>
+startxref
+{xref_start}
+%%EOF""".encode()
+        
+        return pdf_header + pdf_body + field_objects + page_obj + xref + trailer
 
     def run_comprehensive_test(self):
         """Run all tests in sequence"""
