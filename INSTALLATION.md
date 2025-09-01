@@ -18,7 +18,17 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-### Schritt 2: Anwendung herunterladen
+### Schritt 2: IP-Adresse konfigurieren (für Netzwerk-Zugriff)
+
+```bash
+# Für Zugriff von anderen Computern im Netzwerk
+./setup-ip.sh
+
+# Das Script erkennt automatisch Ihre IP (z.B. 192.168.99.72)
+# Oder Sie geben eine spezifische IP ein
+```
+
+### Schritt 3: System starten
 
 ```bash
 # Verzeichnis erstellen
