@@ -1092,6 +1092,14 @@ const AssignmentsManagement = () => {
           )}
         </CardContent>
       </Card>
+      
+      {/* Contract Viewer Modal */}
+      {selectedContractId && (
+        <ContractViewer 
+          contractId={selectedContractId} 
+          onClose={() => setSelectedContractId(null)} 
+        />
+      )}
     </div>
   );
 };
