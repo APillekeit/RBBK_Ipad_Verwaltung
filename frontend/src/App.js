@@ -302,6 +302,7 @@ const IPadDetail = ({ ipadId, onClose }) => {
                   <TableHead>Schüler</TableHead>
                   <TableHead>Hochgeladen am</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -314,6 +315,36 @@ const IPadDetail = ({ ipadId, onClose }) => {
                       <Badge className={contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                         {contract.is_active ? 'Aktiv' : 'Historisch'}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const response = await api.get(`/api/contracts/${contract.id}/download`, {
+                              responseType: 'blob'
+                            });
+                            
+                            const blob = new Blob([response.data], { type: 'application/pdf' });
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = contract.filename;
+                            document.body.appendChild(link);
+                            link.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(link);
+                            
+                            toast.success('Vertrag heruntergeladen');
+                          } catch (error) {
+                            toast.error('Fehler beim Herunterladen des Vertrags');
+                          }
+                        }}
+                        title="Vertrag herunterladen"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
