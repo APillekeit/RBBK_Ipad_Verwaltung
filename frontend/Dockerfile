@@ -7,10 +7,17 @@ WORKDIR /app
 # Package-Dateien kopieren
 COPY package*.json ./
 
-# Abhängigkeiten installieren (Yarn ist bereits installiert)
+# Yarn Konfiguration für bessere Netzwerk-Stabilität
+RUN yarn config set network-timeout 300000
+RUN yarn config set network-concurrency 1
+RUN yarn config set registry https://registry.npmjs.org/
+
+# Abhängigkeiten installieren mit mehreren Retry-Versuchen
 # Entferne yarn.lock falls vorhanden für sauberen Build
 RUN rm -f yarn.lock
-RUN yarn install
+RUN yarn install --network-timeout 300000 || \
+    yarn install --network-timeout 300000 || \
+    yarn install --network-timeout 300000
 
 # Build-Argument für Backend-URL
 ARG REACT_APP_BACKEND_URL
