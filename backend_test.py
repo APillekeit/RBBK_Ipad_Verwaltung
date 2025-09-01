@@ -965,6 +965,297 @@ startxref
         
         return pdf_header + pdf_body + field_objects + page_obj + xref + trailer
 
+    def test_assignment_specific_contract_upload(self):
+        """Test assignment-specific contract upload functionality"""
+        print("\n🔍 Testing Assignment-Specific Contract Upload Functionality...")
+        
+        # Step 1: Get assignments to test with
+        print("\n   📋 Step 1: Getting assignments for contract upload testing...")
+        
+        success = self.run_api_test(
+            "Get Assignments for Contract Upload Testing",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if not success:
+            return self.log_result("Assignment-Specific Contract Upload", False, "Could not get assignments for testing")
+        
+        assignments = self.test_results[-1]['response_data']
+        if not isinstance(assignments, list) or len(assignments) == 0:
+            return self.log_result("Assignment-Specific Contract Upload", False, "No assignments found for testing")
+        
+        # Find an assignment to test with
+        test_assignment = assignments[0]
+        assignment_id = test_assignment['id']
+        assignment_itnr = test_assignment['itnr']
+        student_name = test_assignment['student_name']
+        
+        print(f"   🎯 Testing with assignment: {assignment_itnr} → {student_name}")
+        
+        test_results = []
+        
+        # Step 2: Test uploading PDF with form fields that trigger validation warning
+        print(f"\n   🧪 Step 2: Testing contract upload with validation warning...")
+        
+        # Create PDF with form fields that should trigger warning
+        # (NutzungEinhaltung == NutzungKenntnisnahme) OR (ausgabeNeu == ausgabeGebraucht)
+        warning_form_fields = {
+            'NutzungEinhaltung': '/Yes',
+            'NutzungKenntnisnahme': 'Some text',  # Both have values = warning
+            'ausgabeNeu': '/No',
+            'ausgabeGebraucht': '/No',  # Both same = warning
+            'ITNr': assignment_itnr,
+            'SuSVorn': student_name.split()[0] if ' ' in student_name else student_name,
+            'SuSNachn': student_name.split()[1] if ' ' in student_name else 'Test'
+        }
+        
+        pdf_content_warning = self.create_pdf_with_form_fields(warning_form_fields)
+        
+        # Upload contract with warning
+        url = f"{self.base_url}/api/assignments/{assignment_id}/upload-contract"
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        files = {'file': ('contract_with_warning.pdf', pdf_content_warning, 'application/pdf')}
+        
+        try:
+            response = requests.post(url, files=files, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                
+                # Verify response structure
+                expected_fields = ['message', 'contract_id', 'has_form_fields', 'validation_status', 'contract_warning']
+                missing_fields = [field for field in expected_fields if field not in response_data]
+                
+                if missing_fields:
+                    test_results.append(False)
+                    print(f"      ❌ Missing response fields: {missing_fields}")
+                else:
+                    # Verify validation warning is detected
+                    if response_data.get('contract_warning') == True and response_data.get('validation_status') == 'validation_warning':
+                        print(f"      ✅ Contract upload with validation warning successful")
+                        print(f"         Contract ID: {response_data.get('contract_id')}")
+                        print(f"         Has form fields: {response_data.get('has_form_fields')}")
+                        print(f"         Validation status: {response_data.get('validation_status')}")
+                        test_results.append(True)
+                        warning_contract_id = response_data.get('contract_id')
+                    else:
+                        print(f"      ❌ Validation warning not properly detected")
+                        print(f"         Contract warning: {response_data.get('contract_warning')}")
+                        print(f"         Validation status: {response_data.get('validation_status')}")
+                        test_results.append(False)
+                        warning_contract_id = None
+            else:
+                print(f"      ❌ Contract upload failed: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"         Error: {error_data.get('detail', 'Unknown error')}")
+                except:
+                    print(f"         Raw response: {response.text}")
+                test_results.append(False)
+                warning_contract_id = None
+                
+        except Exception as e:
+            print(f"      ❌ Contract upload exception: {str(e)}")
+            test_results.append(False)
+            warning_contract_id = None
+        
+        # Step 3: Test uploading PDF without form fields (should clear warning)
+        print(f"\n   🧪 Step 3: Testing contract upload without form fields...")
+        
+        # Create PDF without form fields
+        pdf_content_no_fields = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000074 00000 n \n0000000120 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n179\n%%EOF"
+        
+        files = {'file': ('contract_no_fields.pdf', pdf_content_no_fields, 'application/pdf')}
+        
+        try:
+            response = requests.post(url, files=files, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                
+                # Verify no validation warning
+                if response_data.get('contract_warning') == False and response_data.get('validation_status') == 'no_validation_issues':
+                    print(f"      ✅ Contract upload without form fields successful")
+                    print(f"         Contract ID: {response_data.get('contract_id')}")
+                    print(f"         Has form fields: {response_data.get('has_form_fields')}")
+                    print(f"         Validation status: {response_data.get('validation_status')}")
+                    test_results.append(True)
+                    no_fields_contract_id = response_data.get('contract_id')
+                    
+                    # Verify old contract was marked inactive
+                    if warning_contract_id:
+                        print(f"         Previous contract {warning_contract_id} should be marked inactive")
+                else:
+                    print(f"      ❌ Contract without form fields not handled properly")
+                    print(f"         Contract warning: {response_data.get('contract_warning')}")
+                    print(f"         Validation status: {response_data.get('validation_status')}")
+                    test_results.append(False)
+                    no_fields_contract_id = None
+            else:
+                print(f"      ❌ Contract upload failed: {response.status_code}")
+                test_results.append(False)
+                no_fields_contract_id = None
+                
+        except Exception as e:
+            print(f"      ❌ Contract upload exception: {str(e)}")
+            test_results.append(False)
+            no_fields_contract_id = None
+        
+        # Step 4: Test uploading PDF with form fields that pass validation
+        print(f"\n   🧪 Step 4: Testing contract upload with passing validation...")
+        
+        # Create PDF with form fields that should NOT trigger warning
+        passing_form_fields = {
+            'NutzungEinhaltung': '/Yes',
+            'NutzungKenntnisnahme': '',  # Different states = no warning
+            'ausgabeNeu': '/Yes',
+            'ausgabeGebraucht': '/No',  # Different states = no warning
+            'ITNr': assignment_itnr,
+            'SuSVorn': student_name.split()[0] if ' ' in student_name else student_name,
+            'SuSNachn': student_name.split()[1] if ' ' in student_name else 'Test'
+        }
+        
+        pdf_content_passing = self.create_pdf_with_form_fields(passing_form_fields)
+        
+        files = {'file': ('contract_passing.pdf', pdf_content_passing, 'application/pdf')}
+        
+        try:
+            response = requests.post(url, files=files, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                
+                # Verify no validation warning
+                if response_data.get('contract_warning') == False and response_data.get('validation_status') == 'no_validation_issues':
+                    print(f"      ✅ Contract upload with passing validation successful")
+                    print(f"         Contract ID: {response_data.get('contract_id')}")
+                    print(f"         Has form fields: {response_data.get('has_form_fields')}")
+                    print(f"         Validation status: {response_data.get('validation_status')}")
+                    test_results.append(True)
+                    passing_contract_id = response_data.get('contract_id')
+                else:
+                    print(f"      ❌ Contract with passing validation not handled properly")
+                    print(f"         Contract warning: {response_data.get('contract_warning')}")
+                    print(f"         Validation status: {response_data.get('validation_status')}")
+                    test_results.append(False)
+                    passing_contract_id = None
+            else:
+                print(f"      ❌ Contract upload failed: {response.status_code}")
+                test_results.append(False)
+                passing_contract_id = None
+                
+        except Exception as e:
+            print(f"      ❌ Contract upload exception: {str(e)}")
+            test_results.append(False)
+            passing_contract_id = None
+        
+        # Step 5: Test error cases
+        print(f"\n   🧪 Step 5: Testing error cases...")
+        
+        # Test with non-existent assignment ID
+        fake_assignment_id = "non-existent-assignment-12345"
+        fake_url = f"{self.base_url}/api/assignments/{fake_assignment_id}/upload-contract"
+        
+        files = {'file': ('test.pdf', pdf_content_no_fields, 'application/pdf')}
+        
+        try:
+            response = requests.post(fake_url, files=files, headers=headers, timeout=30)
+            
+            if response.status_code == 404:
+                print(f"      ✅ Non-existent assignment ID properly returns 404")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Non-existent assignment ID returned {response.status_code}, expected 404")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Non-existent assignment test exception: {str(e)}")
+            test_results.append(False)
+        
+        # Test with non-PDF file
+        files = {'file': ('test.txt', b'This is not a PDF file', 'text/plain')}
+        
+        try:
+            response = requests.post(url, files=files, headers=headers, timeout=30)
+            
+            if response.status_code == 400:
+                print(f"      ✅ Non-PDF file properly returns 400")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Non-PDF file returned {response.status_code}, expected 400")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Non-PDF file test exception: {str(e)}")
+            test_results.append(False)
+        
+        # Step 6: End-to-end verification
+        print(f"\n   🧪 Step 6: End-to-end verification...")
+        
+        # Get assignments again to verify contract_warning status
+        verify_success = self.run_api_test(
+            "Get Assignments for Verification",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if verify_success:
+            updated_assignments = self.test_results[-1]['response_data']
+            updated_assignment = next((a for a in updated_assignments if a['id'] == assignment_id), None)
+            
+            if updated_assignment:
+                # Check if assignment now references the latest contract
+                current_contract_id = updated_assignment.get('contract_id')
+                current_warning = updated_assignment.get('contract_warning', False)
+                
+                print(f"      📋 Assignment contract status:")
+                print(f"         Current contract ID: {current_contract_id}")
+                print(f"         Contract warning: {current_warning}")
+                
+                # The latest contract should be the passing one (no warning)
+                if current_contract_id == passing_contract_id and not current_warning:
+                    print(f"      ✅ Assignment correctly references latest contract with no warning")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Assignment contract status not as expected")
+                    print(f"         Expected contract ID: {passing_contract_id}")
+                    print(f"         Expected warning: False")
+                    test_results.append(False)
+            else:
+                print(f"      ❌ Could not find assignment after contract uploads")
+                test_results.append(False)
+        else:
+            print(f"      ❌ Could not verify assignments after contract uploads")
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Assignment-Specific Contract Upload Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Assignment-Specific Contract Upload", 
+                True, 
+                f"All {total_tests} contract upload tests passed successfully"
+            )
+        else:
+            return self.log_result(
+                "Assignment-Specific Contract Upload", 
+                False, 
+                f"Only {successful_tests}/{total_tests} contract upload tests passed"
+            )
+
     def run_comprehensive_test(self):
         """Run all tests in sequence"""
         print("=" * 80)
