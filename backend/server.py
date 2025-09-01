@@ -100,9 +100,9 @@ class Assignment(BaseModel):
 
 class Contract(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    assignment_id: str
-    itnr: str
-    student_name: str
+    assignment_id: Optional[str] = None
+    itnr: Optional[str] = None
+    student_name: Optional[str] = None
     filename: str
     file_data: bytes
     form_fields: Dict[str, Any]
