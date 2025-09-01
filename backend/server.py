@@ -392,18 +392,18 @@ async def get_assignments(current_user: str = Depends(get_current_user)):
             if contract and contract.get("form_fields"):
                 fields = contract["form_fields"]
                 
-                # Check validation: (NutzungEinhaltung ON) AND (NutzungKenntnisnahme ON) AND ((ausgabeNeu ON) XOR (ausgabeGebraucht ON))
+                # Check validation: Warning appears when (NutzungEinhaltung == NutzungKenntnisnahme) OR (ausgabeNeu == ausgabeGebraucht)
                 nutzung_einhaltung = fields.get('NutzungEinhaltung') == '/Yes'
                 nutzung_kenntnisnahme = fields.get('NutzungKenntnisnahme') == '/Yes'
                 ausgabe_neu = fields.get('ausgabeNeu') == '/Yes'
                 ausgabe_gebraucht = fields.get('ausgabeGebraucht') == '/Yes'
                 
-                # Validation logic
-                valid = (nutzung_einhaltung and 
-                        nutzung_kenntnisnahme and 
-                        (ausgabe_neu != ausgabe_gebraucht))  # XOR: exactly one must be true
+                # New validation logic - warning appears when:
+                # 1. Both usage checkboxes are the same (both on or both off) OR
+                # 2. Both output checkboxes are the same (both on or both off)
+                warning_needed = (nutzung_einhaltung == nutzung_kenntnisnahme) or (ausgabe_neu == ausgabe_gebraucht)
                 
-                if not valid:
+                if warning_needed:
                     assignment["contract_warning"] = True
                     assignment["warning_dismissed"] = assignment.get("warning_dismissed", False)
     
