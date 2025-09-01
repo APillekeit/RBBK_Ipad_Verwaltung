@@ -7,8 +7,7 @@ WORKDIR /app
 # Package-Dateien kopieren
 COPY package*.json ./
 
-# Yarn installieren und Abhängigkeiten installieren
-RUN npm install -g yarn
+# Abhängigkeiten installieren (Yarn ist bereits installiert)
 RUN yarn install --frozen-lockfile
 
 # Build-Argument für Backend-URL
