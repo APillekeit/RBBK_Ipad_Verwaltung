@@ -370,8 +370,8 @@ const IPadsManagement = () => {
 
   const handleStatusChange = async (ipadId, newStatus) => {
     try {
-      await api.put(`/api/ipads/${ipadId}/status?status=${newStatus}`);
-      toast.success(`iPad Status auf "${newStatus}" geändert`);
+      const response = await api.put(`/api/ipads/${ipadId}/status?status=${newStatus}`);
+      toast.success(response.data.message);
       await loadIPads();
     } catch (error) {
       toast.error('Fehler beim Ändern des Status');
