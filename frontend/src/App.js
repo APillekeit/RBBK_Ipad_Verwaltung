@@ -1230,7 +1230,12 @@ const AssignmentsManagement = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleViewContract(assignment)}
+                            onClick={(e) => {
+                              console.log('🔵 Eye button clicked for assignment:', assignment);
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewContract(assignment);
+                            }}
                             title={assignment.contract_id ? "Vertrag anzeigen" : "Kein Vertrag vorhanden"}
                             className={assignment.contract_id ? "hover:bg-blue-50" : "opacity-50"}
                           >
@@ -1239,7 +1244,12 @@ const AssignmentsManagement = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleDissolveAssignment(assignment)}
+                            onClick={(e) => {
+                              console.log('🗑️ Trash button clicked for assignment:', assignment);
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDissolveAssignment(assignment);
+                            }}
                             title="Zuordnung auflösen"
                             className="hover:bg-red-50 hover:text-red-600"
                           >
