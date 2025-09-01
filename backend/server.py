@@ -535,8 +535,8 @@ async def update_ipad_status(ipad_id: str, status: str, current_user: str = Depe
     if not ipad:
         raise HTTPException(status_code=404, detail="iPad not found")
     
-    # If setting to defekt or gestohlen, dissolve any active assignment
-    if status in ["defekt", "gestohlen"]:
+    # If setting to defekt, gestohlen, or verfügbar, dissolve any active assignment
+    if status in ["defekt", "gestohlen", "verfügbar"]:
         active_assignment = await db.assignments.find_one({
             "ipad_id": ipad_id,
             "is_active": True
