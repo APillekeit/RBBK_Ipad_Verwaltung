@@ -119,7 +119,9 @@ print('Excel-Test: OK')
 
 ### Vollständiger Bibliothekstest
 ```bash
-docker exec ipad_backend python test-docker-libs.py
+# Dynamische Container-Erkennung
+BACKEND_CONTAINER=$(docker-compose ps -q backend)
+docker exec $BACKEND_CONTAINER python test-docker-libs.py
 ```
 
 ## Besondere Features
