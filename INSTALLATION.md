@@ -18,17 +18,22 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-### Schritt 2: IP-Adresse konfigurieren (für Netzwerk-Zugriff)
+### Schritt 2: System starten (Universelle IP-Unterstützung)
 
 ```bash
-# Für Zugriff von anderen Computern im Netzwerk
-./setup-ip.sh
+# System starten - funktioniert automatisch mit jeder IP!
+./start-docker.sh
 
-# Das Script erkennt automatisch Ihre IP (z.B. 192.168.99.72)
-# Oder Sie geben eine spezifische IP ein
+# Optional: Setup-Info anzeigen
+./setup-ip.sh
 ```
 
-### Schritt 3: System starten
+**🌐 Das System funktioniert automatisch mit JEDER IP-Adresse:**
+- http://localhost (lokal)
+- http://192.168.99.72 (Ihre Netzwerk-IP)
+- http://[BELIEBIGE-IP] (universell)
+
+### Schritt 3: Erste Anmeldung
 
 ```bash
 # Verzeichnis erstellen
