@@ -370,7 +370,7 @@ async def get_student_details(student_id: str, current_user: str = Depends(get_c
     
     return {
         "student": Student(**parse_from_mongo(student)),
-        "current_assignment": current_assignment,
+        "current_assignment": Assignment(**parse_from_mongo(current_assignment)) if current_assignment else None,
         "assignment_history": [Assignment(**parse_from_mongo(a)) for a in assignment_history],
         "contracts": contract_data
     }
