@@ -1276,6 +1276,19 @@ const AssignmentsManagement = () => {
           onClose={() => setSelectedContractId(null)} 
         />
       )}
+      
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onClose={() => {
+          console.log('❌ Dialog cancelled');
+          setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null });
+          toast.info('Auflösung abgebrochen');
+        }}
+        onConfirm={confirmDialog.onConfirm}
+      />
     </div>
   );
 };
