@@ -223,7 +223,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Fix iPad status consistency issue"
+    - "Assignment-specific contract upload API endpoint"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
