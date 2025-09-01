@@ -8,7 +8,9 @@ WORKDIR /app
 COPY package*.json ./
 
 # Abhängigkeiten installieren (Yarn ist bereits installiert)
-RUN yarn install --frozen-lockfile
+# Entferne yarn.lock falls vorhanden für sauberen Build
+RUN rm -f yarn.lock
+RUN yarn install
 
 # Build-Argument für Backend-URL
 ARG REACT_APP_BACKEND_URL
