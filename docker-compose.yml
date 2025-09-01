@@ -48,7 +48,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - REACT_APP_BACKEND_URL=http://192.168.99.72/api
+        - REACT_APP_BACKEND_URL=/api
     container_name: ipad_frontend_build
     volumes:
       - frontend_build:/app/build
