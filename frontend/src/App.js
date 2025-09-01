@@ -902,19 +902,21 @@ const AssignmentsManagement = () => {
 
   const handleDissolveAssignment = async (assignment) => {
     console.log('🔥 DISSOLUTION FUNCTION CALLED!');
-    console.log('Assignment:', assignment);
+    
+    // Simple, working confirmation with setTimeout
+    toast.info(`Zuordnung ${assignment.student_name} auflösen? Klicken Sie nochmal in 2 Sekunden um zu bestätigen.`);
+    
+    // Add a flag to require double-click
+    const now = Date.now();
+    if (!assignment._lastClick || (now - assignment._lastClick) > 3000) {
+      assignment._lastClick = now;
+      return; // First click - just show warning
+    }
     
     try {
-      // DIRECT API CALL WITHOUT CONFIRMATION FOR TESTING
-      console.log('⚡ BYPASSING CONFIRMATION FOR TESTING');
-      toast.info('Löse Zuordnung direkt auf...');
+      toast.info('Löse Zuordnung auf...');
       
-      const apiUrl = `${API_BASE_URL}/api/assignments/${assignment.id}`;
-      console.log('📡 API URL:', apiUrl);
-      console.log('📡 Assignment ID:', assignment.id);
-      console.log('📡 Token:', localStorage.getItem('token') ? 'EXISTS' : 'MISSING');
-      
-      const response = await fetch(apiUrl, {
+      const response = await fetch(`${API_BASE_URL}/api/assignments/${assignment.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -922,21 +924,12 @@ const AssignmentsManagement = () => {
         }
       });
       
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response ok:', response.ok);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Success data:', data);
         toast.success('Zuordnung erfolgreich aufgelöst!');
-        
-        console.log('🔄 Reloading data...');
         await loadAllData();
-        console.log('✅ Data reloaded');
       } else {
-        const errorText = await response.text();
-        console.error('❌ API Error:', response.status, errorText);
-        toast.error(`API Fehler: ${response.status} - ${errorText}`);
+        toast.error(`API Fehler: ${response.status}`);
       }
       
     } catch (error) {
