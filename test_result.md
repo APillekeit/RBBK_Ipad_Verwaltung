@@ -106,7 +106,7 @@ user_problem_statement: "Vertrag-Upload für Zuordnungen mit Validierungsfehlern
 
 backend:
   - task: "Assignment-specific contract upload API endpoint"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "backend/server.py"
     stuck_count: 0
@@ -115,7 +115,20 @@ backend:
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "Need to implement POST /api/assignments/{assignment_id}/upload-contract endpoint"
+        - comment: "Implemented POST /api/assignments/{assignment_id}/upload-contract endpoint with validation logic, contract replacement, and warning status calculation"
+
+frontend:
+  - task: "Contract upload button for assignments with validation warnings"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Added upload button (only visible for assignments with contract warnings), file input handling, upload functionality with progress indication"
 
   - task: "Fix iPad status consistency issue"
     implemented: true
