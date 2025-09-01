@@ -647,10 +647,17 @@ const StudentsManagement = () => {
 // Assignments Management Component
 const AssignmentsManagement = () => {
   const [assignments, setAssignments] = useState([]);
+  const [filteredAssignments, setFilteredAssignments] = useState([]);
   const [ipads, setIPads] = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  
+  // Filter states
+  const [vornameFilter, setVornameFilter] = useState('');
+  const [nachnameFilter, setNachnameFilter] = useState('');
+  const [klasseFilter, setKlasseFilter] = useState('');
 
   const loadAllData = async () => {
     try {
@@ -661,10 +668,11 @@ const AssignmentsManagement = () => {
       ]);
       
       setAssignments(assignmentsRes.data);
+      setFilteredAssignments(assignmentsRes.data);
       setIPads(ipadsRes.data);
       setStudents(studentsRes.data);
     } catch (error) {
-      toast.error('Failed to load data');
+      toast.error('Fehler beim Laden der Daten');
       console.error('Data loading error:', error);
     } finally {
       setLoading(false);
@@ -675,29 +683,113 @@ const AssignmentsManagement = () => {
     loadAllData();
   }, []);
 
+  // Apply filters
+  useEffect(() => {
+    applyFilters();
+  }, [assignments, vornameFilter, nachnameFilter, klasseFilter]);
+
+  const applyFilters = async () => {
+    if (!vornameFilter && !nachnameFilter && !klasseFilter) {
+      setFilteredAssignments(assignments);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      if (vornameFilter) params.append('sus_vorn', vornameFilter);
+      if (nachnameFilter) params.append('sus_nachn', nachnameFilter);
+      if (klasseFilter) params.append('sus_kl', klasseFilter);
+
+      const response = await api.get(`/api/assignments/filtered?${params.toString()}`);
+      setFilteredAssignments(response.data);
+    } catch (error) {
+      console.error('Filter error:', error);
+      toast.error('Fehler beim Filtern der Zuordnungen');
+    }
+  };
+
   const handleAutoAssign = async () => {
     setAssigning(true);
     try {
       const response = await api.post('/api/assignments/auto-assign');
       toast.success(response.data.message);
-      await loadAllData(); // Reload all data after assignment
+      await loadAllData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Auto-assignment failed');
+      toast.error(error.response?.data?.detail || 'Auto-Zuordnung fehlgeschlagen');
       console.error('Auto-assignment error:', error);
     } finally {
       setAssigning(false);
     }
   };
 
-  const handleViewAssignment = (assignment) => {
-    toast.info(`iPad ${assignment.itnr} ist zugewiesen an ${assignment.student_name}`);
+  const handleDissolveAssignment = async (assignment) => {
+    if (window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich auflösen?`)) {
+      try {
+        await api.delete(`/api/assignments/${assignment.id}`);
+        toast.success('Zuordnung erfolgreich aufgelöst');
+        await loadAllData();
+      } catch (error) {
+        toast.error('Fehler beim Auflösen der Zuordnung');
+        console.error('Dissolution error:', error);
+      }
+    }
   };
 
-  const handleDeleteAssignment = async (assignment) => {
-    if (window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich löschen?`)) {
-      // This would need a backend endpoint for deletion
-      toast.info('Löschfunktion wird in der nächsten Version implementiert');
+  const handleBatchDissolve = async () => {
+    if (filteredAssignments.length === 0) {
+      toast.error('Keine gefilterten Zuordnungen zum Auflösen vorhanden');
+      return;
     }
+
+    if (window.confirm(`Möchten Sie alle ${filteredAssignments.length} gefilterten Zuordnungen wirklich auflösen?`)) {
+      try {
+        const promises = filteredAssignments.map(assignment => 
+          api.delete(`/api/assignments/${assignment.id}`)
+        );
+        
+        await Promise.all(promises);
+        toast.success(`${filteredAssignments.length} Zuordnungen erfolgreich aufgelöst`);
+        await loadAllData();
+      } catch (error) {
+        toast.error('Fehler beim Batch-Auflösen der Zuordnungen');
+        console.error('Batch dissolution error:', error);
+      }
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const response = await api.get('/api/assignments/export', {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'zuordnungen_export.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      toast.success('Export erfolgreich heruntergeladen');
+    } catch (error) {
+      toast.error('Fehler beim Export');
+      console.error('Export error:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setVornameFilter('');
+    setNachnameFilter('');
+    setKlasseFilter('');
   };
 
   const unassignedStudents = students.filter(student => !student.current_assignment_id);
@@ -749,15 +841,80 @@ const AssignmentsManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Aktuelle Zuordnungen ({assignments.length})
+            Zuordnungen verwalten ({filteredAssignments.length} von {assignments.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Filter Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+            <div>
+              <Label htmlFor="vorname">Vorname filtern:</Label>
+              <Input
+                id="vorname"
+                value={vornameFilter}
+                onChange={(e) => setVornameFilter(e.target.value)}
+                placeholder="z.B. Anna"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="nachname">Nachname filtern:</Label>
+              <Input
+                id="nachname"
+                value={nachnameFilter}
+                onChange={(e) => setNachnameFilter(e.target.value)}
+                placeholder="z.B. Müller"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="klasse">Klasse filtern:</Label>
+              <Input
+                id="klasse"
+                value={klasseFilter}
+                onChange={(e) => setKlasseFilter(e.target.value)}
+                placeholder="z.B. 5A"
+                className="mt-1"
+              />
+            </div>
+            <div className="flex flex-col justify-end">
+              <Button variant="outline" onClick={clearFilters} className="mt-1">
+                Filter zurücksetzen
+              </Button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 mb-4">
+            <Button 
+              onClick={handleExport}
+              disabled={exporting}
+              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {exporting ? 'Exportiere...' : 'Alle Zuordnungen exportieren'}
+            </Button>
+            
+            {filteredAssignments.length > 0 && filteredAssignments.length < assignments.length && (
+              <Button 
+                onClick={handleBatchDissolve}
+                variant="destructive"
+                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Gefilterte Zuordnungen auflösen ({filteredAssignments.length})
+              </Button>
+            )}
+          </div>
+
           {loading ? (
             <div className="text-center py-8">Lade Zuordnungen...</div>
-          ) : assignments.length === 0 ? (
+          ) : filteredAssignments.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              Keine Zuordnungen vorhanden. Verwenden Sie die automatische Zuordnung oben.
+              {assignments.length === 0 
+                ? 'Keine Zuordnungen vorhanden. Verwenden Sie die automatische Zuordnung oben.'
+                : 'Keine Zuordnungen entsprechen den Filterkriterien.'
+              }
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -772,7 +929,7 @@ const AssignmentsManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {assignments.map((assignment) => (
+                  {filteredAssignments.map((assignment) => (
                     <TableRow key={assignment.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">{assignment.itnr}</TableCell>
                       <TableCell>{assignment.student_name}</TableCell>
@@ -787,7 +944,7 @@ const AssignmentsManagement = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleViewAssignment(assignment)}
+                            onClick={() => toast.info(`iPad ${assignment.itnr} ist zugewiesen an ${assignment.student_name}`)}
                             title="Details anzeigen"
                           >
                             <Eye className="h-4 w-4" />
@@ -795,8 +952,9 @@ const AssignmentsManagement = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => handleDeleteAssignment(assignment)}
-                            title="Zuordnung löschen"
+                            onClick={() => handleDissolveAssignment(assignment)}
+                            title="Zuordnung auflösen"
+                            className="hover:bg-red-50 hover:text-red-600"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
