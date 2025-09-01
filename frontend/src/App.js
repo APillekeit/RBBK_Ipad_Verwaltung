@@ -366,32 +366,61 @@ const StudentsManagement = () => {
 // Assignments Management Component
 const AssignmentsManagement = () => {
   const [assignments, setAssignments] = useState([]);
+  const [ipads, setIPads] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(false);
 
-  const loadAssignments = async () => {
+  const loadAllData = async () => {
     try {
-      const response = await api.get('/api/assignments');
-      setAssignments(response.data);
+      const [assignmentsRes, ipadsRes, studentsRes] = await Promise.all([
+        api.get('/api/assignments'),
+        api.get('/api/ipads'),
+        api.get('/api/students')
+      ]);
+      
+      setAssignments(assignmentsRes.data);
+      setIPads(ipadsRes.data);
+      setStudents(studentsRes.data);
     } catch (error) {
-      toast.error('Failed to load assignments');
+      toast.error('Failed to load data');
+      console.error('Data loading error:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadAssignments();
+    loadAllData();
   }, []);
 
   const handleAutoAssign = async () => {
+    setAssigning(true);
     try {
       const response = await api.post('/api/assignments/auto-assign');
       toast.success(response.data.message);
-      loadAssignments();
+      await loadAllData(); // Reload all data after assignment
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Auto-assignment failed');
+      console.error('Auto-assignment error:', error);
+    } finally {
+      setAssigning(false);
     }
   };
+
+  const handleViewAssignment = (assignment) => {
+    toast.info(`iPad ${assignment.itnr} ist zugewiesen an ${assignment.student_name}`);
+  };
+
+  const handleDeleteAssignment = async (assignment) => {
+    if (window.confirm(`Möchten Sie die Zuordnung von iPad ${assignment.itnr} an ${assignment.student_name} wirklich löschen?`)) {
+      // This would need a backend endpoint for deletion
+      toast.info('Löschfunktion wird in der nächsten Version implementiert');
+    }
+  };
+
+  const unassignedStudents = students.filter(student => !student.current_assignment_id);
+  const availableIPads = ipads.filter(ipad => ipad.status === 'verfügbar');
 
   return (
     <div className="space-y-6">
@@ -403,12 +432,35 @@ const AssignmentsManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button 
-            onClick={handleAutoAssign}
-            className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600"
-          >
-            Automatische Zuordnung starten
-          </Button>
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="font-medium text-blue-800">Verfügbare iPads</div>
+                <div className="text-2xl font-bold text-blue-600">{availableIPads.length}</div>
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <div className="font-medium text-green-800">Schüler ohne iPad</div>
+                <div className="text-2xl font-bold text-green-600">{unassignedStudents.length}</div>
+              </div>
+              <div className="bg-purple-50 p-3 rounded-lg">
+                <div className="font-medium text-purple-800">Aktuelle Zuordnungen</div>
+                <div className="text-2xl font-bold text-purple-600">{assignments.length}</div>
+              </div>
+            </div>
+            <Button 
+              onClick={handleAutoAssign}
+              disabled={assigning || availableIPads.length === 0 || unassignedStudents.length === 0}
+              className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50"
+            >
+              {assigning ? 'Zuordnung läuft...' : 'Automatische Zuordnung starten'}
+            </Button>
+            {(availableIPads.length === 0 || unassignedStudents.length === 0) && (
+              <p className="text-sm text-gray-600">
+                {availableIPads.length === 0 && 'Keine verfügbaren iPads vorhanden. '}
+                {unassignedStudents.length === 0 && 'Alle Schüler haben bereits ein iPad. '}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -422,6 +474,10 @@ const AssignmentsManagement = () => {
         <CardContent>
           {loading ? (
             <div className="text-center py-8">Lade Zuordnungen...</div>
+          ) : assignments.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Keine Zuordnungen vorhanden. Verwenden Sie die automatische Zuordnung oben.
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -436,7 +492,7 @@ const AssignmentsManagement = () => {
                 </TableHeader>
                 <TableBody>
                   {assignments.map((assignment) => (
-                    <TableRow key={assignment.id}>
+                    <TableRow key={assignment.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">{assignment.itnr}</TableCell>
                       <TableCell>{assignment.student_name}</TableCell>
                       <TableCell>{new Date(assignment.assigned_at).toLocaleDateString('de-DE')}</TableCell>
@@ -447,10 +503,20 @@ const AssignmentsManagement = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewAssignment(assignment)}
+                            title="Details anzeigen"
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDeleteAssignment(assignment)}
+                            title="Zuordnung löschen"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
