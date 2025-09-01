@@ -50,6 +50,7 @@
 - **React 19.0.0** - UI-Framework
 - **React-DOM 19.0.0** - DOM-Rendering
 - **React-Scripts 5.0.1** - Build-Tools
+- **Node.js 20-alpine** - Build-Environment (Docker)
 
 ### UI-Komponenten (Shadcn/ui)
 - **@radix-ui/react-*** - Basis-UI-Komponenten
