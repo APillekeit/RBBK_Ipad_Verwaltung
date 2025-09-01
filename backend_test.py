@@ -733,6 +733,57 @@ class IPadManagementTester:
                     status_update_results.append(False)
             else:
                 status_update_results.append(False)
+            
+            # Test updating to "zugewiesen" - should preserve current_assignment_id if it exists
+            # First, let's find an iPad that has an assignment to test with
+            assigned_ipad = None
+            for ipad in post_fix_ipads:
+                if ipad.get('status') == 'zugewiesen' and ipad.get('current_assignment_id'):
+                    assigned_ipad = ipad
+                    break
+            
+            if assigned_ipad:
+                assigned_ipad_id = assigned_ipad['id']
+                assigned_itnr = assigned_ipad['itnr']
+                original_assignment_id = assigned_ipad['current_assignment_id']
+                
+                print(f"      🧪 Testing 'zugewiesen' status preservation with iPad: {assigned_itnr}")
+                
+                zugewiesen_success = self.run_api_test(
+                    f"Update iPad {assigned_itnr} to zugewiesen (preserve assignment)",
+                    "PUT",
+                    f"ipads/{assigned_ipad_id}/status?status=zugewiesen",
+                    200
+                )
+                
+                if zugewiesen_success:
+                    verify_success = self.run_api_test(
+                        "Verify iPad After Zugewiesen Update",
+                        "GET",
+                        "ipads",
+                        200
+                    )
+                    
+                    if verify_success:
+                        updated_ipads = self.test_results[-1]['response_data']
+                        updated_ipad = next((ipad for ipad in updated_ipads if ipad['id'] == assigned_ipad_id), None)
+                        
+                        if updated_ipad:
+                            if updated_ipad['status'] == 'zugewiesen' and updated_ipad.get('current_assignment_id') == original_assignment_id:
+                                print(f"        ✅ Status 'zugewiesen' correctly preserves current_assignment_id: {original_assignment_id}")
+                                status_update_results.append(True)
+                            else:
+                                print(f"        ❌ Status 'zugewiesen' failed - Status: {updated_ipad['status']}, Assignment: {updated_ipad.get('current_assignment_id')} (expected: {original_assignment_id})")
+                                status_update_results.append(False)
+                        else:
+                            status_update_results.append(False)
+                    else:
+                        status_update_results.append(False)
+                else:
+                    status_update_results.append(False)
+            else:
+                print(f"        ⚠️  No assigned iPad found to test 'zugewiesen' status preservation")
+                status_update_results.append(True)  # Skip this test
         
         # Step 5: Test iPad history consistency
         print(f"\n   📚 Step 5: Testing iPad history consistency...")
