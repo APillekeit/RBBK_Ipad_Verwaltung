@@ -530,15 +530,60 @@ async def update_ipad_status(ipad_id: str, status: str, current_user: str = Depe
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
     
-    result = await db.ipads.update_one(
-        {"id": ipad_id},
-        {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
-    )
-    
-    if result.matched_count == 0:
+    # Get the iPad first
+    ipad = await db.ipads.find_one({"id": ipad_id})
+    if not ipad:
         raise HTTPException(status_code=404, detail="iPad not found")
     
-    return {"message": f"iPad status updated to {status}"}
+    # If setting to defekt or gestohlen, dissolve any active assignment
+    if status in ["defekt", "gestohlen"]:
+        active_assignment = await db.assignments.find_one({
+            "ipad_id": ipad_id,
+            "is_active": True
+        })
+        
+        if active_assignment:
+            # Move contract to history if exists
+            if active_assignment.get("contract_id"):
+                await db.contracts.update_one(
+                    {"id": active_assignment["contract_id"]},
+                    {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+            
+            # Mark assignment as inactive
+            await db.assignments.update_one(
+                {"id": active_assignment["id"]},
+                {"$set": {
+                    "is_active": False,
+                    "unassigned_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            
+            # Update student
+            await db.students.update_one(
+                {"id": active_assignment["student_id"]},
+                {"$set": {
+                    "current_assignment_id": None,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+    
+    # Update iPad status
+    result = await db.ipads.update_one(
+        {"id": ipad_id},
+        {"$set": {
+            "status": status, 
+            "current_assignment_id": None if status in ["defekt", "gestohlen"] else ipad.get("current_assignment_id"),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    message = f"iPad status updated to {status}"
+    if status in ["defekt", "gestohlen"]:
+        message += " and assignment dissolved"
+    
+    return {"message": message}
 
 # iPad history and details
 @api_router.get("/ipads/{ipad_id}/history")
