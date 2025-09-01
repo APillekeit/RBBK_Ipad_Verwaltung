@@ -97,6 +97,8 @@ class Assignment(BaseModel):
     assigned_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     unassigned_at: Optional[datetime] = None
     contract_id: Optional[str] = None
+    contract_warning: Optional[bool] = False
+    warning_dismissed: Optional[bool] = False
 
 class Contract(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
