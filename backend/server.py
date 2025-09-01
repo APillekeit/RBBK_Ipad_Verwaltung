@@ -766,6 +766,37 @@ async def update_ipad_status(ipad_id: str, status: str, current_user: str = Depe
     
     return {"message": message}
 
+@api_router.post("/ipads/fix-status-consistency")
+async def fix_ipad_status_consistency(current_user: str = Depends(get_current_user)):
+    """Fix any inconsistent iPad status data where status is 'verfügbar' but current_assignment_id is not None"""
+    try:
+        # Find iPads with status 'verfügbar' but still have current_assignment_id
+        inconsistent_ipads = await db.ipads.find({
+            "status": "verfügbar",
+            "current_assignment_id": {"$ne": None}
+        }).to_list(length=None)
+        
+        fixed_count = 0
+        for ipad in inconsistent_ipads:
+            # Clear current_assignment_id for verfügbar iPads
+            await db.ipads.update_one(
+                {"id": ipad["id"]},
+                {"$set": {
+                    "current_assignment_id": None,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            fixed_count += 1
+        
+        return {
+            "message": f"iPad status consistency fixed",
+            "fixed_ipads": fixed_count,
+            "details": [f"Fixed iPad {ipad['itnr']}" for ipad in inconsistent_ipads]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fixing iPad consistency: {str(e)}")
+
 # iPad history and details
 @api_router.get("/ipads/{ipad_id}/history")
 async def get_ipad_history(ipad_id: str, current_user: str = Depends(get_current_user)):
