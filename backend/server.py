@@ -331,6 +331,118 @@ async def get_students(current_user: str = Depends(get_current_user)):
     students = await db.students.find().to_list(length=None)
     return [Student(**parse_from_mongo(student)) for student in students]
 
+@api_router.get("/students/{student_id}")
+async def get_student_details(student_id: str, current_user: str = Depends(get_current_user)):
+    """Get detailed information about a specific student"""
+    student = await db.students.find_one({"id": student_id})
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Get current assignment if exists
+    current_assignment = None
+    if student.get("current_assignment_id"):
+        current_assignment = await db.assignments.find_one({"id": student["current_assignment_id"]})
+    
+    # Get assignment history
+    assignment_history = await db.assignments.find({"student_id": student_id}).to_list(length=None)
+    
+    # Get contracts related to this student
+    contracts = await db.contracts.find({
+        "$or": [
+            {"student_name": {"$regex": f"{student['sus_vorn']} {student['sus_nachn']}", "$options": "i"}},
+            {"assignment_id": {"$in": [a["id"] for a in assignment_history]}}
+        ]
+    }).to_list(length=None)
+    
+    # Prepare contract data (without file_data for display)
+    contract_data = []
+    for contract in contracts:
+        contract_dict = {
+            "id": contract.get("id"),
+            "assignment_id": contract.get("assignment_id"),
+            "itnr": contract.get("itnr"),
+            "student_name": contract.get("student_name"),
+            "filename": contract.get("filename"),
+            "uploaded_at": contract.get("uploaded_at"),
+            "is_active": contract.get("is_active", True)
+        }
+        contract_data.append(contract_dict)
+    
+    return {
+        "student": Student(**parse_from_mongo(student)),
+        "current_assignment": current_assignment,
+        "assignment_history": [Assignment(**parse_from_mongo(a)) for a in assignment_history],
+        "contracts": contract_data
+    }
+
+@api_router.delete("/students/{student_id}")
+async def delete_student(student_id: str, current_user: str = Depends(get_current_user)):
+    """Delete a student and all related data (assignments, contracts, history)"""
+    student = await db.students.find_one({"id": student_id})
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    student_name = f"{student['sus_vorn']} {student['sus_nachn']}"
+    
+    # Step 1: Dissolve active assignment if exists
+    active_assignment = await db.assignments.find_one({
+        "student_id": student_id,
+        "is_active": True
+    })
+    
+    if active_assignment:
+        # Move contract to inactive if exists
+        if active_assignment.get("contract_id"):
+            await db.contracts.update_one(
+                {"id": active_assignment["contract_id"]},
+                {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+        
+        # Mark assignment as inactive
+        await db.assignments.update_one(
+            {"id": active_assignment["id"]},
+            {"$set": {
+                "is_active": False,
+                "unassigned_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        # Update iPad status to available
+        await db.ipads.update_one(
+            {"id": active_assignment["ipad_id"]},
+            {"$set": {
+                "status": "verfügbar",
+                "current_assignment_id": None,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    
+    # Step 2: Delete all assignments (history) for this student
+    assignments_result = await db.assignments.delete_many({"student_id": student_id})
+    
+    # Step 3: Delete all contracts related to this student
+    # Find contracts by student name pattern or by assignment IDs
+    all_assignments = await db.assignments.find({"student_id": student_id}).to_list(length=None)
+    assignment_ids = [a["id"] for a in all_assignments]
+    
+    contracts_result = await db.contracts.delete_many({
+        "$or": [
+            {"student_name": {"$regex": f"{student['sus_vorn']} {student['sus_nachn']}", "$options": "i"}},
+            {"assignment_id": {"$in": assignment_ids}}
+        ]
+    })
+    
+    # Step 4: Delete the student
+    student_result = await db.students.delete_one({"id": student_id})
+    
+    return {
+        "message": f"Student {student_name} successfully deleted",
+        "deleted_assignments": assignments_result.deleted_count,
+        "deleted_contracts": contracts_result.deleted_count,
+        "dissolved_active_assignment": bool(active_assignment)
+    }
+
 # Assignment endpoints
 @api_router.post("/assignments/auto-assign", response_model=AssignmentResponse)
 async def auto_assign_ipads(current_user: str = Depends(get_current_user)):
