@@ -1064,8 +1064,7 @@ const AssignmentsManagement = () => {
   const [exporting, setExporting] = useState(false);
   const [dissolving, setDissolving] = useState(false);
   const [selectedContractId, setSelectedContractId] = useState(null);
-  
-  // Removed confirmation dialog states for testing
+  const [uploadingContractForAssignment, setUploadingContractForAssignment] = useState(null);
   
   // Filter states
   const [vornameFilter, setVornameFilter] = useState('');
@@ -1277,6 +1276,34 @@ const AssignmentsManagement = () => {
     } catch (error) {
       toast.error('Fehler beim Entfernen der Warnung');
       console.error('Warning dismissal error:', error);
+    }
+  };
+
+  const handleUploadContractForAssignment = async (assignment, file) => {
+    if (!file) return;
+    
+    setUploadingContractForAssignment(assignment.id);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      toast.info(`Lade neuen Vertrag für ${assignment.student_name} hoch...`);
+      
+      const response = await api.post(`/api/assignments/${assignment.id}/upload-contract`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      toast.success(response.data.message);
+      
+      // Reload assignments to show updated validation status
+      await loadAllData();
+      
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Fehler beim Upload des Vertrags');
+      console.error('Contract upload error:', error);
+    } finally {
+      setUploadingContractForAssignment(null);
     }
   };
 
@@ -1511,6 +1538,38 @@ const AssignmentsManagement = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          
+                          {/* Contract Upload Button - Only show for assignments with validation warnings */}
+                          {assignment.contract_warning && !assignment.warning_dismissed && (
+                            <div className="relative">
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) => {
+                                  if (e.target.files[0]) {
+                                    handleUploadContractForAssignment(assignment, e.target.files[0]);
+                                    e.target.value = ''; // Reset input
+                                  }
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                disabled={uploadingContractForAssignment === assignment.id}
+                              />
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                title="Neuen korrekten Vertrag hochladen"
+                                className="hover:bg-yellow-50 hover:text-yellow-600"
+                                disabled={uploadingContractForAssignment === assignment.id}
+                              >
+                                {uploadingContractForAssignment === assignment.id ? (
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-yellow-600 border-t-transparent"></div>
+                                ) : (
+                                  <Upload className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                          
                           <Button 
                             variant="outline" 
                             size="sm"
