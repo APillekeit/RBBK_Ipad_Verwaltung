@@ -644,6 +644,113 @@ const StudentsManagement = () => {
   );
 };
 
+// Contract Viewer Component
+const ContractViewer = ({ contractId, onClose }) => {
+  const [contract, setContract] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadContract = async () => {
+      try {
+        const response = await api.get(`/api/contracts/${contractId}`);
+        setContract(response.data);
+      } catch (error) {
+        toast.error('Fehler beim Laden des Vertrags');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (contractId) {
+      loadContract();
+    }
+  }, [contractId]);
+
+  const handleDownload = async () => {
+    try {
+      const response = await api.get(`/api/contracts/${contractId}/download`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = contract?.filename || 'vertrag.pdf';
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      toast.success('Vertrag heruntergeladen');
+    } catch (error) {
+      toast.error('Fehler beim Herunterladen des Vertrags');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2">Lade Vertrag...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!contract) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Vertrag Details</h3>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            ✕
+          </Button>
+        </div>
+        
+        <div className="space-y-3">
+          <div><strong>Dateiname:</strong> {contract.filename}</div>
+          <div><strong>Schüler:</strong> {contract.student_name || 'Unzugewiesen'}</div>
+          <div><strong>iPad ITNr:</strong> {contract.itnr || 'Unzugewiesen'}</div>
+          <div><strong>Hochgeladen am:</strong> {new Date(contract.uploaded_at).toLocaleDateString('de-DE')}</div>
+          <div><strong>Status:</strong> 
+            <Badge className={`ml-2 ${contract.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+              {contract.is_active ? 'Aktiv' : 'Historisch'}
+            </Badge>
+          </div>
+          
+          {contract.form_fields && Object.keys(contract.form_fields).length > 0 && (
+            <div>
+              <strong>Formularfelder:</strong>
+              <div className="mt-2 max-h-32 overflow-y-auto text-sm bg-gray-50 p-2 rounded">
+                {Object.entries(contract.form_fields).map(([key, value]) => (
+                  <div key={key} className="flex justify-between">
+                    <span className="font-medium">{key}:</span>
+                    <span>{value || 'leer'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex gap-2 mt-6">
+          <Button onClick={handleDownload} className="flex-1">
+            <Download className="h-4 w-4 mr-2" />
+            PDF herunterladen
+          </Button>
+          <Button variant="outline" onClick={onClose} className="flex-1">
+            Schließen
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Assignments Management Component
 const AssignmentsManagement = () => {
   const [assignments, setAssignments] = useState([]);
@@ -653,6 +760,8 @@ const AssignmentsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [dissolving, setDissolving] = useState(false);
+  const [selectedContractId, setSelectedContractId] = useState(null);
   
   // Filter states
   const [vornameFilter, setVornameFilter] = useState('');
