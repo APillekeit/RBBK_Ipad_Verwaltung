@@ -900,7 +900,6 @@ const AssignmentsManagement = () => {
     console.log('🔥 DISSOLUTION FUNCTION CALLED!');
     console.log('Assignment received:', assignment);
     
-    // Immediate user feedback that function was called
     toast.info('Auflösungsfunktion gestartet...');
     
     try {
@@ -910,20 +909,32 @@ const AssignmentsManagement = () => {
         return;
       }
       
-      console.log('✅ Assignment valid, showing confirmation...');
+      console.log('✅ Assignment valid, preparing confirmation...');
       
-      // Simple confirmation
-      if (!confirm(`Zuordnung auflösen: ${assignment.student_name} (${assignment.itnr})?`)) {
-        console.log('❌ User cancelled');
+      // Debug the confirm dialog
+      const confirmMessage = `Zuordnung auflösen: ${assignment.student_name} (${assignment.itnr})?`;
+      console.log('📝 Confirmation message:', confirmMessage);
+      console.log('🔍 About to show confirm dialog...');
+      
+      // Try different confirmation approach
+      const userConfirmed = window.confirm(confirmMessage);
+      console.log('📋 Confirm dialog result:', userConfirmed);
+      console.log('📋 Confirm dialog type:', typeof userConfirmed);
+      
+      if (userConfirmed !== true) {
+        console.log('❌ User did not confirm (result was not true)');
         toast.info('Auflösung abgebrochen');
         return;
       }
       
-      console.log('✅ User confirmed, making API call...');
+      console.log('✅ User confirmed! Proceeding with API call...');
       toast.info('Löse Zuordnung auf...');
       
       // Direct API call
-      const response = await fetch(`${API_BASE_URL}/api/assignments/${assignment.id}`, {
+      const apiUrl = `${API_BASE_URL}/api/assignments/${assignment.id}`;
+      console.log('📡 Making API call to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -931,15 +942,17 @@ const AssignmentsManagement = () => {
         }
       });
       
-      console.log('API Response status:', response.status);
+      console.log('📡 API Response status:', response.status);
+      console.log('📡 API Response ok:', response.ok);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Success:', data);
+        console.log('✅ API Success:', data);
         toast.success('Zuordnung erfolgreich aufgelöst!');
         
-        // Reload data
+        console.log('🔄 Reloading data...');
         await loadAllData();
+        console.log('✅ Data reloaded');
       } else {
         const errorData = await response.text();
         console.error('❌ API Error:', response.status, errorData);
@@ -947,7 +960,7 @@ const AssignmentsManagement = () => {
       }
       
     } catch (error) {
-      console.error('❌ Exception:', error);
+      console.error('❌ Exception in dissolution:', error);
       toast.error(`Fehler: ${error.message}`);
     }
   };
