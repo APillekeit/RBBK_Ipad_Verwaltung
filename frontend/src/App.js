@@ -569,6 +569,7 @@ const StudentsManagement = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
 
   const loadStudents = async () => {
     setLoading(true);
@@ -599,69 +600,136 @@ const StudentsManagement = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(response.data.message);
-      await loadStudents(); // Reload students after upload
+      response.data.details.forEach(detail => {
+        toast.info(detail);
+      });
+      await loadStudents();
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(error.response?.data?.detail || 'Upload fehlgeschlagen');
+      toast.error(error.response?.data?.detail || 'Student upload failed');
     } finally {
       setUploading(false);
     }
   };
 
+  const handleDeleteStudent = async (student) => {
+    console.log('🗑️ DELETE STUDENT CALLED:', student);
+    
+    // Double-click protection
+    const now = Date.now();
+    if (!student._lastDeleteClick || (now - student._lastDeleteClick) > 3000) {
+      student._lastDeleteClick = now;
+      toast.info(`Schüler ${student.sus_vorn} ${student.sus_nachn} löschen? WARNUNG: Alle Zuordnungen, Historie und Verträge werden gelöscht! Klicken Sie nochmal in 3 Sekunden um zu bestätigen.`);
+      return;
+    }
+
+    try {
+      toast.info('Lösche Schüler und alle zugehörigen Daten...');
+      
+      const response = await api.delete(`/api/students/${student.id}`);
+      
+      toast.success(`${response.data.message}. Gelöscht: ${response.data.deleted_assignments} Zuordnungen, ${response.data.deleted_contracts} Verträge`);
+      
+      // Reload students list
+      await loadStudents();
+      
+    } catch (error) {
+      console.error('Delete student error:', error);
+      toast.error(error.response?.data?.detail || 'Fehler beim Löschen des Schülers');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <FileUpload
-        onUpload={handleUpload}
-        acceptedTypes=".xlsx"
-        title="Schüler hochladen"
-        description="Excel-Datei mit Schülerinformationen hochladen (.xlsx)"
-      />
-      
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            Schüler hochladen
+          </CardTitle>
+          <CardDescription>
+            Excel-Datei mit Schülerdaten hochladen (schildexport.xlsx Format)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+            <Input
+              type="file"
+              accept=".xlsx"
+              onChange={(e) => e.target.files[0] && handleUpload(e.target.files[0])}
+              className="mb-4"
+              disabled={uploading}
+            />
+            {uploading && (
+              <div className="text-sm text-gray-600">
+                Schüler werden hochgeladen und verarbeitet...
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Schüler Übersicht ({students.length})
+            Schüler verwalten ({students.length})
           </CardTitle>
-          <CardDescription>
-            {loading ? 'Lade Daten...' : `${students.length} Schüler in der Datenbank`}
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2">Lade Schüler...</p>
-            </div>
+            <div className="text-center py-8">Lade Schüler...</div>
           ) : students.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p>Keine Schüler vorhanden.</p>
-              <p className="text-sm">Laden Sie eine Excel-Datei hoch, um Schüler hinzuzufügen.</p>
+              Keine Schüler vorhanden. Laden Sie zuerst eine Excel-Datei hoch.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Vorname</TableHead>
-                    <TableHead>Nachname</TableHead>
+                    <TableHead>Name</TableHead>
                     <TableHead>Klasse</TableHead>
-                    <TableHead>Ort</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>iPad-Status</TableHead>
+                    <TableHead>Erstellt am</TableHead>
+                    <TableHead>Aktionen</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {students.map((student) => (
                     <TableRow key={student.id} className="hover:bg-gray-50">
-                      <TableCell>{student.sus_vorn || 'N/A'}</TableCell>
-                      <TableCell className="font-medium">{student.sus_nachn || 'N/A'}</TableCell>
+                      <TableCell className="font-medium">
+                        {student.sus_vorn} {student.sus_nachn}
+                      </TableCell>
                       <TableCell>{student.sus_kl || 'N/A'}</TableCell>
-                      <TableCell>{student.sus_ort || 'N/A'}</TableCell>
                       <TableCell>
-                        <Badge className={student.current_assignment_id ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}>
-                          {student.current_assignment_id ? 'Zugewiesen' : 'Verfügbar'}
+                        <Badge className={student.current_assignment_id ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          {student.current_assignment_id ? 'Zugewiesen' : 'Ohne iPad'}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {student.created_at ? new Date(student.created_at).toLocaleDateString('de-DE') : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedStudentId(student.id)}
+                            title="Schülerdetails anzeigen"
+                            className="hover:bg-blue-50"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDeleteStudent(student)}
+                            title="Schüler löschen (inkl. aller Daten)"
+                            className="hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -671,6 +739,14 @@ const StudentsManagement = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Student Detail Viewer Modal */}
+      {selectedStudentId && (
+        <StudentDetailViewer 
+          studentId={selectedStudentId} 
+          onClose={() => setSelectedStudentId(null)} 
+        />
+      )}
     </div>
   );
 };
