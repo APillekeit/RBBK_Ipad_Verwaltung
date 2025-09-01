@@ -848,6 +848,8 @@ const AssignmentsManagement = () => {
   };
 
   const handleBatchDissolve = async () => {
+    console.log('Filtered assignments for batch dissolve:', filteredAssignments); // Debug log
+    
     if (filteredAssignments.length === 0) {
       toast.error('Keine gefilterten Zuordnungen zum Auflösen vorhanden');
       return;
@@ -858,12 +860,30 @@ const AssignmentsManagement = () => {
     if (window.confirm(confirmMessage)) {
       setDissolving(true);
       try {
-        const promises = filteredAssignments.map(assignment => 
-          api.delete(`/api/assignments/${assignment.id}`)
-        );
+        console.log('Starting batch dissolution...'); // Debug log
         
-        await Promise.all(promises);
-        toast.success(`${filteredAssignments.length} Zuordnungen erfolgreich aufgelöst`);
+        // Process assignments one by one for better error handling
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const assignment of filteredAssignments) {
+          try {
+            console.log(`Dissolving assignment ${assignment.id}...`); // Debug log
+            await api.delete(`/api/assignments/${assignment.id}`);
+            successCount++;
+          } catch (error) {
+            console.error(`Error dissolving assignment ${assignment.id}:`, error);
+            errorCount++;
+          }
+        }
+        
+        if (successCount > 0) {
+          toast.success(`${successCount} Zuordnungen erfolgreich aufgelöst`);
+        }
+        if (errorCount > 0) {
+          toast.error(`${errorCount} Zuordnungen konnten nicht aufgelöst werden`);
+        }
+        
         await loadAllData();
       } catch (error) {
         toast.error('Fehler beim Batch-Auflösen der Zuordnungen');
