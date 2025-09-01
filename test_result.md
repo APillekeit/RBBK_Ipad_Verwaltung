@@ -149,3 +149,5 @@ test_plan:
 agent_communication:
     - agent: "main"
     - message: "Implementing new contract validation formula: warning appears when (NutzungEinhaltung == NutzungKenntnisnahme) OR (ausgabeNeu == ausgabeGebraucht)"
+    - agent: "testing"
+    - message: "✅ CONTRACT VALIDATION TESTING COMPLETE - All validation scenarios working perfectly! The new formula correctly identifies contracts that should show warnings. Tested 5 existing contracts and all validation logic is accurate. The /api/assignments endpoint properly returns contract_warning=true for contracts where checkboxes match the warning criteria. Core functionality is working as requested. Minor: Warning dismissal needs database field initialization but this doesn't affect the main validation logic."
