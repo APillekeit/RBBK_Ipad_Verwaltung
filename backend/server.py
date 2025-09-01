@@ -454,9 +454,6 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
             
             # Create unassigned contract
             contract = Contract(
-                assignment_id=None,
-                itnr=None,
-                student_name=None,
                 filename=file.filename,
                 file_data=contents,
                 form_fields=form_fields,
