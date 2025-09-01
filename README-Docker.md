@@ -30,9 +30,10 @@ chmod +x start-docker.sh
 ./start-docker.sh
 ```
 
-### 3. System nutzen
-- **Anwendung:** http://localhost
+### 3. System nutzen (Universeller Zugriff)
+- **Anwendung:** http://localhost ODER http://[BELIEBIGE-IP]
 - **Standard-Login:** admin / admin123
+- **🌐 Funktioniert automatisch mit jeder IP-Adresse!**
 
 ## Architektur
 
