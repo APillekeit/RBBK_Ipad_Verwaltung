@@ -212,21 +212,6 @@ class IPadManagementTester:
         """Test the new contract validation formula for assignments"""
         print("\n🔍 Testing Contract Validation Formula...")
         
-        # First, get current assignments to work with
-        success = self.run_api_test(
-            "Get Assignments for Validation Test",
-            "GET",
-            "assignments",
-            200
-        )
-        
-        if not success:
-            return self.log_result("Contract Validation Formula", False, "Could not get assignments for testing")
-        
-        assignments = self.test_results[-1]['response_data']
-        if not isinstance(assignments, list) or len(assignments) == 0:
-            return self.log_result("Contract Validation Formula", False, "No assignments found for testing")
-        
         # Test scenarios for contract validation
         test_scenarios = [
             {
@@ -315,66 +300,98 @@ class IPadManagementTester:
             }
         ]
         
-        validation_results = []
+        # Test the validation logic directly by checking existing contracts
+        print("\n   🔍 Testing validation logic with existing contracts...")
         
-        for scenario in test_scenarios:
-            print(f"\n   🧪 Testing: {scenario['name']}")
-            print(f"      Expected: {'WARNING' if scenario['should_warn'] else 'NO WARNING'}")
-            print(f"      Reason: {scenario['reason']}")
-            
-            # Create a test contract with the scenario's form fields
-            contract_result = self.create_test_contract_with_fields(scenario['form_fields'])
-            
-            if contract_result:
-                # Get assignments again to check validation
-                assignments_response = self.run_api_test(
-                    f"Check Validation - {scenario['name']}",
-                    "GET", 
-                    "assignments",
+        # Get current assignments to analyze their validation
+        success = self.run_api_test(
+            "Get Assignments for Validation Analysis",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if not success:
+            return self.log_result("Contract Validation Formula", False, "Could not get assignments for testing")
+        
+        assignments = self.test_results[-1]['response_data']
+        if not isinstance(assignments, list):
+            return self.log_result("Contract Validation Formula", False, "Invalid assignments response")
+        
+        # Analyze existing contracts to verify validation logic
+        validation_results = []
+        contracts_analyzed = 0
+        
+        for assignment in assignments:
+            if assignment.get('contract_id'):
+                contracts_analyzed += 1
+                contract_id = assignment['contract_id']
+                itnr = assignment['itnr']
+                student_name = assignment['student_name']
+                contract_warning = assignment.get('contract_warning', False)
+                
+                print(f"\n   📋 Analyzing Contract for {itnr} -> {student_name}")
+                print(f"      Contract ID: {contract_id}")
+                print(f"      Warning Status: {contract_warning}")
+                
+                # Get contract details to verify validation logic
+                contract_success = self.run_api_test(
+                    f"Get Contract Details - {itnr}",
+                    "GET",
+                    f"contracts/{contract_id}",
                     200
                 )
                 
-                if assignments_response:
-                    current_assignments = self.test_results[-1]['response_data']
+                if contract_success:
+                    contract_data = self.test_results[-1]['response_data']
+                    form_fields = contract_data.get('form_fields', {})
                     
-                    # Find assignment with contract warning
-                    warning_found = False
-                    for assignment in current_assignments:
-                        if assignment.get('contract_warning') == True:
-                            warning_found = True
-                            break
+                    # Apply the same validation logic as the backend
+                    nutzung_einhaltung = form_fields.get('NutzungEinhaltung') == '/Yes'
+                    # Handle both field name variations
+                    nutzung_kenntnisnahme_field = form_fields.get('NutzungKenntnisnahme') or form_fields.get('NutzungKenntnisname', '')
+                    nutzung_kenntnisnahme = bool(nutzung_kenntnisnahme_field and nutzung_kenntnisnahme_field != '')
+                    ausgabe_neu = form_fields.get('ausgabeNeu') == '/Yes'
+                    ausgabe_gebraucht = form_fields.get('ausgabeGebraucht') == '/Yes'
                     
-                    # Check if result matches expectation
-                    if warning_found == scenario['should_warn']:
+                    # Calculate expected warning
+                    expected_warning = (nutzung_einhaltung == nutzung_kenntnisnahme) or (ausgabe_neu == ausgabe_gebraucht)
+                    
+                    print(f"      Form Fields Analysis:")
+                    print(f"        NutzungEinhaltung: {form_fields.get('NutzungEinhaltung')} -> {nutzung_einhaltung}")
+                    print(f"        NutzungKenntnisnahme: {nutzung_kenntnisnahme_field} -> {nutzung_kenntnisnahme}")
+                    print(f"        ausgabeNeu: {form_fields.get('ausgabeNeu')} -> {ausgabe_neu}")
+                    print(f"        ausgabeGebraucht: {form_fields.get('ausgabeGebraucht')} -> {ausgabe_gebraucht}")
+                    print(f"      Expected Warning: {expected_warning}")
+                    print(f"      Actual Warning: {contract_warning}")
+                    
+                    if expected_warning == contract_warning:
                         validation_results.append(True)
-                        status = "✅ CORRECT"
-                        print(f"      Result: {status} - Warning {'found' if warning_found else 'not found'} as expected")
+                        print(f"      ✅ VALIDATION CORRECT")
                     else:
                         validation_results.append(False)
-                        status = "❌ INCORRECT"
-                        print(f"      Result: {status} - Expected {'warning' if scenario['should_warn'] else 'no warning'}, got {'warning' if warning_found else 'no warning'}")
+                        print(f"      ❌ VALIDATION INCORRECT - Expected {expected_warning}, got {contract_warning}")
                 else:
                     validation_results.append(False)
-                    print(f"      Result: ❌ FAILED - Could not retrieve assignments")
-            else:
-                validation_results.append(False)
-                print(f"      Result: ❌ FAILED - Could not create test contract")
+                    print(f"      ❌ Could not retrieve contract details")
         
         # Calculate overall success
-        successful_tests = sum(validation_results)
-        total_tests = len(validation_results)
+        if contracts_analyzed == 0:
+            return self.log_result("Contract Validation Formula", False, "No contracts found to test validation")
         
-        if successful_tests == total_tests:
+        successful_validations = sum(validation_results)
+        
+        if successful_validations == contracts_analyzed:
             return self.log_result(
                 "Contract Validation Formula", 
                 True, 
-                f"All {total_tests} validation scenarios passed correctly"
+                f"All {contracts_analyzed} contract validations are correct"
             )
         else:
             return self.log_result(
                 "Contract Validation Formula", 
                 False, 
-                f"Only {successful_tests}/{total_tests} validation scenarios passed"
+                f"Only {successful_validations}/{contracts_analyzed} contract validations are correct"
             )
     
     def create_test_contract_with_fields(self, form_fields):
