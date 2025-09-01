@@ -208,100 +208,299 @@ class IPadManagementTester:
             return True
         return False
 
+    def test_student_detail_view(self):
+        """Test student detail view endpoint"""
+        print("\n🔍 Testing Student Detail View Endpoint...")
+        
+        # First get list of students to test with
+        success = self.run_api_test(
+            "Get Students for Detail Testing",
+            "GET",
+            "students",
+            200
+        )
+        
+        if not success:
+            return self.log_result("Student Detail View", False, "Could not get students list for testing")
+        
+        students = self.test_results[-1]['response_data']
+        if not isinstance(students, list) or len(students) == 0:
+            return self.log_result("Student Detail View", False, "No students found for testing")
+        
+        # Test with first student
+        test_student = students[0]
+        student_id = test_student['id']
+        student_name = f"{test_student.get('sus_vorn', '')} {test_student.get('sus_nachn', '')}"
+        
+        print(f"   👤 Testing with student: {student_name} (ID: {student_id})")
+        
+        # Test valid student ID
+        success = self.run_api_test(
+            f"Student Detail View - {student_name}",
+            "GET",
+            f"students/{student_id}",
+            200
+        )
+        
+        if success:
+            detail_data = self.test_results[-1]['response_data']
+            
+            # Verify response structure
+            required_fields = ['student', 'current_assignment', 'assignment_history', 'contracts']
+            missing_fields = [field for field in required_fields if field not in detail_data]
+            
+            if missing_fields:
+                return self.log_result(
+                    "Student Detail View Structure", 
+                    False, 
+                    f"Missing required fields: {missing_fields}"
+                )
+            
+            # Verify student data completeness
+            student_data = detail_data['student']
+            print(f"      ✅ Student data: {student_data.get('sus_vorn')} {student_data.get('sus_nachn')}")
+            print(f"      📚 Class: {student_data.get('sus_kl', 'N/A')}")
+            print(f"      🏠 Address: {student_data.get('sus_str_hnr', 'N/A')}, {student_data.get('sus_plz', 'N/A')} {student_data.get('sus_ort', 'N/A')}")
+            
+            # Check assignment info
+            current_assignment = detail_data['current_assignment']
+            assignment_history = detail_data['assignment_history']
+            contracts = detail_data['contracts']
+            
+            print(f"      📱 Current assignment: {'Yes' if current_assignment else 'No'}")
+            print(f"      📋 Assignment history: {len(assignment_history)} entries")
+            print(f"      📄 Related contracts: {len(contracts)} contracts")
+            
+            # Test with non-existent student ID
+            fake_student_id = "non-existent-student-id-12345"
+            not_found_success = self.run_api_test(
+                "Student Detail View - Non-existent ID",
+                "GET",
+                f"students/{fake_student_id}",
+                404
+            )
+            
+            if success and not_found_success:
+                return self.log_result(
+                    "Student Detail View", 
+                    True, 
+                    f"Successfully retrieved details for {student_name} and properly handled 404 for invalid ID"
+                )
+            else:
+                return self.log_result(
+                    "Student Detail View", 
+                    False, 
+                    "Failed to handle non-existent student ID properly"
+                )
+        else:
+            return self.log_result("Student Detail View", False, "Failed to get student details")
+
+    def test_student_cascading_delete(self):
+        """Test student cascading delete endpoint"""
+        print("\n🔍 Testing Student Cascading Delete Endpoint...")
+        
+        # First get list of students
+        success = self.run_api_test(
+            "Get Students for Delete Testing",
+            "GET",
+            "students",
+            200
+        )
+        
+        if not success:
+            return self.log_result("Student Cascading Delete", False, "Could not get students list for testing")
+        
+        students = self.test_results[-1]['response_data']
+        if not isinstance(students, list) or len(students) == 0:
+            return self.log_result("Student Cascading Delete", False, "No students found for testing")
+        
+        # Get assignments to find students with and without active assignments
+        assignments_success = self.run_api_test(
+            "Get Assignments for Delete Testing",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if not assignments_success:
+            return self.log_result("Student Cascading Delete", False, "Could not get assignments for testing")
+        
+        assignments = self.test_results[-1]['response_data']
+        assigned_student_ids = [a['student_id'] for a in assignments if a.get('is_active', True)]
+        
+        # Find a student WITH active assignment
+        student_with_assignment = None
+        student_without_assignment = None
+        
+        for student in students:
+            if student['id'] in assigned_student_ids and not student_with_assignment:
+                student_with_assignment = student
+            elif student['id'] not in assigned_student_ids and not student_without_assignment:
+                student_without_assignment = student
+        
+        test_results = []
+        
+        # Test 1: Delete student WITH active assignment
+        if student_with_assignment:
+            student_id = student_with_assignment['id']
+            student_name = f"{student_with_assignment.get('sus_vorn', '')} {student_with_assignment.get('sus_nachn', '')}"
+            
+            print(f"   🧪 Test 1: Deleting student WITH active assignment: {student_name}")
+            
+            # Get assignment details before deletion
+            assignment_before = None
+            ipad_id_before = None
+            for assignment in assignments:
+                if assignment['student_id'] == student_id and assignment.get('is_active', True):
+                    assignment_before = assignment
+                    ipad_id_before = assignment['ipad_id']
+                    break
+            
+            if assignment_before:
+                print(f"      📱 Student has active assignment to iPad: {assignment_before['itnr']}")
+                
+                # Perform deletion
+                delete_success = self.run_api_test(
+                    f"Delete Student with Assignment - {student_name}",
+                    "DELETE",
+                    f"students/{student_id}",
+                    200
+                )
+                
+                if delete_success:
+                    delete_response = self.test_results[-1]['response_data']
+                    print(f"      ✅ Deletion response: {delete_response.get('message', 'N/A')}")
+                    print(f"      📊 Deleted assignments: {delete_response.get('deleted_assignments', 0)}")
+                    print(f"      📄 Deleted contracts: {delete_response.get('deleted_contracts', 0)}")
+                    print(f"      🔄 Dissolved active assignment: {delete_response.get('dissolved_active_assignment', False)}")
+                    
+                    # Verify iPad status was updated to "verfügbar"
+                    if ipad_id_before:
+                        ipads_success = self.run_api_test(
+                            "Get iPads after Student Deletion",
+                            "GET",
+                            "ipads",
+                            200
+                        )
+                        
+                        if ipads_success:
+                            ipads = self.test_results[-1]['response_data']
+                            ipad_after = next((ipad for ipad in ipads if ipad['id'] == ipad_id_before), None)
+                            
+                            if ipad_after:
+                                if ipad_after['status'] == 'verfügbar' and not ipad_after.get('current_assignment_id'):
+                                    print(f"      ✅ iPad {assignment_before['itnr']} status correctly set to 'verfügbar'")
+                                    test_results.append(True)
+                                else:
+                                    print(f"      ❌ iPad {assignment_before['itnr']} status not properly updated: {ipad_after['status']}")
+                                    test_results.append(False)
+                            else:
+                                print(f"      ❌ Could not find iPad after deletion")
+                                test_results.append(False)
+                        else:
+                            test_results.append(False)
+                    else:
+                        test_results.append(True)  # No iPad to check
+                else:
+                    test_results.append(False)
+            else:
+                print(f"      ⚠️ Student marked as having assignment but no active assignment found")
+                test_results.append(False)
+        else:
+            print(f"   ⚠️ No student with active assignment found for testing")
+            test_results.append(False)
+        
+        # Test 2: Delete student WITHOUT active assignment
+        if student_without_assignment:
+            student_id = student_without_assignment['id']
+            student_name = f"{student_without_assignment.get('sus_vorn', '')} {student_without_assignment.get('sus_nachn', '')}"
+            
+            print(f"\n   🧪 Test 2: Deleting student WITHOUT active assignment: {student_name}")
+            
+            delete_success = self.run_api_test(
+                f"Delete Student without Assignment - {student_name}",
+                "DELETE",
+                f"students/{student_id}",
+                200
+            )
+            
+            if delete_success:
+                delete_response = self.test_results[-1]['response_data']
+                print(f"      ✅ Deletion response: {delete_response.get('message', 'N/A')}")
+                print(f"      📊 Deleted assignments: {delete_response.get('deleted_assignments', 0)}")
+                print(f"      📄 Deleted contracts: {delete_response.get('deleted_contracts', 0)}")
+                test_results.append(True)
+            else:
+                test_results.append(False)
+        else:
+            print(f"   ⚠️ No student without active assignment found for testing")
+            test_results.append(False)
+        
+        # Test 3: Delete non-existent student
+        fake_student_id = "non-existent-student-id-12345"
+        not_found_success = self.run_api_test(
+            "Delete Non-existent Student",
+            "DELETE",
+            f"students/{fake_student_id}",
+            404
+        )
+        
+        if not_found_success:
+            print(f"      ✅ Properly returned 404 for non-existent student")
+            test_results.append(True)
+        else:
+            test_results.append(False)
+        
+        # Verify data integrity - check that no orphaned data remains
+        print(f"\n   🔍 Verifying data integrity after deletions...")
+        
+        # Check that deleted students are actually gone
+        final_students_success = self.run_api_test(
+            "Get Students after Deletions",
+            "GET",
+            "students",
+            200
+        )
+        
+        if final_students_success:
+            final_students = self.test_results[-1]['response_data']
+            deleted_student_ids = []
+            if student_with_assignment:
+                deleted_student_ids.append(student_with_assignment['id'])
+            if student_without_assignment:
+                deleted_student_ids.append(student_without_assignment['id'])
+            
+            remaining_deleted_students = [s for s in final_students if s['id'] in deleted_student_ids]
+            
+            if len(remaining_deleted_students) == 0:
+                print(f"      ✅ All deleted students properly removed from database")
+                test_results.append(True)
+            else:
+                print(f"      ❌ {len(remaining_deleted_students)} deleted students still found in database")
+                test_results.append(False)
+        else:
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Student Cascading Delete", 
+                True, 
+                f"All {total_tests} deletion tests passed successfully"
+            )
+        else:
+            return self.log_result(
+                "Student Cascading Delete", 
+                False, 
+                f"Only {successful_tests}/{total_tests} deletion tests passed"
+            )
+
     def test_contract_validation_formula(self):
         """Test the new contract validation formula for assignments"""
         print("\n🔍 Testing Contract Validation Formula...")
-        
-        # Test scenarios for contract validation
-        test_scenarios = [
-            {
-                "name": "Both Nutzung ON (should trigger warning)",
-                "form_fields": {
-                    "NutzungEinhaltung": "/Yes",
-                    "NutzungKenntnisnahme": "/Yes", 
-                    "ausgabeNeu": "/Yes",
-                    "ausgabeGebraucht": "/Off",
-                    "ITNr": "TEST001",
-                    "SuSVorn": "Max",
-                    "SuSNachn": "Mustermann"
-                },
-                "should_warn": True,
-                "reason": "NutzungEinhaltung == NutzungKenntnisnahme (both ON)"
-            },
-            {
-                "name": "Both Nutzung OFF (should trigger warning)",
-                "form_fields": {
-                    "NutzungEinhaltung": "/Off",
-                    "NutzungKenntnisnahme": "/Off",
-                    "ausgabeNeu": "/Yes", 
-                    "ausgabeGebraucht": "/Off",
-                    "ITNr": "TEST002",
-                    "SuSVorn": "Anna",
-                    "SuSNachn": "Schmidt"
-                },
-                "should_warn": True,
-                "reason": "NutzungEinhaltung == NutzungKenntnisnahme (both OFF)"
-            },
-            {
-                "name": "Both Ausgabe ON (should trigger warning)",
-                "form_fields": {
-                    "NutzungEinhaltung": "/Yes",
-                    "NutzungKenntnisnahme": "/Off",
-                    "ausgabeNeu": "/Yes",
-                    "ausgabeGebraucht": "/Yes",
-                    "ITNr": "TEST003", 
-                    "SuSVorn": "Peter",
-                    "SuSNachn": "Mueller"
-                },
-                "should_warn": True,
-                "reason": "ausgabeNeu == ausgabeGebraucht (both ON)"
-            },
-            {
-                "name": "Both Ausgabe OFF (should trigger warning)",
-                "form_fields": {
-                    "NutzungEinhaltung": "/Yes",
-                    "NutzungKenntnisnahme": "/Off",
-                    "ausgabeNeu": "/Off",
-                    "ausgabeGebraucht": "/Off",
-                    "ITNr": "TEST004",
-                    "SuSVorn": "Lisa",
-                    "SuSNachn": "Weber"
-                },
-                "should_warn": True,
-                "reason": "ausgabeNeu == ausgabeGebraucht (both OFF)"
-            },
-            {
-                "name": "Different Nutzung, Different Ausgabe (should NOT trigger warning)",
-                "form_fields": {
-                    "NutzungEinhaltung": "/Yes",
-                    "NutzungKenntnisnahme": "/Off",
-                    "ausgabeNeu": "/Yes",
-                    "ausgabeGebraucht": "/Off",
-                    "ITNr": "TEST005",
-                    "SuSVorn": "Tom",
-                    "SuSNachn": "Fischer"
-                },
-                "should_warn": False,
-                "reason": "All checkboxes are different"
-            },
-            {
-                "name": "Mixed scenario - Nutzung same, Ausgabe different (should trigger warning)",
-                "form_fields": {
-                    "NutzungEinhaltung": "/Off",
-                    "NutzungKenntnisnahme": "/Off",
-                    "ausgabeNeu": "/Yes",
-                    "ausgabeGebraucht": "/Off",
-                    "ITNr": "TEST006",
-                    "SuSVorn": "Sarah",
-                    "SuSNachn": "Klein"
-                },
-                "should_warn": True,
-                "reason": "NutzungEinhaltung == NutzungKenntnisnahme (both OFF)"
-            }
-        ]
-        
-        # Test the validation logic directly by checking existing contracts
-        print("\n   🔍 Testing validation logic with existing contracts...")
         
         # Get current assignments to analyze their validation
         success = self.run_api_test(
