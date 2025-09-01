@@ -102,7 +102,20 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Schüler-Tab erweitern: 1) View-Aktion für Detailansicht aller Schüler-Details, 2) Lösch-Button mit kaskadierender Löschung (Zuordnung auflösen, Historie und Verträge löschen)"
+user_problem_statement: "KRITISCHER FEHLER: iPad-Status Inkonsistenz zwischen Übersicht und Detailansicht. iPad IPAD001 zeigt 'zugewiesen' in Übersicht aber 'verfügbar' in Details. Datenintegritätsproblem im Backend."
+
+backend:
+  - task: "Fix iPad status consistency issue"
+    implemented: false
+    working: false
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+        - working: false
+        - agent: "troubleshoot"
+        - comment: "CRITICAL ISSUE IDENTIFIED: Race condition in iPad status update logic (line 753). When status set to 'verfügbar', current_assignment_id not properly cleared, causing database inconsistency."
 
 backend:
   - task: "Student detail view API endpoint"
