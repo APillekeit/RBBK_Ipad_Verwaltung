@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { Toaster } from './components/ui/sonner';
 import { Upload, Users, Tablet, FileText, Settings, LogOut, Eye, Download, Trash2, ExternalLink, Shield, AlertTriangle, X, User } from 'lucide-react';
 
-const API_BASE_URL = process.env.REACT_APP_BACKEND_URL;
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || '/api';
 
 // API configuration
 const api = axios.create({
