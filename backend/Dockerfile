@@ -4,13 +4,19 @@ FROM python:3.11-slim
 # Arbeitsverzeichnis setzen
 WORKDIR /app
 
-# System-Abhängigkeiten installieren
+# System-Abhängigkeiten installieren (für PDF/Excel-Verarbeitung)
 RUN apt-get update && apt-get install -y \
     curl \
+    gcc \
+    g++ \
+    python3-dev \
+    libffi-dev \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Python-Abhängigkeiten kopieren und installieren
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Anwendung kopieren
