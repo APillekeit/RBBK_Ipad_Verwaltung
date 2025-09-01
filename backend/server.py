@@ -410,7 +410,11 @@ async def get_assignments(current_user: str = Depends(get_current_user)):
                 
                 if warning_needed:
                     assignment["contract_warning"] = True
+                    # Get warning_dismissed status from database
                     assignment["warning_dismissed"] = assignment.get("warning_dismissed", False)
+                else:
+                    assignment["contract_warning"] = False
+                    assignment["warning_dismissed"] = False
     
     return [Assignment(**parse_from_mongo(assignment)) for assignment in assignments]
 
