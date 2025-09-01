@@ -1174,7 +1174,14 @@ const AssignmentsManagement = () => {
             
             {filteredAssignments.length > 0 && filteredAssignments.length < assignments.length && (
               <Button 
-                onClick={handleBatchDissolve}
+                onClick={(e) => {
+                  console.log('🔥 Batch dissolve button clicked!');
+                  console.log('Filtered assignments:', filteredAssignments);
+                  console.log('Total assignments:', assignments);
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleBatchDissolve();
+                }}
                 disabled={dissolving}
                 variant="destructive"
                 className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 disabled:opacity-50"
