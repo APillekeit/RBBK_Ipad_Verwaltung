@@ -1256,10 +1256,8 @@ const AssignmentsManagement = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={(e) => {
-                              console.log('🗑️ Trash button clicked for assignment:', assignment);
-                              e.preventDefault();
-                              e.stopPropagation();
+                            onClick={() => {
+                              console.log('🗑️ BUTTON CLICKED!', assignment);
                               handleDissolveAssignment(assignment);
                             }}
                             title="Zuordnung auflösen"
