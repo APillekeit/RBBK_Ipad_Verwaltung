@@ -384,85 +384,323 @@ async def get_assignments(current_user: str = Depends(get_current_user)):
     return [Assignment(**parse_from_mongo(assignment)) for assignment in assignments]
 
 # Contract endpoints
-@api_router.post("/contracts/upload")
-async def upload_contract(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Only .pdf files are allowed")
+@api_router.post("/contracts/upload-multiple")
+async def upload_multiple_contracts(files: List[UploadFile] = File(...), current_user: str = Depends(get_current_user)):
+    results = []
+    processed_count = 0
+    unassigned_count = 0
     
-    try:
-        contents = await file.read()
-        
-        # Extract form fields from PDF
-        reader = PyPDF2.PdfReader(io.BytesIO(contents))
-        form_fields = {}
-        
-        if '/AcroForm' in reader.trailer['/Root']:
-            form = reader.trailer['/Root']['/AcroForm']
-            if '/Fields' in form:
-                for field in form['/Fields']:
-                    field_obj = field.get_object()
-                    field_name = field_obj.get('/T')
-                    field_value = field_obj.get('/V')
+    for file in files[:20]:  # Limit to 20 files max
+        if not file.filename.endswith('.pdf'):
+            results.append({"filename": file.filename, "status": "error", "message": "Only .pdf files are allowed"})
+            continue
+            
+        try:
+            contents = await file.read()
+            
+            # Extract form fields from PDF
+            reader = PyPDF2.PdfReader(io.BytesIO(contents))
+            form_fields = {}
+            
+            try:
+                if '/AcroForm' in reader.trailer['/Root']:
+                    form = reader.trailer['/Root']['/AcroForm']
+                    if '/Fields' in form:
+                        for field in form['/Fields']:
+                            field_obj = field.get_object()
+                            field_name = field_obj.get('/T')
+                            field_value = field_obj.get('/V')
+                            
+                            if field_name:
+                                form_fields[field_name] = field_value
+            except:
+                form_fields = {}
+            
+            # Check if contract has required fields for auto-assignment
+            itnr = form_fields.get('ITNr')
+            sus_vorn = form_fields.get('SuSVorn')
+            sus_nachn = form_fields.get('SuSNachn')
+            
+            if itnr and sus_vorn and sus_nachn:
+                # Try auto-assignment (no validation errors)
+                assignment = await db.assignments.find_one({
+                    "itnr": str(itnr),
+                    "is_active": True
+                })
+                
+                if assignment:
+                    # Create contract with assignment
+                    contract = Contract(
+                        assignment_id=assignment["id"],
+                        itnr=str(itnr),
+                        student_name=f"{sus_vorn} {sus_nachn}",
+                        filename=file.filename,
+                        file_data=contents,
+                        form_fields=form_fields
+                    )
                     
-                    if field_name:
-                        form_fields[field_name] = field_value
-        
-        # Validate required fields
-        itnr = form_fields.get('ITNr')
-        sus_vorn = form_fields.get('SuSVorn')
-        sus_nachn = form_fields.get('SuSNachn')
-        
-        if not all([itnr, sus_vorn, sus_nachn]):
-            raise HTTPException(status_code=400, detail="Missing required fields: ITNr, SuSVorn, SuSNachn")
-        
-        # Check if assignment exists
-        assignment = await db.assignments.find_one({
-            "itnr": itnr,
-            "is_active": True
-        })
-        
-        if not assignment:
-            raise HTTPException(status_code=400, detail=f"No active assignment found for iPad {itnr}")
-        
-        # Validate student name matches assignment
-        if assignment["student_name"] != f"{sus_vorn} {sus_nachn}":
-            raise HTTPException(status_code=400, detail="Student name in PDF does not match assignment")
-        
-        # Validate checkbox logic
-        nutzung_einhaltung = form_fields.get('NutzungEinhaltung') == '/Yes'
-        nutzung_kenntnisnahme = form_fields.get('NutzungKenntnisnahme') == '/Yes'
-        ausgabe_neu = form_fields.get('ausgabeNeu') == '/Yes'
-        ausgabe_gebraucht = form_fields.get('ausgabeGebraucht') == '/Yes'
-        
-        if not (nutzung_einhaltung and nutzung_kenntnisnahme):
-            raise HTTPException(status_code=400, detail="NutzungEinhaltung and NutzungKenntnisnahme must be checked")
-        
-        if not (ausgabe_neu or ausgabe_gebraucht) or (ausgabe_neu and ausgabe_gebraucht):
-            raise HTTPException(status_code=400, detail="Exactly one of ausgabeNeu or ausgabeGebraucht must be checked")
-        
-        # Create contract
-        contract = Contract(
-            assignment_id=assignment["id"],
-            itnr=itnr,
-            student_name=f"{sus_vorn} {sus_nachn}",
-            filename=file.filename,
-            file_data=contents,
-            form_fields=form_fields
+                    contract_dict = prepare_for_mongo(contract.dict())
+                    await db.contracts.insert_one(contract_dict)
+                    
+                    # Update assignment with contract reference
+                    await db.assignments.update_one(
+                        {"id": assignment["id"]},
+                        {"$set": {"contract_id": contract.id}}
+                    )
+                    
+                    processed_count += 1
+                    results.append({"filename": file.filename, "status": "assigned", "message": f"Assigned to iPad {itnr}"})
+                    continue
+            
+            # Create unassigned contract
+            contract = Contract(
+                assignment_id=None,
+                itnr=None,
+                student_name=None,
+                filename=file.filename,
+                file_data=contents,
+                form_fields=form_fields,
+                is_active=False  # Unassigned contracts are inactive
+            )
+            
+            contract_dict = prepare_for_mongo(contract.dict())
+            await db.contracts.insert_one(contract_dict)
+            
+            unassigned_count += 1
+            results.append({"filename": file.filename, "status": "unassigned", "message": "Contract saved as unassigned"})
+            
+        except Exception as e:
+            results.append({"filename": file.filename, "status": "error", "message": f"Error: {str(e)}"})
+    
+    return {
+        "message": f"Processed {len(files)} contracts: {processed_count} assigned, {unassigned_count} unassigned",
+        "processed_count": processed_count,
+        "unassigned_count": unassigned_count,
+        "results": results
+    }
+
+@api_router.get("/contracts/unassigned")
+async def get_unassigned_contracts(current_user: str = Depends(get_current_user)):
+    contracts = await db.contracts.find({"is_active": False}).to_list(length=None)
+    return [Contract(**parse_from_mongo(contract)) for contract in contracts]
+
+@api_router.get("/assignments/available-for-contracts")
+async def get_assignments_available_for_contracts(current_user: str = Depends(get_current_user)):
+    # Get assignments without contracts
+    assignments = await db.assignments.find({
+        "is_active": True,
+        "contract_id": None
+    }).to_list(length=None)
+    
+    return [{"assignment_id": a["id"], "itnr": a["itnr"], "student_name": a["student_name"]} for a in assignments]
+
+@api_router.post("/contracts/{contract_id}/assign/{assignment_id}")
+async def assign_contract_to_assignment(contract_id: str, assignment_id: str, current_user: str = Depends(get_current_user)):
+    # Get contract and assignment
+    contract = await db.contracts.find_one({"id": contract_id})
+    assignment = await db.assignments.find_one({"id": assignment_id})
+    
+    if not contract or not assignment:
+        raise HTTPException(status_code=404, detail="Contract or assignment not found")
+    
+    # Update contract
+    await db.contracts.update_one(
+        {"id": contract_id},
+        {"$set": {
+            "assignment_id": assignment_id,
+            "itnr": assignment["itnr"],
+            "student_name": assignment["student_name"],
+            "is_active": True,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update assignment
+    await db.assignments.update_one(
+        {"id": assignment_id},
+        {"$set": {"contract_id": contract_id}}
+    )
+    
+    return {"message": "Contract assigned successfully"}
+
+# iPad status management
+@api_router.put("/ipads/{ipad_id}/status")
+async def update_ipad_status(ipad_id: str, status: str, current_user: str = Depends(get_current_user)):
+    valid_statuses = ["verfügbar", "zugewiesen", "defekt", "gestohlen"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+    
+    result = await db.ipads.update_one(
+        {"id": ipad_id},
+        {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="iPad not found")
+    
+    return {"message": f"iPad status updated to {status}"}
+
+# iPad history and details
+@api_router.get("/ipads/{ipad_id}/history")
+async def get_ipad_history(ipad_id: str, current_user: str = Depends(get_current_user)):
+    # Get iPad
+    ipad = await db.ipads.find_one({"id": ipad_id})
+    if not ipad:
+        raise HTTPException(status_code=404, detail="iPad not found")
+    
+    # Get all assignments (active and inactive)
+    assignments = await db.assignments.find({"ipad_id": ipad_id}).to_list(length=None)
+    
+    # Get all contracts for this iPad
+    contracts = await db.contracts.find({"itnr": ipad["itnr"]}).to_list(length=None)
+    
+    return {
+        "ipad": iPad(**parse_from_mongo(ipad)),
+        "assignments": [Assignment(**parse_from_mongo(a)) for a in assignments],
+        "contracts": [Contract(**parse_from_mongo(c)) for c in contracts]
+    }
+
+# Assignment dissolution
+@api_router.delete("/assignments/{assignment_id}")
+async def dissolve_assignment(assignment_id: str, current_user: str = Depends(get_current_user)):
+    assignment = await db.assignments.find_one({"id": assignment_id})
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    
+    # Move contract to history if exists
+    if assignment.get("contract_id"):
+        await db.contracts.update_one(
+            {"id": assignment["contract_id"]},
+            {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
+    
+    # Mark assignment as inactive
+    await db.assignments.update_one(
+        {"id": assignment_id},
+        {"$set": {
+            "is_active": False,
+            "unassigned_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update iPad status to available
+    await db.ipads.update_one(
+        {"id": assignment["ipad_id"]},
+        {"$set": {
+            "status": "verfügbar",
+            "current_assignment_id": None,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update student
+    await db.students.update_one(
+        {"id": assignment["student_id"]},
+        {"$set": {
+            "current_assignment_id": None,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Assignment dissolved successfully"}
+
+# Export functionality
+@api_router.get("/assignments/export")
+async def export_assignments(current_user: str = Depends(get_current_user)):
+    # Get all assignments with related data
+    assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
+    
+    export_data = []
+    for assignment in assignments:
+        # Get student data
+        student = await db.students.find_one({"id": assignment["student_id"]})
+        # Get iPad data
+        ipad = await db.ipads.find_one({"id": assignment["ipad_id"]})
         
-        contract_dict = prepare_for_mongo(contract.dict())
-        await db.contracts.insert_one(contract_dict)
+        if student and ipad:
+            # Combine data in order: student fields first, then iPad fields
+            row_data = {
+                # Student data first (matching schildexport.xlsx order)
+                "lfdNr": student.get("lfd_nr", ""),
+                "Sname": student.get("sname", ""),
+                "SuSNachn": student.get("sus_nachn", ""),
+                "SuSVorn": student.get("sus_vorn", ""),
+                "SuSKl": student.get("sus_kl", ""),
+                "SuSStrHNr": student.get("sus_str_hnr", ""),
+                "SuSPLZ": student.get("sus_plz", ""),
+                "SuSOrt": student.get("sus_ort", ""),
+                "SuSGeb": student.get("sus_geb", ""),
+                "Erz1Nachn": student.get("erz1_nachn", ""),
+                "Erz1Vorn": student.get("erz1_vorn", ""),
+                "Erz1StrHNr": student.get("erz1_str_hnr", ""),
+                "Erz1PLZ": student.get("erz1_plz", ""),
+                "Erz1Ort": student.get("erz1_ort", ""),
+                "Erz2Nachn": student.get("erz2_nachn", ""),
+                "Erz2Vorn": student.get("erz2_vorn", ""),
+                "Erz2StrHNr": student.get("erz2_str_hnr", ""),
+                "Erz2PLZ": student.get("erz2_plz", ""),
+                "Erz2Ort": student.get("erz2_ort", ""),
+                # iPad data second (matching ipads.xlsx order)
+                "ITNr": ipad.get("itnr", ""),
+                "SNr": ipad.get("snr", ""),
+                "Karton": ipad.get("karton", ""),
+                "Pencil": ipad.get("pencil", ""),
+                "Typ": ipad.get("typ", ""),
+                "AnschJahr": ipad.get("ansch_jahr", ""),
+                "AusleiheDatum": ipad.get("ausleihe_datum", ""),
+                # Assignment data
+                "Zugewiesen_am": assignment.get("assigned_at", ""),
+                "Vertrag_vorhanden": "Ja" if assignment.get("contract_id") else "Nein"
+            }
+            export_data.append(row_data)
+    
+    # Create Excel file
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df = pd.DataFrame(export_data)
+        df.to_excel(writer, sheet_name='Zuordnungen', index=False)
+    
+    output.seek(0)
+    
+    return StreamingResponse(
+        io.BytesIO(output.read()),
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={"Content-Disposition": "attachment; filename=zuordnungen_export.xlsx"}
+    )
+
+# Filtering
+@api_router.get("/assignments/filtered")
+async def get_filtered_assignments(
+    sus_vorn: Optional[str] = None,
+    sus_nachn: Optional[str] = None, 
+    sus_kl: Optional[str] = None,
+    current_user: str = Depends(get_current_user)
+):
+    # Build filter query
+    student_filter = {}
+    if sus_vorn:
+        student_filter["sus_vorn"] = {"$regex": sus_vorn, "$options": "i"}
+    if sus_nachn:
+        student_filter["sus_nachn"] = {"$regex": sus_nachn, "$options": "i"}
+    if sus_kl:
+        student_filter["sus_kl"] = {"$regex": sus_kl, "$options": "i"}
+    
+    if student_filter:
+        # Get matching students
+        students = await db.students.find(student_filter).to_list(length=None)
+        student_ids = [s["id"] for s in students]
         
-        # Update assignment with contract reference
-        await db.assignments.update_one(
-            {"id": assignment["id"]},
-            {"$set": {"contract_id": contract.id}}
-        )
-        
-        return {"message": "Contract uploaded and validated successfully"}
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing contract: {str(e)}")
+        # Get assignments for these students
+        assignments = await db.assignments.find({
+            "is_active": True,
+            "student_id": {"$in": student_ids}
+        }).to_list(length=None)
+    else:
+        # No filter, get all assignments
+        assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
+    
+    return [Assignment(**parse_from_mongo(assignment)) for assignment in assignments]
 
 # Include the router
 app.include_router(api_router)
