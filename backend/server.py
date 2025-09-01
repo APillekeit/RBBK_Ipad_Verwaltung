@@ -479,7 +479,27 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
 @api_router.get("/contracts/unassigned")
 async def get_unassigned_contracts(current_user: str = Depends(get_current_user)):
     contracts = await db.contracts.find({"is_active": False}).to_list(length=None)
-    return [Contract(**parse_from_mongo(contract)) for contract in contracts]
+    
+    # Return contracts without file_data to avoid encoding issues
+    result = []
+    for contract in contracts:
+        try:
+            contract_dict = {
+                "id": contract.get("id"),
+                "assignment_id": contract.get("assignment_id"),
+                "itnr": contract.get("itnr"),
+                "student_name": contract.get("student_name"),
+                "filename": contract.get("filename"),
+                "form_fields": contract.get("form_fields", {}),
+                "uploaded_at": contract.get("uploaded_at"),
+                "is_active": contract.get("is_active", False)
+            }
+            result.append(contract_dict)
+        except Exception as e:
+            print(f"Error processing contract {contract.get('id')}: {e}")
+            continue
+    
+    return result
 
 @api_router.get("/assignments/available-for-contracts")
 async def get_assignments_available_for_contracts(current_user: str = Depends(get_current_user)):
