@@ -106,7 +106,7 @@ user_problem_statement: "Änderung der Validierungsformel für Vertragsvalidieru
 
 backend:
   - task: "Contract validation formula update"
-    implemented: false
+    implemented: true
     working: "NA"
     file: "backend/server.py"
     stuck_count: 0
@@ -115,7 +115,7 @@ backend:
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "About to implement new validation logic"
+        - comment: "Successfully implemented new validation logic: warning appears when (NutzungEinhaltung == NutzungKenntnisnahme) OR (ausgabeNeu == ausgabeGebraucht)"
 
 frontend:
   - task: "No frontend changes needed"
