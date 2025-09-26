@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Vertrag-Upload für Zuordnungen mit Validierungsfehlern: Wenn Zuordnung ⚠️ Validation Dreieck zeigt, soll Upload-Aktion für neuen korrekten Vertrag verfügbar sein. Neuer Vertrag wird validiert, alter ersetzt. Wenn neuer Vertrag keine Felder hat, verschwindet Dreieck."
+user_problem_statement: "Implementierung von globalen Einstellungen und Bestandsliste-Export: 1) Globale Einstellungen für Standard iPad-Typ und Pencil-Ausstattung in Einstellungen-Tab, 2) Bestandsliste-Export (Anforderung 2) mit Excel-Download aller iPads und Schülerzuordnungen in Einstellungen-Tab, 3) Nutzerfreundliche UI-Gestaltung für beide Features."
 
 backend:
   - task: "Assignment-specific contract upload API endpoint"
