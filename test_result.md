@@ -223,7 +223,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Assignment-specific contract upload API endpoint"
+    - "Global Settings UI implementation"
+    - "Inventory Export UI implementation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
