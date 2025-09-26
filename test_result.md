@@ -121,7 +121,7 @@ backend:
         - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Assignment-specific contract upload functionality working perfectly! Tested all 6 scenarios: 1) PDF with form fields triggering validation warning (NutzungEinhaltung == NutzungKenntnisnahme OR ausgabeNeu == ausgabeGebraucht), 2) PDF without form fields (clears validation warning), 3) PDF with form fields passing validation, 4) Non-existent assignment ID (404), 5) Non-PDF file (400), 6) End-to-end verification. Contract replacement works correctly - old contracts marked inactive, new contracts linked to assignment. Response validation confirmed - proper message, contract_id, has_form_fields, validation_status fields. Contract warning status correctly updated in assignments endpoint. All validation logic working as specified."
 
 frontend:
-  - task: "Contract upload button for assignments with validation warnings"
+  - task: "Global Settings UI implementation"
     implemented: true
     working: "NA"
     file: "frontend/src/App.js"
@@ -131,19 +131,19 @@ frontend:
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "Added upload button (only visible for assignments with contract warnings), file input handling, upload functionality with progress indication"
+        - comment: "Implemented Global Settings UI in Settings tab with form inputs for iPad-Typ and Pencil defaults, connected to backend API endpoints"
 
-  - task: "Fix iPad status consistency issue"
+  - task: "Inventory Export UI implementation"
     implemented: true
-    working: true
-    file: "backend/server.py"
+    working: "NA"
+    file: "frontend/src/App.js"
     stuck_count: 0
-    priority: "critical"
-    needs_retesting: false
+    priority: "high"
+    needs_retesting: true
     status_history:
-        - working: true
-        - agent: "testing"
-        - comment: "✅ CRITICAL ISSUE FIXED: iPad status consistency problem resolved."
+        - working: "NA"
+        - agent: "main"
+        - comment: "Implemented Inventory Export UI in Settings tab with download button, handles Excel file download with proper filename extraction"
 
 backend:
   - task: "Student detail view API endpoint"
