@@ -1849,6 +1849,80 @@ const ContractsManagement = () => {
 // Settings Component
 const Settings = () => {
   const [cleaning, setCleaning] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [globalSettings, setGlobalSettings] = useState({
+    ipad_typ: 'Apple iPad',
+    pencil: 'ohne Apple Pencil'
+  });
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  // Load global settings on component mount
+  useEffect(() => {
+    const loadGlobalSettings = async () => {
+      try {
+        const response = await api.get('/settings/global');
+        setGlobalSettings(response.data);
+      } catch (error) {
+        console.error('Failed to load global settings:', error);
+        toast.error('Fehler beim Laden der globalen Einstellungen');
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+
+    loadGlobalSettings();
+  }, []);
+
+  const handleSaveGlobalSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const response = await api.put('/settings/global', globalSettings);
+      toast.success(response.data.message);
+    } catch (error) {
+      console.error('Failed to save global settings:', error);
+      toast.error('Fehler beim Speichern der globalen Einstellungen');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleInventoryExport = async () => {
+    setExporting(true);
+    try {
+      const response = await api.get('/exports/inventory', {
+        responseType: 'blob'
+      });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extract filename from response headers or create default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'bestandsliste_export.xlsx';
+      if (contentDisposition) {
+        const matches = contentDisposition.match(/filename="(.+)"/);
+        if (matches) {
+          filename = matches[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+      toast.success('Bestandsliste erfolgreich exportiert');
+    } catch (error) {
+      console.error('Failed to export inventory:', error);
+      toast.error('Fehler beim Exportieren der Bestandsliste');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleDataProtectionCleanup = async () => {
     // Double-click protection
@@ -1877,6 +1951,93 @@ const Settings = () => {
 
   return (
     <div className="space-y-6">
+      {/* Global Settings */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <SettingsIcon className="h-5 w-5" />
+            Globale Einstellungen
+          </CardTitle>
+          <CardDescription>
+            Standard-Werte für iPad-Typ und Pencil-Ausstattung
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loadingSettings ? (
+            <div className="text-center py-4">Lade Einstellungen...</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ipad_typ">iPad-Typ (Standard)</Label>
+                  <Input
+                    id="ipad_typ"
+                    value={globalSettings.ipad_typ}
+                    onChange={(e) => setGlobalSettings({...globalSettings, ipad_typ: e.target.value})}
+                    placeholder="z.B. Apple iPad"
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pencil">Pencil-Ausstattung (Standard)</Label>
+                  <Input
+                    id="pencil"
+                    value={globalSettings.pencil}
+                    onChange={(e) => setGlobalSettings({...globalSettings, pencil: e.target.value})}
+                    placeholder="z.B. ohne Apple Pencil"
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={handleSaveGlobalSettings}
+                  disabled={savingSettings}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all duration-200"
+                >
+                  <SettingsIcon className="h-4 w-4 mr-2" />
+                  {savingSettings ? 'Speichert...' : 'Einstellungen speichern'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Inventory Export */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Bestandsliste-Export
+          </CardTitle>
+          <CardDescription>
+            Komplette Bestandsliste aller iPads mit Schülerzuordnungen exportieren
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="border-l-4 border-green-400 bg-green-50 p-4 rounded">
+              <h4 className="font-medium text-green-800 mb-2">Bestandsliste-Export (Anforderung 2)</h4>
+              <p className="text-sm text-green-700 mb-4">
+                Exportiert eine vollständige Excel-Datei mit allen iPads und zugehörigen Schülerdaten. 
+                Beinhaltet alle Spalten: Schülerdaten, iPad-Details, Zuordnungsinformationen.
+              </p>
+              <Button 
+                onClick={handleInventoryExport}
+                disabled={exporting}
+                className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 transition-all duration-200"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {exporting ? 'Exportiert...' : 'Bestandsliste exportieren'}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Data Protection Settings */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
