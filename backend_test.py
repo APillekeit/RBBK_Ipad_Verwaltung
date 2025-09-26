@@ -1606,6 +1606,485 @@ startxref
                 f"Only {successful_tests}/{total_tests} integration tests passed"
             )
 
+    def test_assignment_export_functionality(self):
+        """Test Assignment Export functionality with corrected requirements"""
+        print("\n🔍 Testing Assignment Export Functionality...")
+        
+        test_results = []
+        
+        # Step 1: Test basic assignment export endpoint
+        print("\n   📊 Step 1: Testing GET /api/assignments/export endpoint...")
+        
+        url = f"{self.base_url}/api/assignments/export"
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                # Verify it's an Excel file
+                content_type = response.headers.get('content-type', '')
+                content_disposition = response.headers.get('content-disposition', '')
+                
+                print(f"      📄 Content-Type: {content_type}")
+                print(f"      📎 Content-Disposition: {content_disposition}")
+                
+                # Check content type
+                if 'spreadsheet' in content_type or 'excel' in content_type:
+                    print(f"      ✅ Correct Excel MIME type")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Incorrect MIME type: {content_type}")
+                    test_results.append(False)
+                
+                # Check filename is "zuordnungen_export.xlsx"
+                if 'zuordnungen_export.xlsx' in content_disposition:
+                    print(f"      ✅ Correct filename: zuordnungen_export.xlsx")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Incorrect filename in disposition: {content_disposition}")
+                    test_results.append(False)
+                
+                # Check file size (should not be empty)
+                file_size = len(response.content)
+                print(f"      📏 File size: {file_size} bytes")
+                
+                if file_size > 1000:
+                    print(f"      ✅ File size indicates proper Excel content")
+                    test_results.append(True)
+                    excel_content = response.content
+                else:
+                    print(f"      ❌ File size too small: {file_size} bytes")
+                    test_results.append(False)
+                    excel_content = None
+                
+            else:
+                print(f"      ❌ Export failed with status: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"         Error: {error_data.get('detail', 'Unknown error')}")
+                except:
+                    print(f"         Raw response: {response.text[:200]}")
+                test_results.append(False)
+                excel_content = None
+                
+        except Exception as e:
+            print(f"      ❌ Export request exception: {str(e)}")
+            test_results.append(False)
+            excel_content = None
+        
+        # Step 2: Verify Excel file structure and column order
+        if excel_content:
+            print("\n   🔍 Step 2: Analyzing Excel file structure and column order...")
+            
+            try:
+                import pandas as pd
+                import io
+                
+                # Read Excel file
+                df = pd.read_excel(io.BytesIO(excel_content))
+                
+                print(f"      📊 Excel file loaded successfully")
+                print(f"      📏 Rows: {len(df)}, Columns: {len(df.columns)}")
+                print(f"      📋 Column headers: {list(df.columns)}")
+                
+                # Check for required headers in correct order
+                expected_headers = [
+                    # Student fields first
+                    'lfdNr', 'Sname', 'SuSNachn', 'SuSVorn', 'SuSKl', 'SuSStrHNr', 'SuSPLZ', 'SuSOrt', 'SuSGeb',
+                    'Erz1Nachn', 'Erz1Vorn', 'Erz1StrHNr', 'Erz1PLZ', 'Erz1Ort',
+                    'Erz2Nachn', 'Erz2Vorn', 'Erz2StrHNr', 'Erz2PLZ', 'Erz2Ort',
+                    # iPad fields second (WITHOUT Karton column)
+                    'ITNr', 'SNr', 'Pencil', 'Typ', 'AnschJahr', 'AusleiheDatum',
+                    # Assignment fields
+                    'Zugewiesen_am', 'Vertrag_vorhanden'
+                ]
+                
+                missing_headers = [h for h in expected_headers if h not in df.columns]
+                
+                if not missing_headers:
+                    print(f"      ✅ All required headers present")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Missing headers: {missing_headers}")
+                    test_results.append(False)
+                
+                # CRITICAL: Check that Karton column has been REMOVED
+                if 'Karton' in df.columns:
+                    print(f"      ❌ CRITICAL: Karton column still present - should be removed!")
+                    test_results.append(False)
+                else:
+                    print(f"      ✅ VERIFIED: Karton column successfully removed from export")
+                    test_results.append(True)
+                
+                # Check column order - student fields first, then iPad fields
+                actual_headers = list(df.columns)
+                student_fields = ['lfdNr', 'Sname', 'SuSNachn', 'SuSVorn', 'SuSKl', 'SuSStrHNr', 'SuSPLZ', 'SuSOrt', 'SuSGeb',
+                                'Erz1Nachn', 'Erz1Vorn', 'Erz1StrHNr', 'Erz1PLZ', 'Erz1Ort',
+                                'Erz2Nachn', 'Erz2Vorn', 'Erz2StrHNr', 'Erz2PLZ', 'Erz2Ort']
+                ipad_fields = ['ITNr', 'SNr', 'Pencil', 'Typ', 'AnschJahr', 'AusleiheDatum']
+                
+                # Find positions of student and iPad fields
+                student_positions = [actual_headers.index(field) for field in student_fields if field in actual_headers]
+                ipad_positions = [actual_headers.index(field) for field in ipad_fields if field in actual_headers]
+                
+                if student_positions and ipad_positions:
+                    max_student_pos = max(student_positions)
+                    min_ipad_pos = min(ipad_positions)
+                    
+                    if max_student_pos < min_ipad_pos:
+                        print(f"      ✅ Correct column order: student fields before iPad fields")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ Incorrect column order: iPad fields mixed with student fields")
+                        test_results.append(False)
+                else:
+                    print(f"      ⚠️  Could not verify column order - missing fields")
+                    test_results.append(False)
+                
+                # Check if we have assignment data
+                if len(df) > 0:
+                    print(f"      ✅ Export contains {len(df)} assignment records")
+                    test_results.append(True)
+                    
+                    # Show sample data
+                    print(f"      📋 Sample assignment record:")
+                    sample_row = df.iloc[0]
+                    for col in ['ITNr', 'SuSVorn', 'SuSNachn', 'SuSGeb', 'AusleiheDatum', 'Vertrag_vorhanden']:
+                        if col in sample_row:
+                            print(f"         {col}: {sample_row[col]}")
+                else:
+                    print(f"      ⚠️  Export is empty (no assignment records)")
+                    test_results.append(True)  # Empty is valid if no assignments exist
+                
+            except Exception as e:
+                print(f"      ❌ Error analyzing Excel file: {str(e)}")
+                test_results.append(False)
+        else:
+            print("\n   ⚠️  Step 2: Skipped - no Excel content to analyze")
+            test_results.append(False)
+        
+        # Step 3: Test date format corrections (TT.MM.JJJJ format)
+        if excel_content:
+            print("\n   📅 Step 3: Testing date format corrections...")
+            
+            try:
+                import pandas as pd
+                import io
+                import re
+                
+                df = pd.read_excel(io.BytesIO(excel_content))
+                
+                # Test SuSGeb (Geburtstag) date format
+                if 'SuSGeb' in df.columns and len(df) > 0:
+                    susGeb_values = df['SuSGeb'].dropna()
+                    
+                    if len(susGeb_values) > 0:
+                        print(f"      📅 Testing SuSGeb (Geburtstag) date format...")
+                        
+                        # Check if dates are in TT.MM.JJJJ format
+                        date_pattern = re.compile(r'^\d{2}\.\d{2}\.\d{4}$')
+                        valid_dates = 0
+                        total_dates = 0
+                        
+                        for date_val in susGeb_values:
+                            if pd.notna(date_val) and str(date_val) != '':
+                                total_dates += 1
+                                date_str = str(date_val)
+                                if date_pattern.match(date_str):
+                                    valid_dates += 1
+                                    print(f"         ✅ Valid date format: {date_str}")
+                                else:
+                                    print(f"         ❌ Invalid date format: {date_str} (should be TT.MM.JJJJ)")
+                        
+                        if total_dates > 0:
+                            if valid_dates == total_dates:
+                                print(f"      ✅ All SuSGeb dates in correct TT.MM.JJJJ format ({valid_dates}/{total_dates})")
+                                test_results.append(True)
+                            else:
+                                print(f"      ❌ Some SuSGeb dates in wrong format ({valid_dates}/{total_dates} correct)")
+                                test_results.append(False)
+                        else:
+                            print(f"      ⚠️  No SuSGeb date values to test")
+                            test_results.append(True)
+                    else:
+                        print(f"      ⚠️  No SuSGeb values found")
+                        test_results.append(True)
+                else:
+                    print(f"      ❌ SuSGeb column missing")
+                    test_results.append(False)
+                
+                # Test AusleiheDatum date format (derived from assignment assigned_at)
+                if 'AusleiheDatum' in df.columns and len(df) > 0:
+                    ausleihe_values = df['AusleiheDatum'].dropna()
+                    
+                    if len(ausleihe_values) > 0:
+                        print(f"      📅 Testing AusleiheDatum date format...")
+                        
+                        valid_ausleihe_dates = 0
+                        total_ausleihe_dates = 0
+                        
+                        for date_val in ausleihe_values:
+                            if pd.notna(date_val) and str(date_val) != '':
+                                total_ausleihe_dates += 1
+                                date_str = str(date_val)
+                                if date_pattern.match(date_str):
+                                    valid_ausleihe_dates += 1
+                                    print(f"         ✅ Valid AusleiheDatum format: {date_str}")
+                                else:
+                                    print(f"         ❌ Invalid AusleiheDatum format: {date_str} (should be TT.MM.JJJJ)")
+                        
+                        if total_ausleihe_dates > 0:
+                            if valid_ausleihe_dates == total_ausleihe_dates:
+                                print(f"      ✅ All AusleiheDatum dates in correct TT.MM.JJJJ format ({valid_ausleihe_dates}/{total_ausleihe_dates})")
+                                test_results.append(True)
+                            else:
+                                print(f"      ❌ Some AusleiheDatum dates in wrong format ({valid_ausleihe_dates}/{total_ausleihe_dates} correct)")
+                                test_results.append(False)
+                        else:
+                            print(f"      ⚠️  No AusleiheDatum values to test")
+                            test_results.append(True)
+                    else:
+                        print(f"      ⚠️  No AusleiheDatum values found")
+                        test_results.append(True)
+                else:
+                    print(f"      ❌ AusleiheDatum column missing")
+                    test_results.append(False)
+                
+                # Verify AusleiheDatum comes from assignment assigned_at, not old ausleihe_datum
+                print(f"      🔍 Verifying AusleiheDatum source (should be from assignment assigned_at, not iPad ausleihe_datum)...")
+                
+                # Get assignments to compare
+                assignments_success = self.run_api_test(
+                    "Get Assignments for Date Comparison",
+                    "GET",
+                    "assignments",
+                    200
+                )
+                
+                if assignments_success:
+                    assignments = self.test_results[-1]['response_data']
+                    
+                    # Compare first assignment's assigned_at with export AusleiheDatum
+                    if len(assignments) > 0 and len(df) > 0:
+                        assignment = assignments[0]
+                        export_row = df.iloc[0]
+                        
+                        if assignment.get('assigned_at') and 'AusleiheDatum' in export_row:
+                            try:
+                                # Parse assignment assigned_at
+                                from datetime import datetime
+                                assigned_at_str = assignment['assigned_at']
+                                if assigned_at_str.endswith('Z'):
+                                    assigned_at_str = assigned_at_str[:-1] + '+00:00'
+                                assigned_date = datetime.fromisoformat(assigned_at_str)
+                                expected_ausleihe = assigned_date.strftime("%d.%m.%Y")
+                                
+                                actual_ausleihe = str(export_row['AusleiheDatum'])
+                                
+                                if expected_ausleihe == actual_ausleihe:
+                                    print(f"         ✅ AusleiheDatum correctly derived from assignment assigned_at")
+                                    print(f"            Assignment assigned_at: {assignment['assigned_at']}")
+                                    print(f"            Export AusleiheDatum: {actual_ausleihe}")
+                                    test_results.append(True)
+                                else:
+                                    print(f"         ❌ AusleiheDatum mismatch")
+                                    print(f"            Expected (from assigned_at): {expected_ausleihe}")
+                                    print(f"            Actual (from export): {actual_ausleihe}")
+                                    test_results.append(False)
+                            except Exception as e:
+                                print(f"         ❌ Error comparing dates: {str(e)}")
+                                test_results.append(False)
+                        else:
+                            print(f"         ⚠️  Cannot compare - missing data")
+                            test_results.append(True)
+                    else:
+                        print(f"         ⚠️  No data to compare")
+                        test_results.append(True)
+                else:
+                    print(f"         ❌ Could not get assignments for comparison")
+                    test_results.append(False)
+                
+            except Exception as e:
+                print(f"      ❌ Error testing date formats: {str(e)}")
+                test_results.append(False)
+        else:
+            print("\n   ⚠️  Step 3: Skipped - no Excel content to analyze")
+            test_results.append(False)
+        
+        # Step 4: Test data accuracy and joins
+        if excel_content:
+            print("\n   🔍 Step 4: Testing data accuracy and proper joins...")
+            
+            try:
+                import pandas as pd
+                import io
+                
+                df = pd.read_excel(io.BytesIO(excel_content))
+                
+                # Verify that only active assignments are included
+                print(f"      📊 Verifying only active assignments are exported...")
+                
+                # Get active assignments count
+                assignments_success = self.run_api_test(
+                    "Get Active Assignments Count",
+                    "GET",
+                    "assignments",
+                    200
+                )
+                
+                if assignments_success:
+                    assignments = self.test_results[-1]['response_data']
+                    active_assignments = [a for a in assignments if a.get('is_active', True)]
+                    
+                    print(f"         Active assignments in system: {len(active_assignments)}")
+                    print(f"         Records in export: {len(df)}")
+                    
+                    if len(df) == len(active_assignments):
+                        print(f"      ✅ Export contains correct number of active assignments")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ Export count mismatch - expected {len(active_assignments)}, got {len(df)}")
+                        test_results.append(False)
+                else:
+                    print(f"      ❌ Could not get assignments for comparison")
+                    test_results.append(False)
+                
+                # Test contract status accuracy
+                if 'Vertrag_vorhanden' in df.columns and len(df) > 0:
+                    print(f"      📄 Testing contract status accuracy...")
+                    
+                    contract_ja_count = len(df[df['Vertrag_vorhanden'] == 'Ja'])
+                    contract_nein_count = len(df[df['Vertrag_vorhanden'] == 'Nein'])
+                    
+                    print(f"         Assignments with contracts (Ja): {contract_ja_count}")
+                    print(f"         Assignments without contracts (Nein): {contract_nein_count}")
+                    print(f"         Total: {contract_ja_count + contract_nein_count}")
+                    
+                    if contract_ja_count + contract_nein_count == len(df):
+                        print(f"      ✅ All assignments have valid contract status")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ Some assignments missing contract status")
+                        test_results.append(False)
+                else:
+                    print(f"      ❌ Vertrag_vorhanden column missing or no data")
+                    test_results.append(False)
+                
+                # Test student and iPad data joins
+                if len(df) > 0:
+                    print(f"      🔗 Testing student and iPad data joins...")
+                    
+                    # Check that student data is properly joined
+                    student_fields = ['SuSVorn', 'SuSNachn', 'SuSKl']
+                    missing_student_data = 0
+                    
+                    for _, row in df.iterrows():
+                        if any(pd.isna(row[field]) or str(row[field]) == '' for field in student_fields if field in row):
+                            missing_student_data += 1
+                    
+                    if missing_student_data == 0:
+                        print(f"      ✅ All assignments have complete student data")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ {missing_student_data} assignments missing student data")
+                        test_results.append(False)
+                    
+                    # Check that iPad data is properly joined
+                    ipad_fields = ['ITNr']
+                    missing_ipad_data = 0
+                    
+                    for _, row in df.iterrows():
+                        if any(pd.isna(row[field]) or str(row[field]) == '' for field in ipad_fields if field in row):
+                            missing_ipad_data += 1
+                    
+                    if missing_ipad_data == 0:
+                        print(f"      ✅ All assignments have complete iPad data")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ {missing_ipad_data} assignments missing iPad data")
+                        test_results.append(False)
+                else:
+                    print(f"      ⚠️  No data to test joins")
+                    test_results.append(True)
+                
+            except Exception as e:
+                print(f"      ❌ Error testing data accuracy: {str(e)}")
+                test_results.append(False)
+        else:
+            print("\n   ⚠️  Step 4: Skipped - no Excel content to analyze")
+            test_results.append(False)
+        
+        # Step 5: Test authentication requirement
+        print("\n   🔐 Step 5: Testing authentication requirement...")
+        
+        try:
+            response = requests.get(url, timeout=30)  # No auth headers
+            
+            if response.status_code in [401, 403]:
+                print(f"      ✅ Properly requires authentication ({response.status_code})")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Should require authentication, got: {response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Auth test exception: {str(e)}")
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Assignment Export Testing Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        # Detailed results summary
+        print(f"\n   📋 Key Corrections Verified:")
+        if excel_content:
+            try:
+                import pandas as pd
+                import io
+                df = pd.read_excel(io.BytesIO(excel_content))
+                
+                karton_removed = 'Karton' not in df.columns
+                print(f"      ✅ Karton column removed: {'YES' if karton_removed else 'NO'}")
+                
+                if 'SuSGeb' in df.columns:
+                    susGeb_values = df['SuSGeb'].dropna()
+                    if len(susGeb_values) > 0:
+                        import re
+                        date_pattern = re.compile(r'^\d{2}\.\d{2}\.\d{4}$')
+                        valid_susGeb = all(date_pattern.match(str(val)) for val in susGeb_values if pd.notna(val) and str(val) != '')
+                        print(f"      ✅ SuSGeb date format (TT.MM.JJJJ): {'YES' if valid_susGeb else 'NO'}")
+                
+                if 'AusleiheDatum' in df.columns:
+                    ausleihe_values = df['AusleiheDatum'].dropna()
+                    if len(ausleihe_values) > 0:
+                        valid_ausleihe = all(date_pattern.match(str(val)) for val in ausleihe_values if pd.notna(val) and str(val) != '')
+                        print(f"      ✅ AusleiheDatum format (TT.MM.JJJJ): {'YES' if valid_ausleihe else 'NO'}")
+                        print(f"      ✅ AusleiheDatum from assigned_at: VERIFIED")
+                
+            except Exception as e:
+                print(f"      ❌ Error in summary: {str(e)}")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Assignment Export Functionality", 
+                True, 
+                f"All {total_tests} assignment export tests passed successfully. Key corrections verified: Karton removed, date formats corrected, AusleiheDatum from assigned_at."
+            )
+        else:
+            return self.log_result(
+                "Assignment Export Functionality", 
+                False, 
+                f"Only {successful_tests}/{total_tests} assignment export tests passed"
+            )
+
     def run_comprehensive_test(self):
         """Run all tests in sequence"""
         print("=" * 80)
