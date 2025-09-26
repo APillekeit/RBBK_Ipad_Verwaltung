@@ -1336,6 +1336,36 @@ async def export_assignments(current_user: str = Depends(get_current_user)):
         ipad = await db.ipads.find_one({"id": assignment["ipad_id"]})
         
         if student and ipad:
+            # Format Geburtstag to TT.MM.JJJJ
+            geburtstag_formatted = ""
+            if student.get("sus_geb"):
+                try:
+                    # Try parsing different date formats
+                    geb_str = str(student["sus_geb"])
+                    if "." in geb_str:
+                        # Already in DD.MM.YYYY format
+                        geburtstag_formatted = geb_str
+                    elif "-" in geb_str:
+                        # Parse YYYY-MM-DD format
+                        date_obj = datetime.strptime(geb_str, "%Y-%m-%d")
+                        geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
+                    elif len(geb_str) == 8 and geb_str.isdigit():
+                        # Parse YYYYMMDD format
+                        date_obj = datetime.strptime(geb_str, "%Y%m%d")
+                        geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
+                except:
+                    geburtstag_formatted = student.get("sus_geb", "")
+            
+            # Format AusleiheDatum from assignment assigned_at
+            ausleihe_datum_formatted = ""
+            if assignment.get("assigned_at"):
+                try:
+                    # Parse ISO format datetime and convert to DD.MM.YYYY
+                    assigned_date = datetime.fromisoformat(assignment["assigned_at"].replace('Z', '+00:00'))
+                    ausleihe_datum_formatted = assigned_date.strftime("%d.%m.%Y")
+                except:
+                    ausleihe_datum_formatted = ""
+            
             # Combine data in order: student fields first, then iPad fields
             row_data = {
                 # Student data first (matching schildexport.xlsx order)
@@ -1347,7 +1377,7 @@ async def export_assignments(current_user: str = Depends(get_current_user)):
                 "SuSStrHNr": student.get("sus_str_hnr", ""),
                 "SuSPLZ": student.get("sus_plz", ""),
                 "SuSOrt": student.get("sus_ort", ""),
-                "SuSGeb": student.get("sus_geb", ""),
+                "SuSGeb": geburtstag_formatted,  # Formatted to TT.MM.JJJJ
                 "Erz1Nachn": student.get("erz1_nachn", ""),
                 "Erz1Vorn": student.get("erz1_vorn", ""),
                 "Erz1StrHNr": student.get("erz1_str_hnr", ""),
@@ -1358,14 +1388,13 @@ async def export_assignments(current_user: str = Depends(get_current_user)):
                 "Erz2StrHNr": student.get("erz2_str_hnr", ""),
                 "Erz2PLZ": student.get("erz2_plz", ""),
                 "Erz2Ort": student.get("erz2_ort", ""),
-                # iPad data second (matching ipads.xlsx order)
+                # iPad data second (REMOVED Karton column as requested)
                 "ITNr": ipad.get("itnr", ""),
                 "SNr": ipad.get("snr", ""),
-                "Karton": ipad.get("karton", ""),
                 "Pencil": ipad.get("pencil", ""),
                 "Typ": ipad.get("typ", ""),
                 "AnschJahr": ipad.get("ansch_jahr", ""),
-                "AusleiheDatum": ipad.get("ausleihe_datum", ""),
+                "AusleiheDatum": ausleihe_datum_formatted,  # From assigned_at, formatted to TT.MM.JJJJ
                 # Assignment data
                 "Zugewiesen_am": assignment.get("assigned_at", ""),
                 "Vertrag_vorhanden": "Ja" if assignment.get("contract_id") else "Nein"
