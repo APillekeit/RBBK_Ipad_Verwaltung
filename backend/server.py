@@ -1343,8 +1343,19 @@ async def export_assignments(current_user: str = Depends(get_current_user)):
                     # Try parsing different date formats
                     geb_str = str(student["sus_geb"])
                     if "." in geb_str:
-                        # Already in DD.MM.YYYY format
-                        geburtstag_formatted = geb_str
+                        # Parse DD.MM.YYYY format and reformat to ensure leading zeros
+                        try:
+                            date_obj = datetime.strptime(geb_str, "%d.%m.%Y")
+                            geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
+                        except:
+                            # Try parsing without leading zeros
+                            parts = geb_str.split(".")
+                            if len(parts) == 3:
+                                day, month, year = parts
+                                date_obj = datetime(int(year), int(month), int(day))
+                                geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
+                            else:
+                                geburtstag_formatted = geb_str
                     elif "-" in geb_str:
                         # Parse YYYY-MM-DD format
                         date_obj = datetime.strptime(geb_str, "%Y-%m-%d")
