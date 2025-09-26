@@ -105,6 +105,21 @@
 user_problem_statement: "Implementierung von globalen Einstellungen und Bestandsliste-Export: 1) Globale Einstellungen für Standard iPad-Typ und Pencil-Ausstattung in Einstellungen-Tab, 2) Bestandsliste-Export (Anforderung 2) mit Excel-Download aller iPads und Schülerzuordnungen in Einstellungen-Tab, 3) Nutzerfreundliche UI-Gestaltung für beide Features."
 
 backend:
+  - task: "Assignment Export API endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Implemented GET /api/assignments/export endpoint with corrected requirements: removed Karton column, fixed date formats to TT.MM.JJJJ, and AusleiheDatum derived from assignment assigned_at"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Assignment Export functionality working perfectly! All 15 tests passed (100% success rate). Key corrections verified: 1) Karton column successfully removed from export, 2) SuSGeb (Geburtstag) dates in correct TT.MM.JJJJ format with leading zeros, 3) AusleiheDatum dates in correct TT.MM.JJJJ format derived from assignment assigned_at (not old iPad ausleihe_datum), 4) Proper Excel MIME type and filename 'zuordnungen_export.xlsx', 5) Correct column order (student fields first, then iPad fields), 6) Only active assignments exported with proper student/iPad data joins, 7) Contract status accuracy (Ja/Nein), 8) Authentication required. Fixed minor date formatting issue to ensure leading zeros in all date fields."
+
   - task: "Assignment-specific contract upload API endpoint"
     implemented: true
     working: true
