@@ -120,6 +120,36 @@ backend:
         - agent: "testing"
         - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Assignment-specific contract upload functionality working perfectly! Tested all 6 scenarios: 1) PDF with form fields triggering validation warning (NutzungEinhaltung == NutzungKenntnisnahme OR ausgabeNeu == ausgabeGebraucht), 2) PDF without form fields (clears validation warning), 3) PDF with form fields passing validation, 4) Non-existent assignment ID (404), 5) Non-PDF file (400), 6) End-to-end verification. Contract replacement works correctly - old contracts marked inactive, new contracts linked to assignment. Response validation confirmed - proper message, contract_id, has_form_fields, validation_status fields. Contract warning status correctly updated in assignments endpoint. All validation logic working as specified."
 
+  - task: "Global Settings API endpoints"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Implemented GET /api/settings/global and PUT /api/settings/global endpoints for managing default iPad-Typ and Pencil settings"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Global Settings API working perfectly! Tested 5 scenarios: 1) GET default settings returns correct values (iPad-Typ: 'Apple iPad', Pencil: 'ohne Apple Pencil'), 2) PUT updates settings and returns confirmation, 3) Settings persistence verified between requests, 4) Error handling with empty data (applies defaults), 5) Settings reset functionality. All endpoints respond correctly with proper JSON structure and German success messages. Settings are properly stored in MongoDB global_settings collection and persist across requests."
+
+  - task: "Inventory Export API endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Implemented GET /api/exports/inventory endpoint for Excel export of complete inventory with student and iPad data"
+        - working: true
+        - agent: "testing"
+        - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Inventory Export API working excellently! Tested 7 scenarios: 1) Basic export returns proper Excel file with correct content-type and timestamped filename, 2) Excel structure verified with all 25 required headers and 9 data rows, 3) Global settings integration confirmed - Typ and Pencil columns use current global settings, 4) Authentication properly required (403 for unauthenticated requests), 5) File size appropriate (6391 bytes), 6) Data consistency verified - export contains all iPads with proper assignment status, 7) Both assigned (7) and unassigned (2) iPads correctly represented. Export uses MongoDB aggregation pipeline to join iPads, assignments, and students data. Minor: Authentication test expected 401 but got 403 (acceptable security behavior)."
+
 frontend:
   - task: "Global Settings UI implementation"
     implemented: true
