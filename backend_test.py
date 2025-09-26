@@ -965,295 +965,645 @@ startxref
         
         return pdf_header + pdf_body + field_objects + page_obj + xref + trailer
 
-    def test_assignment_specific_contract_upload(self):
-        """Test assignment-specific contract upload functionality"""
-        print("\n🔍 Testing Assignment-Specific Contract Upload Functionality...")
-        
-        # Step 1: Get assignments to test with
-        print("\n   📋 Step 1: Getting assignments for contract upload testing...")
-        
-        success = self.run_api_test(
-            "Get Assignments for Contract Upload Testing",
-            "GET",
-            "assignments",
-            200
-        )
-        
-        if not success:
-            return self.log_result("Assignment-Specific Contract Upload", False, "Could not get assignments for testing")
-        
-        assignments = self.test_results[-1]['response_data']
-        if not isinstance(assignments, list) or len(assignments) == 0:
-            return self.log_result("Assignment-Specific Contract Upload", False, "No assignments found for testing")
-        
-        # Find an assignment to test with
-        test_assignment = assignments[0]
-        assignment_id = test_assignment['id']
-        assignment_itnr = test_assignment['itnr']
-        student_name = test_assignment['student_name']
-        
-        print(f"   🎯 Testing with assignment: {assignment_itnr} → {student_name}")
+    def test_global_settings_api(self):
+        """Test Global Settings API endpoints"""
+        print("\n🔍 Testing Global Settings API Functionality...")
         
         test_results = []
         
-        # Step 2: Test uploading PDF with form fields that trigger validation warning
-        print(f"\n   🧪 Step 2: Testing contract upload with validation warning...")
+        # Step 1: Test GET /api/settings/global - should return default settings
+        print("\n   📋 Step 1: Testing GET global settings (default values)...")
         
-        # Create PDF with form fields that should trigger warning
-        # (NutzungEinhaltung == NutzungKenntnisnahme) OR (ausgabeNeu == ausgabeGebraucht)
-        warning_form_fields = {
-            'NutzungEinhaltung': '/Yes',
-            'NutzungKenntnisnahme': 'Some text',  # Both have values = warning
-            'ausgabeNeu': '/No',
-            'ausgabeGebraucht': '/No',  # Both same = warning
-            'ITNr': assignment_itnr,
-            'SuSVorn': student_name.split()[0] if ' ' in student_name else student_name,
-            'SuSNachn': student_name.split()[1] if ' ' in student_name else 'Test'
-        }
-        
-        pdf_content_warning = self.create_pdf_with_form_fields(warning_form_fields)
-        
-        # Upload contract with warning
-        url = f"{self.base_url}/api/assignments/{assignment_id}/upload-contract"
-        headers = {}
-        if self.token:
-            headers['Authorization'] = f'Bearer {self.token}'
-        
-        files = {'file': ('contract_with_warning.pdf', pdf_content_warning, 'application/pdf')}
-        
-        try:
-            response = requests.post(url, files=files, headers=headers, timeout=30)
-            
-            if response.status_code == 200:
-                response_data = response.json()
-                
-                # Verify response structure
-                expected_fields = ['message', 'contract_id', 'has_form_fields', 'validation_status', 'contract_warning']
-                missing_fields = [field for field in expected_fields if field not in response_data]
-                
-                if missing_fields:
-                    test_results.append(False)
-                    print(f"      ❌ Missing response fields: {missing_fields}")
-                else:
-                    # Verify validation warning is detected
-                    if response_data.get('contract_warning') == True and response_data.get('validation_status') == 'validation_warning':
-                        print(f"      ✅ Contract upload with validation warning successful")
-                        print(f"         Contract ID: {response_data.get('contract_id')}")
-                        print(f"         Has form fields: {response_data.get('has_form_fields')}")
-                        print(f"         Validation status: {response_data.get('validation_status')}")
-                        test_results.append(True)
-                        warning_contract_id = response_data.get('contract_id')
-                    else:
-                        print(f"      ❌ Validation warning not properly detected")
-                        print(f"         Contract warning: {response_data.get('contract_warning')}")
-                        print(f"         Validation status: {response_data.get('validation_status')}")
-                        test_results.append(False)
-                        warning_contract_id = None
-            else:
-                print(f"      ❌ Contract upload failed: {response.status_code}")
-                try:
-                    error_data = response.json()
-                    print(f"         Error: {error_data.get('detail', 'Unknown error')}")
-                except:
-                    print(f"         Raw response: {response.text}")
-                test_results.append(False)
-                warning_contract_id = None
-                
-        except Exception as e:
-            print(f"      ❌ Contract upload exception: {str(e)}")
-            test_results.append(False)
-            warning_contract_id = None
-        
-        # Step 3: Test uploading PDF without form fields (should clear warning)
-        print(f"\n   🧪 Step 3: Testing contract upload without form fields...")
-        
-        # Create PDF without form fields
-        pdf_content_no_fields = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000074 00000 n \n0000000120 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n179\n%%EOF"
-        
-        files = {'file': ('contract_no_fields.pdf', pdf_content_no_fields, 'application/pdf')}
-        
-        try:
-            response = requests.post(url, files=files, headers=headers, timeout=30)
-            
-            if response.status_code == 200:
-                response_data = response.json()
-                
-                # Verify no validation warning
-                if response_data.get('contract_warning') == False and response_data.get('validation_status') == 'no_validation_issues':
-                    print(f"      ✅ Contract upload without form fields successful")
-                    print(f"         Contract ID: {response_data.get('contract_id')}")
-                    print(f"         Has form fields: {response_data.get('has_form_fields')}")
-                    print(f"         Validation status: {response_data.get('validation_status')}")
-                    test_results.append(True)
-                    no_fields_contract_id = response_data.get('contract_id')
-                    
-                    # Verify old contract was marked inactive
-                    if warning_contract_id:
-                        print(f"         Previous contract {warning_contract_id} should be marked inactive")
-                else:
-                    print(f"      ❌ Contract without form fields not handled properly")
-                    print(f"         Contract warning: {response_data.get('contract_warning')}")
-                    print(f"         Validation status: {response_data.get('validation_status')}")
-                    test_results.append(False)
-                    no_fields_contract_id = None
-            else:
-                print(f"      ❌ Contract upload failed: {response.status_code}")
-                test_results.append(False)
-                no_fields_contract_id = None
-                
-        except Exception as e:
-            print(f"      ❌ Contract upload exception: {str(e)}")
-            test_results.append(False)
-            no_fields_contract_id = None
-        
-        # Step 4: Test uploading PDF with form fields that pass validation
-        print(f"\n   🧪 Step 4: Testing contract upload with passing validation...")
-        
-        # Create PDF with form fields that should NOT trigger warning
-        passing_form_fields = {
-            'NutzungEinhaltung': '/Yes',
-            'NutzungKenntnisnahme': '',  # Different states = no warning
-            'ausgabeNeu': '/Yes',
-            'ausgabeGebraucht': '/No',  # Different states = no warning
-            'ITNr': assignment_itnr,
-            'SuSVorn': student_name.split()[0] if ' ' in student_name else student_name,
-            'SuSNachn': student_name.split()[1] if ' ' in student_name else 'Test'
-        }
-        
-        pdf_content_passing = self.create_pdf_with_form_fields(passing_form_fields)
-        
-        files = {'file': ('contract_passing.pdf', pdf_content_passing, 'application/pdf')}
-        
-        try:
-            response = requests.post(url, files=files, headers=headers, timeout=30)
-            
-            if response.status_code == 200:
-                response_data = response.json()
-                
-                # Verify no validation warning
-                if response_data.get('contract_warning') == False and response_data.get('validation_status') == 'no_validation_issues':
-                    print(f"      ✅ Contract upload with passing validation successful")
-                    print(f"         Contract ID: {response_data.get('contract_id')}")
-                    print(f"         Has form fields: {response_data.get('has_form_fields')}")
-                    print(f"         Validation status: {response_data.get('validation_status')}")
-                    test_results.append(True)
-                    passing_contract_id = response_data.get('contract_id')
-                else:
-                    print(f"      ❌ Contract with passing validation not handled properly")
-                    print(f"         Contract warning: {response_data.get('contract_warning')}")
-                    print(f"         Validation status: {response_data.get('validation_status')}")
-                    test_results.append(False)
-                    passing_contract_id = None
-            else:
-                print(f"      ❌ Contract upload failed: {response.status_code}")
-                test_results.append(False)
-                passing_contract_id = None
-                
-        except Exception as e:
-            print(f"      ❌ Contract upload exception: {str(e)}")
-            test_results.append(False)
-            passing_contract_id = None
-        
-        # Step 5: Test error cases
-        print(f"\n   🧪 Step 5: Testing error cases...")
-        
-        # Test with non-existent assignment ID
-        fake_assignment_id = "non-existent-assignment-12345"
-        fake_url = f"{self.base_url}/api/assignments/{fake_assignment_id}/upload-contract"
-        
-        files = {'file': ('test.pdf', pdf_content_no_fields, 'application/pdf')}
-        
-        try:
-            response = requests.post(fake_url, files=files, headers=headers, timeout=30)
-            
-            if response.status_code == 404:
-                print(f"      ✅ Non-existent assignment ID properly returns 404")
-                test_results.append(True)
-            else:
-                print(f"      ❌ Non-existent assignment ID returned {response.status_code}, expected 404")
-                test_results.append(False)
-                
-        except Exception as e:
-            print(f"      ❌ Non-existent assignment test exception: {str(e)}")
-            test_results.append(False)
-        
-        # Test with non-PDF file
-        files = {'file': ('test.txt', b'This is not a PDF file', 'text/plain')}
-        
-        try:
-            response = requests.post(url, files=files, headers=headers, timeout=30)
-            
-            if response.status_code == 400:
-                print(f"      ✅ Non-PDF file properly returns 400")
-                test_results.append(True)
-            else:
-                print(f"      ❌ Non-PDF file returned {response.status_code}, expected 400")
-                test_results.append(False)
-                
-        except Exception as e:
-            print(f"      ❌ Non-PDF file test exception: {str(e)}")
-            test_results.append(False)
-        
-        # Step 6: End-to-end verification
-        print(f"\n   🧪 Step 6: End-to-end verification...")
-        
-        # Get assignments again to verify contract_warning status
-        verify_success = self.run_api_test(
-            "Get Assignments for Verification",
+        success = self.run_api_test(
+            "Get Global Settings - Default",
             "GET",
-            "assignments",
+            "settings/global",
             200
         )
         
-        if verify_success:
-            updated_assignments = self.test_results[-1]['response_data']
-            updated_assignment = next((a for a in updated_assignments if a['id'] == assignment_id), None)
+        if success:
+            settings_data = self.test_results[-1]['response_data']
             
-            if updated_assignment:
-                # Check if assignment now references the latest contract
-                current_contract_id = updated_assignment.get('contract_id')
-                current_warning = updated_assignment.get('contract_warning', False)
-                
-                print(f"      📋 Assignment contract status:")
-                print(f"         Current contract ID: {current_contract_id}")
-                print(f"         Contract warning: {current_warning}")
-                
-                # The latest contract should be the passing one (no warning)
-                if current_contract_id == passing_contract_id and not current_warning:
-                    print(f"      ✅ Assignment correctly references latest contract with no warning")
-                    test_results.append(True)
-                else:
-                    print(f"      ❌ Assignment contract status not as expected")
-                    print(f"         Expected contract ID: {passing_contract_id}")
-                    print(f"         Expected warning: False")
-                    test_results.append(False)
+            # Verify default settings structure and values
+            expected_fields = ['ipad_typ', 'pencil']
+            missing_fields = [field for field in expected_fields if field not in settings_data]
+            
+            if missing_fields:
+                print(f"      ❌ Missing response fields: {missing_fields}")
+                test_results.append(False)
             else:
-                print(f"      ❌ Could not find assignment after contract uploads")
+                # Check default values
+                ipad_typ = settings_data.get('ipad_typ')
+                pencil = settings_data.get('pencil')
+                
+                print(f"      📱 iPad-Typ: {ipad_typ}")
+                print(f"      ✏️  Pencil: {pencil}")
+                
+                # Verify default values match specification
+                if ipad_typ == "Apple iPad" and pencil == "ohne Apple Pencil":
+                    print(f"      ✅ Default settings correct")
+                    test_results.append(True)
+                    default_settings = settings_data
+                else:
+                    print(f"      ❌ Default settings incorrect - Expected: iPad-Typ='Apple iPad', Pencil='ohne Apple Pencil'")
+                    test_results.append(False)
+                    default_settings = settings_data
+        else:
+            print(f"      ❌ Failed to get global settings")
+            test_results.append(False)
+            default_settings = None
+        
+        # Step 2: Test PUT /api/settings/global - update settings
+        print("\n   🔧 Step 2: Testing PUT global settings (update values)...")
+        
+        new_settings = {
+            "ipad_typ": "Apple iPad Pro",
+            "pencil": "mit Apple Pencil"
+        }
+        
+        success = self.run_api_test(
+            "Update Global Settings",
+            "PUT",
+            "settings/global",
+            200,
+            data=new_settings
+        )
+        
+        if success:
+            update_response = self.test_results[-1]['response_data']
+            
+            # Verify update response
+            if (update_response.get('ipad_typ') == new_settings['ipad_typ'] and 
+                update_response.get('pencil') == new_settings['pencil'] and
+                'message' in update_response):
+                print(f"      ✅ Settings update successful")
+                print(f"         Message: {update_response.get('message')}")
+                print(f"         Updated iPad-Typ: {update_response.get('ipad_typ')}")
+                print(f"         Updated Pencil: {update_response.get('pencil')}")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Settings update response incorrect")
+                print(f"         Response: {update_response}")
                 test_results.append(False)
         else:
-            print(f"      ❌ Could not verify assignments after contract uploads")
+            print(f"      ❌ Failed to update global settings")
+            test_results.append(False)
+        
+        # Step 3: Test persistence - GET settings again to verify they were saved
+        print("\n   🔍 Step 3: Testing settings persistence...")
+        
+        success = self.run_api_test(
+            "Get Global Settings - After Update",
+            "GET",
+            "settings/global",
+            200
+        )
+        
+        if success:
+            updated_settings = self.test_results[-1]['response_data']
+            
+            # Verify settings persisted
+            if (updated_settings.get('ipad_typ') == new_settings['ipad_typ'] and 
+                updated_settings.get('pencil') == new_settings['pencil']):
+                print(f"      ✅ Settings persistence verified")
+                print(f"         Persisted iPad-Typ: {updated_settings.get('ipad_typ')}")
+                print(f"         Persisted Pencil: {updated_settings.get('pencil')}")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Settings not properly persisted")
+                print(f"         Expected: {new_settings}")
+                print(f"         Got: {updated_settings}")
+                test_results.append(False)
+        else:
+            print(f"      ❌ Failed to verify settings persistence")
+            test_results.append(False)
+        
+        # Step 4: Test error handling - invalid data
+        print("\n   ⚠️  Step 4: Testing error handling...")
+        
+        # Test with empty data
+        success = self.run_api_test(
+            "Update Global Settings - Empty Data",
+            "PUT",
+            "settings/global",
+            200,  # Should still work with defaults
+            data={}
+        )
+        
+        if success:
+            empty_response = self.test_results[-1]['response_data']
+            # Should use defaults when empty
+            if (empty_response.get('ipad_typ') == "Apple iPad" and 
+                empty_response.get('pencil') == "ohne Apple Pencil"):
+                print(f"      ✅ Empty data handled correctly (defaults applied)")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Empty data not handled correctly")
+                test_results.append(False)
+        else:
+            print(f"      ❌ Empty data test failed")
+            test_results.append(False)
+        
+        # Step 5: Reset to original settings for other tests
+        print("\n   🔄 Step 5: Resetting to default settings...")
+        
+        reset_settings = {
+            "ipad_typ": "Apple iPad",
+            "pencil": "ohne Apple Pencil"
+        }
+        
+        success = self.run_api_test(
+            "Reset Global Settings to Default",
+            "PUT",
+            "settings/global",
+            200,
+            data=reset_settings
+        )
+        
+        if success:
+            print(f"      ✅ Settings reset to defaults")
+            test_results.append(True)
+        else:
+            print(f"      ❌ Failed to reset settings")
             test_results.append(False)
         
         # Calculate overall success
         successful_tests = sum(test_results)
         total_tests = len(test_results)
         
-        print(f"\n   📊 Assignment-Specific Contract Upload Summary:")
+        print(f"\n   📊 Global Settings API Summary:")
         print(f"      Total tests: {total_tests}")
         print(f"      Successful tests: {successful_tests}")
         print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
         
         if successful_tests == total_tests:
             return self.log_result(
-                "Assignment-Specific Contract Upload", 
+                "Global Settings API", 
                 True, 
-                f"All {total_tests} contract upload tests passed successfully"
+                f"All {total_tests} global settings tests passed successfully"
             )
         else:
             return self.log_result(
-                "Assignment-Specific Contract Upload", 
+                "Global Settings API", 
                 False, 
-                f"Only {successful_tests}/{total_tests} contract upload tests passed"
+                f"Only {successful_tests}/{total_tests} global settings tests passed"
+            )
+
+    def test_inventory_export_api(self):
+        """Test Inventory Export API endpoint"""
+        print("\n🔍 Testing Inventory Export API Functionality...")
+        
+        test_results = []
+        
+        # Step 1: Test basic inventory export
+        print("\n   📊 Step 1: Testing basic inventory export...")
+        
+        url = f"{self.base_url}/api/exports/inventory"
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=60)  # Longer timeout for file generation
+            
+            if response.status_code == 200:
+                # Verify it's an Excel file
+                content_type = response.headers.get('content-type', '')
+                content_disposition = response.headers.get('content-disposition', '')
+                
+                print(f"      📄 Content-Type: {content_type}")
+                print(f"      📎 Content-Disposition: {content_disposition}")
+                
+                # Check content type
+                if 'spreadsheet' in content_type or 'excel' in content_type:
+                    print(f"      ✅ Correct Excel content type")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Incorrect content type: {content_type}")
+                    test_results.append(False)
+                
+                # Check filename in content disposition
+                if 'bestandsliste_' in content_disposition and '.xlsx' in content_disposition:
+                    print(f"      ✅ Correct filename format with timestamp")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Incorrect filename format: {content_disposition}")
+                    test_results.append(False)
+                
+                # Check file size (should not be empty)
+                file_size = len(response.content)
+                print(f"      📏 File size: {file_size} bytes")
+                
+                if file_size > 1000:  # Should be at least 1KB for a proper Excel file
+                    print(f"      ✅ File size indicates proper Excel content")
+                    test_results.append(True)
+                    excel_content = response.content
+                else:
+                    print(f"      ❌ File size too small: {file_size} bytes")
+                    test_results.append(False)
+                    excel_content = None
+                
+            else:
+                print(f"      ❌ Export failed with status: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"         Error: {error_data.get('detail', 'Unknown error')}")
+                except:
+                    print(f"         Raw response: {response.text[:200]}")
+                test_results.append(False)
+                excel_content = None
+                
+        except Exception as e:
+            print(f"      ❌ Export request exception: {str(e)}")
+            test_results.append(False)
+            excel_content = None
+        
+        # Step 2: Verify Excel file structure (if we got content)
+        if excel_content:
+            print("\n   🔍 Step 2: Analyzing Excel file structure...")
+            
+            try:
+                import pandas as pd
+                import io
+                
+                # Read Excel file
+                df = pd.read_excel(io.BytesIO(excel_content))
+                
+                print(f"      📊 Excel file loaded successfully")
+                print(f"      📏 Rows: {len(df)}, Columns: {len(df.columns)}")
+                print(f"      📋 Column headers: {list(df.columns)}")
+                
+                # Check for required headers
+                required_headers = [
+                    'Sname', 'SuSNachn', 'SuSVorn', 'SuSKl', 'SuSStrHNr', 'SuSPLZ', 'SuSOrt', 'SuSGeb',
+                    'Erz1Nachn', 'Erz1Vorn', 'Erz1StrHNr', 'Erz1PLZ', 'Erz1Ort',
+                    'Erz2Nachn', 'Erz2Vorn', 'Erz2StrHNr', 'Erz2PLZ', 'Erz2Ort',
+                    'Pencil', 'ITNr', 'SNr', 'Typ', 'AnschJahr', 'AusleiheDatum', 'Rückgabe'
+                ]
+                
+                missing_headers = [h for h in required_headers if h not in df.columns]
+                
+                if not missing_headers:
+                    print(f"      ✅ All required headers present")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Missing headers: {missing_headers}")
+                    test_results.append(False)
+                
+                # Check if we have data
+                if len(df) > 0:
+                    print(f"      ✅ Export contains {len(df)} records")
+                    test_results.append(True)
+                    
+                    # Show sample data
+                    print(f"      📋 Sample record:")
+                    sample_row = df.iloc[0]
+                    for col in ['ITNr', 'Typ', 'Pencil', 'SuSVorn', 'SuSNachn']:
+                        if col in sample_row:
+                            print(f"         {col}: {sample_row[col]}")
+                else:
+                    print(f"      ⚠️  Export is empty (no records)")
+                    test_results.append(True)  # Empty is valid if no data exists
+                
+            except Exception as e:
+                print(f"      ❌ Error analyzing Excel file: {str(e)}")
+                test_results.append(False)
+        else:
+            print("\n   ⚠️  Step 2: Skipped - no Excel content to analyze")
+            test_results.append(False)
+        
+        # Step 3: Test global settings integration
+        print("\n   🔧 Step 3: Testing global settings integration...")
+        
+        # First, set specific global settings
+        test_settings = {
+            "ipad_typ": "Apple iPad Air",
+            "pencil": "mit Apple Pencil 2"
+        }
+        
+        settings_success = self.run_api_test(
+            "Set Test Global Settings for Export",
+            "PUT",
+            "settings/global",
+            200,
+            data=test_settings
+        )
+        
+        if settings_success:
+            # Now export again and check if settings are reflected
+            try:
+                response = requests.get(url, headers=headers, timeout=60)
+                
+                if response.status_code == 200:
+                    try:
+                        import pandas as pd
+                        import io
+                        
+                        df = pd.read_excel(io.BytesIO(response.content))
+                        
+                        # Check if global settings are used in export
+                        if 'Typ' in df.columns and 'Pencil' in df.columns:
+                            # Check if any records use the global settings
+                            typ_values = df['Typ'].dropna().unique()
+                            pencil_values = df['Pencil'].dropna().unique()
+                            
+                            print(f"      📊 Typ values in export: {list(typ_values)}")
+                            print(f"      📊 Pencil values in export: {list(pencil_values)}")
+                            
+                            # Should contain our test settings
+                            if test_settings['ipad_typ'] in typ_values and test_settings['pencil'] in pencil_values:
+                                print(f"      ✅ Global settings properly integrated in export")
+                                test_results.append(True)
+                            else:
+                                print(f"      ❌ Global settings not found in export")
+                                print(f"         Expected Typ: {test_settings['ipad_typ']}")
+                                print(f"         Expected Pencil: {test_settings['pencil']}")
+                                test_results.append(False)
+                        else:
+                            print(f"      ❌ Typ or Pencil columns missing from export")
+                            test_results.append(False)
+                            
+                    except Exception as e:
+                        print(f"      ❌ Error checking global settings integration: {str(e)}")
+                        test_results.append(False)
+                else:
+                    print(f"      ❌ Export failed after setting global settings")
+                    test_results.append(False)
+                    
+            except Exception as e:
+                print(f"      ❌ Export request exception: {str(e)}")
+                test_results.append(False)
+        else:
+            print(f"      ❌ Could not set test global settings")
+            test_results.append(False)
+        
+        # Step 4: Reset global settings
+        print("\n   🔄 Step 4: Resetting global settings...")
+        
+        reset_settings = {
+            "ipad_typ": "Apple iPad",
+            "pencil": "ohne Apple Pencil"
+        }
+        
+        self.run_api_test(
+            "Reset Global Settings After Export Test",
+            "PUT",
+            "settings/global",
+            200,
+            data=reset_settings
+        )
+        
+        # Step 5: Test error scenarios
+        print("\n   ⚠️  Step 5: Testing error scenarios...")
+        
+        # Test without authentication
+        try:
+            response = requests.get(url, timeout=30)  # No auth headers
+            
+            if response.status_code == 401:
+                print(f"      ✅ Properly requires authentication (401)")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Should require authentication, got: {response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Auth test exception: {str(e)}")
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Inventory Export API Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Inventory Export API", 
+                True, 
+                f"All {total_tests} inventory export tests passed successfully"
+            )
+        else:
+            return self.log_result(
+                "Inventory Export API", 
+                False, 
+                f"Only {successful_tests}/{total_tests} inventory export tests passed"
+            )
+
+    def test_integration_scenarios(self):
+        """Test integration scenarios between Global Settings and Inventory Export"""
+        print("\n🔍 Testing Integration Scenarios...")
+        
+        test_results = []
+        
+        # Step 1: Test settings impact on export with different scenarios
+        print("\n   🧪 Step 1: Testing various settings combinations...")
+        
+        test_scenarios = [
+            {
+                "name": "Standard iPad Setup",
+                "settings": {"ipad_typ": "Apple iPad", "pencil": "ohne Apple Pencil"}
+            },
+            {
+                "name": "Pro iPad Setup", 
+                "settings": {"ipad_typ": "Apple iPad Pro", "pencil": "mit Apple Pencil"}
+            },
+            {
+                "name": "Air iPad Setup",
+                "settings": {"ipad_typ": "Apple iPad Air", "pencil": "mit Apple Pencil 2"}
+            }
+        ]
+        
+        for scenario in test_scenarios:
+            print(f"\n      🎯 Testing scenario: {scenario['name']}")
+            
+            # Set the settings
+            settings_success = self.run_api_test(
+                f"Set Settings - {scenario['name']}",
+                "PUT",
+                "settings/global",
+                200,
+                data=scenario['settings']
+            )
+            
+            if settings_success:
+                # Export and verify
+                url = f"{self.base_url}/api/exports/inventory"
+                headers = {}
+                if self.token:
+                    headers['Authorization'] = f'Bearer {self.token}'
+                
+                try:
+                    response = requests.get(url, headers=headers, timeout=60)
+                    
+                    if response.status_code == 200:
+                        try:
+                            import pandas as pd
+                            import io
+                            
+                            df = pd.read_excel(io.BytesIO(response.content))
+                            
+                            # Verify settings are reflected
+                            if 'Typ' in df.columns and 'Pencil' in df.columns:
+                                typ_values = df['Typ'].dropna().unique()
+                                pencil_values = df['Pencil'].dropna().unique()
+                                
+                                expected_typ = scenario['settings']['ipad_typ']
+                                expected_pencil = scenario['settings']['pencil']
+                                
+                                if expected_typ in typ_values and expected_pencil in pencil_values:
+                                    print(f"         ✅ Settings correctly applied in export")
+                                    test_results.append(True)
+                                else:
+                                    print(f"         ❌ Settings not found in export")
+                                    print(f"            Expected: {expected_typ}, {expected_pencil}")
+                                    print(f"            Found Typ: {list(typ_values)}")
+                                    print(f"            Found Pencil: {list(pencil_values)}")
+                                    test_results.append(False)
+                            else:
+                                print(f"         ❌ Required columns missing")
+                                test_results.append(False)
+                                
+                        except Exception as e:
+                            print(f"         ❌ Error analyzing export: {str(e)}")
+                            test_results.append(False)
+                    else:
+                        print(f"         ❌ Export failed: {response.status_code}")
+                        test_results.append(False)
+                        
+                except Exception as e:
+                    print(f"         ❌ Export request failed: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"         ❌ Could not set settings for scenario")
+                test_results.append(False)
+        
+        # Step 2: Test data consistency
+        print(f"\n   🔍 Step 2: Testing data consistency...")
+        
+        # Get current data counts
+        ipads_success = self.run_api_test(
+            "Get iPads Count for Consistency Check",
+            "GET",
+            "ipads",
+            200
+        )
+        
+        students_success = self.run_api_test(
+            "Get Students Count for Consistency Check", 
+            "GET",
+            "students",
+            200
+        )
+        
+        assignments_success = self.run_api_test(
+            "Get Assignments Count for Consistency Check",
+            "GET", 
+            "assignments",
+            200
+        )
+        
+        if ipads_success and students_success and assignments_success:
+            ipads_count = len(self.test_results[-3]['response_data'])
+            students_count = len(self.test_results[-2]['response_data'])
+            assignments_count = len(self.test_results[-1]['response_data'])
+            
+            print(f"      📊 Data counts: {ipads_count} iPads, {students_count} students, {assignments_count} assignments")
+            
+            # Export and verify counts match
+            url = f"{self.base_url}/api/exports/inventory"
+            headers = {}
+            if self.token:
+                headers['Authorization'] = f'Bearer {self.token}'
+            
+            try:
+                response = requests.get(url, headers=headers, timeout=60)
+                
+                if response.status_code == 200:
+                    try:
+                        import pandas as pd
+                        import io
+                        
+                        df = pd.read_excel(io.BytesIO(response.content))
+                        export_rows = len(df)
+                        
+                        print(f"      📊 Export contains {export_rows} rows")
+                        
+                        # Export should contain all iPads (one row per iPad)
+                        if export_rows == ipads_count:
+                            print(f"      ✅ Export row count matches iPad count")
+                            test_results.append(True)
+                        else:
+                            print(f"      ❌ Export row count ({export_rows}) doesn't match iPad count ({ipads_count})")
+                            test_results.append(False)
+                        
+                        # Check for both assigned and unassigned iPads
+                        assigned_rows = df[df['SuSVorn'].notna() & (df['SuSVorn'] != '')].shape[0]
+                        unassigned_rows = df[df['SuSVorn'].isna() | (df['SuSVorn'] == '')].shape[0]
+                        
+                        print(f"      📊 Assigned iPads in export: {assigned_rows}")
+                        print(f"      📊 Unassigned iPads in export: {unassigned_rows}")
+                        
+                        if assigned_rows + unassigned_rows == export_rows:
+                            print(f"      ✅ Assignment status properly reflected in export")
+                            test_results.append(True)
+                        else:
+                            print(f"      ❌ Assignment status inconsistent in export")
+                            test_results.append(False)
+                            
+                    except Exception as e:
+                        print(f"      ❌ Error analyzing export consistency: {str(e)}")
+                        test_results.append(False)
+                else:
+                    print(f"      ❌ Export failed for consistency check")
+                    test_results.append(False)
+                    
+            except Exception as e:
+                print(f"      ❌ Export request failed: {str(e)}")
+                test_results.append(False)
+        else:
+            print(f"      ❌ Could not get data counts for consistency check")
+            test_results.append(False)
+        
+        # Step 3: Reset to defaults
+        print(f"\n   🔄 Step 3: Resetting to default settings...")
+        
+        default_settings = {
+            "ipad_typ": "Apple iPad",
+            "pencil": "ohne Apple Pencil"
+        }
+        
+        self.run_api_test(
+            "Reset to Default Settings",
+            "PUT",
+            "settings/global",
+            200,
+            data=default_settings
+        )
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Integration Scenarios Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Integration Scenarios", 
+                True, 
+                f"All {total_tests} integration tests passed successfully"
+            )
+        else:
+            return self.log_result(
+                "Integration Scenarios", 
+                False, 
+                f"Only {successful_tests}/{total_tests} integration tests passed"
             )
 
     def run_comprehensive_test(self):
