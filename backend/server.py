@@ -1084,6 +1084,180 @@ async def delete_contract(contract_id: str, current_user: str = Depends(get_curr
     
     return {"message": "Contract deleted successfully"}
 
+# Global Settings endpoints
+@api_router.get("/settings/global")
+async def get_global_settings(current_user: str = Depends(get_current_user)):
+    """Get global application settings"""
+    try:
+        settings = await db.global_settings.find_one({"type": "app_settings"})
+        if not settings:
+            # Create default settings if they don't exist
+            default_settings = {
+                "type": "app_settings",
+                "ipad_typ": "Apple iPad",
+                "pencil": "ohne Apple Pencil",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.global_settings.insert_one(default_settings)
+            settings = default_settings
+        
+        return {
+            "ipad_typ": settings.get("ipad_typ", "Apple iPad"),
+            "pencil": settings.get("pencil", "ohne Apple Pencil")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting settings: {str(e)}")
+
+@api_router.put("/settings/global")
+async def update_global_settings(
+    settings: dict,
+    current_user: str = Depends(get_current_user)
+):
+    """Update global application settings"""
+    try:
+        ipad_typ = settings.get("ipad_typ", "Apple iPad")
+        pencil = settings.get("pencil", "ohne Apple Pencil")
+        
+        update_data = {
+            "ipad_typ": ipad_typ,
+            "pencil": pencil,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        result = await db.global_settings.update_one(
+            {"type": "app_settings"},
+            {"$set": update_data},
+            upsert=True
+        )
+        
+        return {
+            "message": "Einstellungen erfolgreich aktualisiert",
+            "ipad_typ": ipad_typ,
+            "pencil": pencil
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating settings: {str(e)}")
+
+@api_router.get("/exports/inventory")
+async def export_inventory(current_user: str = Depends(get_current_user)):
+    """Export complete inventory list with all iPads and assigned students"""
+    try:
+        # Get global settings
+        settings = await db.global_settings.find_one({"type": "app_settings"})
+        ipad_typ = settings.get("ipad_typ", "Apple iPad") if settings else "Apple iPad"
+        pencil = settings.get("pencil", "ohne Apple Pencil") if settings else "ohne Apple Pencil"
+        
+        # Get all iPads with their assignments and student data
+        pipeline = [
+            {
+                "$lookup": {
+                    "from": "assignments",
+                    "let": {"ipad_id": "$id"},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$eq": ["$ipad_id", "$$ipad_id"]},
+                                        {"$eq": ["$is_active", True]}
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    "as": "current_assignment"
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "students",
+                    "let": {"student_id": {"$arrayElemAt": ["$current_assignment.student_id", 0]}},
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "$expr": {"$eq": ["$id", "$$student_id"]}
+                            }
+                        }
+                    ],
+                    "as": "student_data"
+                }
+            }
+        ]
+        
+        ipads_with_data = await db.ipads.aggregate(pipeline).to_list(length=None)
+        
+        # Prepare export data
+        export_data = []
+        
+        for ipad in ipads_with_data:
+            student = ipad["student_data"][0] if ipad["student_data"] else None
+            assignment = ipad["current_assignment"][0] if ipad["current_assignment"] else None
+            
+            # Format assignment date
+            ausleibe_datum = ""
+            if assignment and assignment.get("assigned_at"):
+                try:
+                    assigned_date = datetime.fromisoformat(assignment["assigned_at"].replace('Z', '+00:00'))
+                    ausleibe_datum = assigned_date.strftime("%d.%m.%Y")
+                except:
+                    ausleibe_datum = ""
+            
+            row = {
+                # Student data (empty if no assignment)
+                "Sname": student.get("sname", "") if student else "",
+                "SuSNachn": student.get("sus_nachn", "") if student else "",
+                "SuSVorn": student.get("sus_vorn", "") if student else "",
+                "SuSKl": student.get("sus_kl", "") if student else "",
+                "SuSStrHNr": student.get("sus_str_hnr", "") if student else "",
+                "SuSPLZ": student.get("sus_plz", "") if student else "",
+                "SuSOrt": student.get("sus_ort", "") if student else "",
+                "SuSGeb": student.get("sus_geb", "") if student else "",
+                "Erz1Nachn": student.get("erz1_nachn", "") if student else "",
+                "Erz1Vorn": student.get("erz1_vorn", "") if student else "",
+                "Erz1StrHNr": student.get("erz1_str_hnr", "") if student else "",
+                "Erz1PLZ": student.get("erz1_plz", "") if student else "",
+                "Erz1Ort": student.get("erz1_ort", "") if student else "",
+                "Erz2Nachn": student.get("erz2_nachn", "") if student else "",
+                "Erz2Vorn": student.get("erz2_vorn", "") if student else "",
+                "Erz2StrHNr": student.get("erz2_str_hnr", "") if student else "",
+                "Erz2PLZ": student.get("erz2_plz", "") if student else "",
+                "Erz2Ort": student.get("erz2_ort", "") if student else "",
+                
+                # iPad data
+                "Pencil": pencil,
+                "ITNr": ipad.get("itnr", ""),
+                "SNr": ipad.get("snr", ""),  # Assuming this field exists
+                "Typ": ipad_typ,
+                "AnschJahr": "",  # Can be added later if needed
+                "AusleiheDatum": ausleibe_datum,
+                "Rückgabe": ""  # Always empty as requested
+            }
+            export_data.append(row)
+        
+        # Create DataFrame and export to Excel
+        df = pd.DataFrame(export_data)
+        
+        # Create Excel file in memory
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='Bestandsliste', index=False)
+        
+        output.seek(0)
+        
+        # Return as downloadable file
+        filename = f"bestandsliste_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        
+        return StreamingResponse(
+            io.BytesIO(output.read()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating inventory export: {str(e)}")
+
+# Data protection and cleanup endpoints
 @api_router.post("/data-protection/cleanup-old-data")
 async def cleanup_old_data(current_user: str = Depends(get_current_user)):
     """Delete students and contracts older than 5 years"""
