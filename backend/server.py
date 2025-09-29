@@ -1572,7 +1572,8 @@ async def export_inventory(current_user: str = Depends(get_current_user)):
                     ausleibe_datum = ""
             
             row = {
-                # Student data (empty if no assignment)
+                # Student data (empty if no assignment) - EXACT same order as assignment export
+                "lfdNr": student.get("lfd_nr", "") if student else "",
                 "Sname": student.get("sname", "") if student else "",
                 "SuSNachn": student.get("sus_nachn", "") if student else "",
                 "SuSVorn": student.get("sus_vorn", "") if student else "",
@@ -1592,10 +1593,10 @@ async def export_inventory(current_user: str = Depends(get_current_user)):
                 "Erz2PLZ": student.get("erz2_plz", "") if student else "",
                 "Erz2Ort": student.get("erz2_ort", "") if student else "",
                 
-                # iPad data
+                # iPad data in EXACT same order as assignment export
                 "Pencil": pencil,
                 "ITNr": ipad.get("itnr", ""),
-                "SNr": ipad.get("snr", ""),  # Assuming this field exists
+                "SNr": ipad.get("snr", ""),
                 "Typ": ipad_typ,
                 "AnschJahr": "",  # Can be added later if needed
                 "AusleiheDatum": ausleibe_datum,
