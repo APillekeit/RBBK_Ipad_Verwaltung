@@ -1205,6 +1205,108 @@ async def update_global_settings(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating settings: {str(e)}")
 
+@api_router.post("/imports/inventory")
+async def import_inventory(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
+    """Import inventory list from Excel/XLSX file to restore/update iPad data"""
+    try:
+        # Validate file type
+        if not file.filename.lower().endswith(('.xlsx', '.xls')):
+            raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are allowed")
+        
+        # Read Excel file
+        contents = await file.read()
+        
+        # Try to read with different engines for .xls/.xlsx support
+        try:
+            if file.filename.lower().endswith('.xlsx'):
+                df = pd.read_excel(io.BytesIO(contents), engine='openpyxl')
+            else:
+                df = pd.read_excel(io.BytesIO(contents), engine='xlrd')
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error reading Excel file: {str(e)}")
+        
+        # Validate required columns (based on our export format)
+        required_columns = ['ITNr', 'SNr', 'Typ', 'Pencil']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise HTTPException(status_code=400, detail=f"Missing required columns: {missing_columns}")
+        
+        processed_count = 0
+        updated_count = 0
+        created_count = 0
+        error_count = 0
+        errors = []
+        
+        for index, row in df.iterrows():
+            try:
+                itnr = str(row.get('ITNr', '')).strip()
+                if not itnr:
+                    continue  # Skip rows without ITNr
+                
+                # Prepare iPad data
+                ipad_data = {
+                    "itnr": itnr,
+                    "snr": str(row.get('SNr', '')).strip(),
+                    "typ": str(row.get('Typ', '')).strip(),
+                    "pencil": str(row.get('Pencil', '')).strip(),
+                    "ansch_jahr": str(row.get('AnschJahr', '')).strip(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                # Remove empty values
+                ipad_data = {k: v for k, v in ipad_data.items() if v}
+                
+                # Check if iPad already exists
+                existing_ipad = await db.ipads.find_one({"itnr": itnr})
+                
+                if existing_ipad:
+                    # Update existing iPad
+                    await db.ipads.update_one(
+                        {"itnr": itnr},
+                        {"$set": ipad_data}
+                    )
+                    updated_count += 1
+                else:
+                    # Create new iPad
+                    new_ipad = iPad(
+                        itnr=itnr,
+                        snr=ipad_data.get("snr", ""),
+                        typ=ipad_data.get("typ", ""),
+                        pencil=ipad_data.get("pencil", ""),
+                        ansch_jahr=ipad_data.get("ansch_jahr", ""),
+                        status="verfügbar"  # Default status for imported iPads
+                    )
+                    
+                    ipad_dict = prepare_for_mongo(new_ipad.dict())
+                    await db.ipads.insert_one(ipad_dict)
+                    created_count += 1
+                
+                processed_count += 1
+                
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Row {index + 2}: {str(e)}")
+                continue
+        
+        # Prepare response
+        message = f"Inventory import completed: {created_count} created, {updated_count} updated"
+        if error_count > 0:
+            message += f", {error_count} errors"
+        
+        return {
+            "message": message,
+            "processed_count": processed_count,
+            "created_count": created_count,
+            "updated_count": updated_count,
+            "error_count": error_count,
+            "errors": errors[:10] if errors else []  # Limit error list to first 10
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing inventory import: {str(e)}")
+
 @api_router.get("/exports/inventory")
 async def export_inventory(current_user: str = Depends(get_current_user)):
     """Export complete inventory list with all iPads and assigned students"""
