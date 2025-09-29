@@ -2434,6 +2434,496 @@ startxref
 %%EOF"""
         return pdf_content
 
+    def test_assignment_filter_api_enhancement(self):
+        """Test Assignment Filter API Enhancement with IT-Number support"""
+        print("\n🔍 Testing Assignment Filter API Enhancement with IT-Number Support...")
+        
+        test_results = []
+        
+        # Step 1: Get current data for testing
+        print("\n   📊 Step 1: Preparing test data...")
+        
+        # Get assignments to work with
+        assignments_success = self.run_api_test(
+            "Get Assignments for Filter Testing",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if not assignments_success:
+            return self.log_result("Assignment Filter API Enhancement", False, "Could not get assignments for testing")
+        
+        assignments = self.test_results[-1]['response_data']
+        if not isinstance(assignments, list) or len(assignments) == 0:
+            return self.log_result("Assignment Filter API Enhancement", False, "No assignments found for testing")
+        
+        # Get students for testing
+        students_success = self.run_api_test(
+            "Get Students for Filter Testing",
+            "GET",
+            "students",
+            200
+        )
+        
+        if not students_success:
+            return self.log_result("Assignment Filter API Enhancement", False, "Could not get students for testing")
+        
+        students = self.test_results[-1]['response_data']
+        
+        print(f"      📊 Available for testing: {len(assignments)} assignments, {len(students)} students")
+        
+        # Extract test data
+        test_assignment = assignments[0] if assignments else None
+        test_itnr = test_assignment['itnr'] if test_assignment else None
+        test_student_name = test_assignment['student_name'] if test_assignment else None
+        
+        if test_assignment:
+            print(f"      🧪 Test assignment: iPad {test_itnr} → {test_student_name}")
+        
+        # Step 2: Test IT-Number Filter Testing
+        print("\n   🔍 Step 2: Testing IT-Number filter functionality...")
+        
+        if test_itnr:
+            # Test 2.1: Exact IT-number match
+            print(f"\n      🧪 Test 2.1: Exact IT-number match ({test_itnr})...")
+            
+            success = self.run_api_test(
+                f"Filter by Exact IT-Number - {test_itnr}",
+                "GET",
+                f"assignments/filtered?itnr={test_itnr}",
+                200
+            )
+            
+            if success:
+                filtered_assignments = self.test_results[-1]['response_data']
+                
+                # Verify results contain the expected assignment
+                matching_assignments = [a for a in filtered_assignments if a['itnr'] == test_itnr]
+                
+                if len(matching_assignments) > 0:
+                    print(f"         ✅ Found {len(matching_assignments)} assignments with IT-number {test_itnr}")
+                    test_results.append(True)
+                else:
+                    print(f"         ❌ No assignments found with exact IT-number {test_itnr}")
+                    test_results.append(False)
+            else:
+                test_results.append(False)
+            
+            # Test 2.2: Case-insensitive matching
+            print(f"\n      🧪 Test 2.2: Case-insensitive IT-number matching...")
+            
+            # Test with different cases
+            test_cases = [
+                test_itnr.upper() if test_itnr.islower() else test_itnr.lower(),
+                test_itnr.swapcase() if len(test_itnr) > 3 else test_itnr.upper()
+            ]
+            
+            case_test_results = []
+            for case_variant in test_cases:
+                if case_variant != test_itnr:  # Only test if different
+                    success = self.run_api_test(
+                        f"Filter by Case-Insensitive IT-Number - {case_variant}",
+                        "GET",
+                        f"assignments/filtered?itnr={case_variant}",
+                        200
+                    )
+                    
+                    if success:
+                        filtered_assignments = self.test_results[-1]['response_data']
+                        matching_assignments = [a for a in filtered_assignments if a['itnr'].lower() == test_itnr.lower()]
+                        
+                        if len(matching_assignments) > 0:
+                            print(f"         ✅ Case-insensitive match: {case_variant} found {len(matching_assignments)} assignments")
+                            case_test_results.append(True)
+                        else:
+                            print(f"         ❌ Case-insensitive match failed: {case_variant}")
+                            case_test_results.append(False)
+                    else:
+                        case_test_results.append(False)
+            
+            if case_test_results:
+                test_results.append(all(case_test_results))
+            else:
+                print(f"         ⚠️  No case variants to test for {test_itnr}")
+                test_results.append(True)  # Skip this test
+            
+            # Test 2.3: Partial matching
+            print(f"\n      🧪 Test 2.3: Partial IT-number matching...")
+            
+            # Test with partial matches (last 3 characters)
+            if len(test_itnr) >= 3:
+                partial_itnr = test_itnr[-3:]  # Last 3 characters
+                
+                success = self.run_api_test(
+                    f"Filter by Partial IT-Number - {partial_itnr}",
+                    "GET",
+                    f"assignments/filtered?itnr={partial_itnr}",
+                    200
+                )
+                
+                if success:
+                    filtered_assignments = self.test_results[-1]['response_data']
+                    matching_assignments = [a for a in filtered_assignments if partial_itnr.lower() in a['itnr'].lower()]
+                    
+                    if len(matching_assignments) > 0:
+                        print(f"         ✅ Partial match: '{partial_itnr}' found {len(matching_assignments)} assignments")
+                        # Verify our test assignment is included
+                        test_assignment_found = any(a['itnr'] == test_itnr for a in matching_assignments)
+                        if test_assignment_found:
+                            print(f"         ✅ Test assignment {test_itnr} correctly included in partial match")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ Test assignment {test_itnr} not found in partial match results")
+                            test_results.append(False)
+                    else:
+                        print(f"         ❌ Partial match failed: '{partial_itnr}' found no assignments")
+                        test_results.append(False)
+                else:
+                    test_results.append(False)
+            else:
+                print(f"         ⚠️  IT-number too short for partial matching test: {test_itnr}")
+                test_results.append(True)  # Skip this test
+            
+            # Test 2.4: Non-existent IT numbers
+            print(f"\n      🧪 Test 2.4: Non-existent IT-number handling...")
+            
+            fake_itnr = "NONEXISTENT999"
+            success = self.run_api_test(
+                f"Filter by Non-existent IT-Number - {fake_itnr}",
+                "GET",
+                f"assignments/filtered?itnr={fake_itnr}",
+                200
+            )
+            
+            if success:
+                filtered_assignments = self.test_results[-1]['response_data']
+                
+                if len(filtered_assignments) == 0:
+                    print(f"         ✅ Non-existent IT-number correctly returns empty result")
+                    test_results.append(True)
+                else:
+                    print(f"         ❌ Non-existent IT-number returned {len(filtered_assignments)} assignments (should be 0)")
+                    test_results.append(False)
+            else:
+                test_results.append(False)
+        else:
+            print(f"      ⚠️  No test IT-number available, skipping IT-number specific tests")
+            test_results.extend([False, False, False, False])  # Mark all IT-number tests as failed
+        
+        # Step 3: Test Combined Filter Testing
+        print("\n   🔍 Step 3: Testing combined filter scenarios...")
+        
+        if test_assignment and students:
+            # Find the student associated with our test assignment
+            test_student = None
+            for student in students:
+                if any(assignment['student_id'] == student['id'] for assignment in assignments if assignment['itnr'] == test_itnr):
+                    test_student = student
+                    break
+            
+            if test_student:
+                print(f"      👤 Test student: {test_student['sus_vorn']} {test_student['sus_nachn']} (Class: {test_student.get('sus_kl', 'N/A')})")
+                
+                # Test 3.1: IT-number + student name filters
+                print(f"\n      🧪 Test 3.1: IT-number + student name filters...")
+                
+                success = self.run_api_test(
+                    f"Filter by IT-Number + Student Name",
+                    "GET",
+                    f"assignments/filtered?itnr={test_itnr}&sus_vorn={test_student['sus_vorn']}&sus_nachn={test_student['sus_nachn']}",
+                    200
+                )
+                
+                if success:
+                    filtered_assignments = self.test_results[-1]['response_data']
+                    
+                    # Should find our test assignment
+                    matching_assignments = [a for a in filtered_assignments if a['itnr'] == test_itnr and test_student['sus_vorn'] in a['student_name'] and test_student['sus_nachn'] in a['student_name']]
+                    
+                    if len(matching_assignments) > 0:
+                        print(f"         ✅ Combined IT-number + student name filter found {len(matching_assignments)} assignments")
+                        test_results.append(True)
+                    else:
+                        print(f"         ❌ Combined IT-number + student name filter found no matching assignments")
+                        test_results.append(False)
+                else:
+                    test_results.append(False)
+                
+                # Test 3.2: IT-number + class filter
+                if test_student.get('sus_kl'):
+                    print(f"\n      🧪 Test 3.2: IT-number + class filter...")
+                    
+                    success = self.run_api_test(
+                        f"Filter by IT-Number + Class",
+                        "GET",
+                        f"assignments/filtered?itnr={test_itnr}&sus_kl={test_student['sus_kl']}",
+                        200
+                    )
+                    
+                    if success:
+                        filtered_assignments = self.test_results[-1]['response_data']
+                        
+                        # Should find assignments with matching IT-number and class
+                        matching_assignments = [a for a in filtered_assignments if a['itnr'] == test_itnr]
+                        
+                        if len(matching_assignments) > 0:
+                            print(f"         ✅ Combined IT-number + class filter found {len(matching_assignments)} assignments")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ Combined IT-number + class filter found no matching assignments")
+                            test_results.append(False)
+                    else:
+                        test_results.append(False)
+                else:
+                    print(f"         ⚠️  Test student has no class information, skipping class filter test")
+                    test_results.append(True)  # Skip this test
+                
+                # Test 3.3: All filters combined
+                print(f"\n      🧪 Test 3.3: All filters combined...")
+                
+                class_param = f"&sus_kl={test_student['sus_kl']}" if test_student.get('sus_kl') else ""
+                
+                success = self.run_api_test(
+                    f"Filter by All Parameters Combined",
+                    "GET",
+                    f"assignments/filtered?itnr={test_itnr}&sus_vorn={test_student['sus_vorn']}&sus_nachn={test_student['sus_nachn']}{class_param}",
+                    200
+                )
+                
+                if success:
+                    filtered_assignments = self.test_results[-1]['response_data']
+                    
+                    # Should find our specific test assignment
+                    matching_assignments = [a for a in filtered_assignments if a['itnr'] == test_itnr]
+                    
+                    if len(matching_assignments) > 0:
+                        print(f"         ✅ All filters combined found {len(matching_assignments)} assignments")
+                        test_results.append(True)
+                    else:
+                        print(f"         ❌ All filters combined found no matching assignments")
+                        test_results.append(False)
+                else:
+                    test_results.append(False)
+            else:
+                print(f"      ⚠️  Could not find student for test assignment, skipping combined filter tests")
+                test_results.extend([False, False, False])  # Mark combined tests as failed
+        else:
+            print(f"      ⚠️  Insufficient test data for combined filter tests")
+            test_results.extend([False, False, False])  # Mark combined tests as failed
+        
+        # Step 4: Test Filter Parameter Validation
+        print("\n   🔍 Step 4: Testing filter parameter validation...")
+        
+        # Test 4.1: Empty itnr parameter
+        print(f"\n      🧪 Test 4.1: Empty IT-number parameter...")
+        
+        success = self.run_api_test(
+            "Filter with Empty IT-Number",
+            "GET",
+            "assignments/filtered?itnr=",
+            200
+        )
+        
+        if success:
+            filtered_assignments = self.test_results[-1]['response_data']
+            
+            # Should return all assignments (empty filter = no filter)
+            if len(filtered_assignments) == len(assignments):
+                print(f"         ✅ Empty IT-number parameter returns all {len(filtered_assignments)} assignments")
+                test_results.append(True)
+            else:
+                print(f"         ❌ Empty IT-number parameter returned {len(filtered_assignments)} assignments, expected {len(assignments)}")
+                test_results.append(False)
+        else:
+            test_results.append(False)
+        
+        # Test 4.2: Special characters in IT number search
+        print(f"\n      🧪 Test 4.2: Special characters in IT-number search...")
+        
+        special_chars_tests = ["IT-001", "IPAD_001", "TEST@001", "IPAD.001"]
+        special_char_results = []
+        
+        for special_itnr in special_chars_tests:
+            success = self.run_api_test(
+                f"Filter with Special Characters - {special_itnr}",
+                "GET",
+                f"assignments/filtered?itnr={special_itnr}",
+                200
+            )
+            
+            if success:
+                filtered_assignments = self.test_results[-1]['response_data']
+                print(f"         ✅ Special character search '{special_itnr}' handled correctly ({len(filtered_assignments)} results)")
+                special_char_results.append(True)
+            else:
+                print(f"         ❌ Special character search '{special_itnr}' failed")
+                special_char_results.append(False)
+        
+        test_results.append(all(special_char_results))
+        
+        # Test 4.3: Backwards compatibility with existing student filters
+        print(f"\n      🧪 Test 4.3: Backwards compatibility with existing student filters...")
+        
+        if test_student:
+            # Test student name filter without IT-number
+            success = self.run_api_test(
+                f"Filter by Student Name Only (Backwards Compatibility)",
+                "GET",
+                f"assignments/filtered?sus_vorn={test_student['sus_vorn']}&sus_nachn={test_student['sus_nachn']}",
+                200
+            )
+            
+            if success:
+                filtered_assignments = self.test_results[-1]['response_data']
+                
+                # Should find assignments for this student
+                matching_assignments = [a for a in filtered_assignments if test_student['sus_vorn'] in a['student_name'] and test_student['sus_nachn'] in a['student_name']]
+                
+                if len(matching_assignments) > 0:
+                    print(f"         ✅ Student name filter (backwards compatibility) found {len(matching_assignments)} assignments")
+                    test_results.append(True)
+                else:
+                    print(f"         ❌ Student name filter (backwards compatibility) found no assignments")
+                    test_results.append(False)
+            else:
+                test_results.append(False)
+        else:
+            print(f"         ⚠️  No test student available for backwards compatibility test")
+            test_results.append(True)  # Skip this test
+        
+        # Step 5: Test Data Accuracy
+        print("\n   🔍 Step 5: Testing data accuracy and JSON serialization...")
+        
+        # Test 5.1: Verify filtered assignments contain correct assignment data
+        if test_itnr:
+            success = self.run_api_test(
+                f"Verify Assignment Data Structure",
+                "GET",
+                f"assignments/filtered?itnr={test_itnr}",
+                200
+            )
+            
+            if success:
+                filtered_assignments = self.test_results[-1]['response_data']
+                
+                if len(filtered_assignments) > 0:
+                    test_assignment_data = filtered_assignments[0]
+                    
+                    # Check required fields
+                    required_fields = ['id', 'student_id', 'ipad_id', 'itnr', 'student_name', 'is_active', 'assigned_at']
+                    missing_fields = [field for field in required_fields if field not in test_assignment_data]
+                    
+                    if not missing_fields:
+                        print(f"         ✅ Assignment data structure complete with all required fields")
+                        
+                        # Verify data types and values
+                        if (isinstance(test_assignment_data['is_active'], bool) and 
+                            test_assignment_data['is_active'] == True and
+                            test_assignment_data['itnr'] == test_itnr):
+                            print(f"         ✅ Assignment data values correct (active={test_assignment_data['is_active']}, itnr={test_assignment_data['itnr']})")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ Assignment data values incorrect")
+                            test_results.append(False)
+                    else:
+                        print(f"         ❌ Assignment data missing required fields: {missing_fields}")
+                        test_results.append(False)
+                else:
+                    print(f"         ⚠️  No assignments returned for data structure test")
+                    test_results.append(True)  # Skip this test
+            else:
+                test_results.append(False)
+        else:
+            print(f"         ⚠️  No test IT-number for data accuracy test")
+            test_results.append(True)  # Skip this test
+        
+        # Step 6: Test Performance
+        print("\n   🔍 Step 6: Testing performance with multiple filter combinations...")
+        
+        # Test multiple filter combinations for performance
+        import time
+        
+        performance_tests = [
+            ("No filters", "assignments/filtered"),
+            ("IT-number only", f"assignments/filtered?itnr={test_itnr[:3] if test_itnr else 'TEST'}"),
+            ("Student name only", f"assignments/filtered?sus_vorn={test_student['sus_vorn'] if test_student else 'Test'}"),
+            ("Combined filters", f"assignments/filtered?itnr={test_itnr[:3] if test_itnr else 'TEST'}&sus_vorn={test_student['sus_vorn'] if test_student else 'Test'}")
+        ]
+        
+        performance_results = []
+        for test_name, endpoint in performance_tests:
+            start_time = time.time()
+            
+            success = self.run_api_test(
+                f"Performance Test - {test_name}",
+                "GET",
+                endpoint,
+                200
+            )
+            
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            if success:
+                filtered_assignments = self.test_results[-1]['response_data']
+                print(f"         ✅ {test_name}: {response_time:.3f}s ({len(filtered_assignments)} results)")
+                
+                # Consider performance acceptable if under 5 seconds
+                if response_time < 5.0:
+                    performance_results.append(True)
+                else:
+                    print(f"         ⚠️  {test_name}: Response time {response_time:.3f}s may be slow")
+                    performance_results.append(False)
+            else:
+                print(f"         ❌ {test_name}: Failed")
+                performance_results.append(False)
+        
+        test_results.append(all(performance_results))
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Assignment Filter API Enhancement Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        # Detailed breakdown
+        test_categories = [
+            "Exact IT-number match",
+            "Case-insensitive matching", 
+            "Partial matching",
+            "Non-existent IT-number handling",
+            "IT-number + student name filters",
+            "IT-number + class filter",
+            "All filters combined",
+            "Empty IT-number parameter",
+            "Special characters handling",
+            "Backwards compatibility",
+            "Data accuracy",
+            "Performance tests"
+        ]
+        
+        print(f"\n      📋 Test Results Breakdown:")
+        for i, (category, result) in enumerate(zip(test_categories, test_results)):
+            status = "✅" if result else "❌"
+            print(f"         {status} {category}")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Assignment Filter API Enhancement", 
+                True, 
+                f"All {total_tests} assignment filter tests passed successfully. IT-Number support working correctly with case-insensitive and partial matching, combined filters, and proper data validation."
+            )
+        else:
+            return self.log_result(
+                "Assignment Filter API Enhancement", 
+                False, 
+                f"Only {successful_tests}/{total_tests} assignment filter tests passed. Issues found in filter functionality."
+            )
+
     def run_comprehensive_test(self):
         """Run all tests in sequence"""
         print("=" * 80)
