@@ -1354,6 +1354,7 @@ const AssignmentsManagement = () => {
     setVornameFilter('');
     setNachnameFilter('');
     setKlasseFilter('');
+    setItnrFilter('');
   };
 
   const unassignedStudents = students.filter(student => !student.current_assignment_id);
