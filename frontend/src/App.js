@@ -1119,8 +1119,9 @@ const AssignmentsManagement = () => {
     console.log('Vorname filter:', vornameFilter);
     console.log('Nachname filter:', nachnameFilter);
     console.log('Klasse filter:', klasseFilter);
+    console.log('ITNr filter:', itnrFilter);
     
-    if (!vornameFilter && !nachnameFilter && !klasseFilter) {
+    if (!vornameFilter && !nachnameFilter && !klasseFilter && !itnrFilter) {
       console.log('No filters active, showing all assignments');
       setFilteredAssignments(assignments);
       return;
@@ -1139,6 +1140,10 @@ const AssignmentsManagement = () => {
       if (klasseFilter) {
         params.append('sus_kl', klasseFilter);
         console.log('Added klasse filter:', klasseFilter);
+      }
+      if (itnrFilter) {
+        params.append('itnr', itnrFilter);
+        console.log('Added itnr filter:', itnrFilter);
       }
 
       const url = `/assignments/filtered?${params.toString()}`;
