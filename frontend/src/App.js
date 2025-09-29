@@ -1952,6 +1952,42 @@ const Settings = () => {
     }
   };
 
+  const handleInventoryImport = async (file) => {
+    if (!file) return;
+    
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      toast.info('Importiere Bestandsliste...');
+      
+      const response = await api.post('/imports/inventory', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      toast.success(response.data.message);
+      
+      // Show detailed results if available
+      if (response.data.created_count > 0 || response.data.updated_count > 0) {
+        toast.info(`Details: ${response.data.created_count} neue iPads, ${response.data.updated_count} aktualisiert`);
+      }
+      
+      // Show errors if any
+      if (response.data.errors && response.data.errors.length > 0) {
+        response.data.errors.forEach(error => {
+          toast.error(error);
+        });
+      }
+      
+    } catch (error) {
+      console.error('Failed to import inventory:', error);
+      toast.error(error.response?.data?.detail || 'Fehler beim Importieren der Bestandsliste');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleDataProtectionCleanup = async () => {
     // Double-click protection
     const now = Date.now();
