@@ -308,7 +308,7 @@ const IPadDetailViewer = ({ ipadId, onClose }) => {
           )}
 
           {/* Contract History */}
-          {contract_history.length > 0 && (
+          {contract_history && contract_history.length > 0 && (
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Vertragshistorie ({contract_history.length})</CardTitle>
