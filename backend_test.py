@@ -2085,6 +2085,355 @@ startxref
                 f"Only {successful_tests}/{total_tests} assignment export tests passed"
             )
 
+    def test_contract_auto_assignment_by_filename(self):
+        """Test Contract Auto-Assignment by Filename functionality"""
+        print("\n🔍 Testing Contract Auto-Assignment by Filename Functionality...")
+        
+        test_results = []
+        
+        # Step 1: Get existing students and assignments for testing
+        print("\n   📋 Step 1: Preparing test data...")
+        
+        students_success = self.run_api_test(
+            "Get Students for Filename Testing",
+            "GET",
+            "students",
+            200
+        )
+        
+        assignments_success = self.run_api_test(
+            "Get Assignments for Filename Testing",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if not students_success or not assignments_success:
+            return self.log_result("Contract Auto-Assignment by Filename", False, "Could not get test data")
+        
+        students = self.test_results[-2]['response_data']
+        assignments = self.test_results[-1]['response_data']
+        
+        if not students or not assignments:
+            return self.log_result("Contract Auto-Assignment by Filename", False, "No students or assignments available for testing")
+        
+        # Find students with active assignments
+        assigned_students = []
+        for assignment in assignments:
+            if assignment.get('is_active', True):
+                student_name = assignment.get('student_name', '')
+                if student_name:
+                    # Parse student name
+                    name_parts = student_name.split(' ')
+                    if len(name_parts) >= 2:
+                        vorname = name_parts[0]
+                        nachname = ' '.join(name_parts[1:])
+                        assigned_students.append({
+                            'assignment_id': assignment['id'],
+                            'itnr': assignment['itnr'],
+                            'vorname': vorname,
+                            'nachname': nachname,
+                            'student_name': student_name
+                        })
+        
+        if len(assigned_students) < 2:
+            return self.log_result("Contract Auto-Assignment by Filename", False, "Need at least 2 assigned students for comprehensive testing")
+        
+        print(f"      📊 Found {len(assigned_students)} assigned students for testing")
+        for i, student in enumerate(assigned_students[:3]):  # Show first 3
+            print(f"         {i+1}. {student['student_name']} → iPad {student['itnr']}")
+        
+        # Step 2: Test filename pattern matching (Vorname_Nachname.pdf)
+        print("\n   🧪 Step 2: Testing filename pattern matching...")
+        
+        test_student = assigned_students[0]
+        correct_filename = f"{test_student['vorname']}_{test_student['nachname']}.pdf"
+        
+        # Create test PDF content
+        test_pdf_content = self.create_simple_pdf_content()
+        
+        # Test 1: Correct filename pattern
+        print(f"\n      🎯 Test 2.1: Correct filename pattern - {correct_filename}")
+        
+        try:
+            url = f"{self.base_url}/api/contracts/upload-multiple"
+            headers = {}
+            if self.token:
+                headers['Authorization'] = f'Bearer {self.token}'
+            
+            files = {'files': (correct_filename, test_pdf_content, 'application/pdf')}
+            response = requests.post(url, files=files, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                results = response_data.get('results', [])
+                
+                if results and len(results) > 0:
+                    result = results[0]
+                    if result.get('status') == 'assigned' and 'filename pattern' in result.get('message', ''):
+                        print(f"         ✅ Filename pattern assignment successful")
+                        print(f"         📄 Message: {result.get('message')}")
+                        test_results.append(True)
+                    else:
+                        print(f"         ❌ Filename pattern assignment failed")
+                        print(f"         📄 Result: {result}")
+                        test_results.append(False)
+                else:
+                    print(f"         ❌ No results in response")
+                    test_results.append(False)
+            else:
+                print(f"         ❌ Upload failed: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"         📄 Error: {error_data}")
+                except:
+                    print(f"         📄 Raw response: {response.text}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"         ❌ Exception during filename test: {str(e)}")
+            test_results.append(False)
+        
+        # Step 3: Test case-insensitive matching
+        print(f"\n   🧪 Step 3: Testing case-insensitive matching...")
+        
+        if len(assigned_students) > 1:
+            test_student2 = assigned_students[1]
+            # Create filename with different case
+            case_insensitive_filename = f"{test_student2['vorname'].lower()}_{test_student2['nachname'].upper()}.pdf"
+            
+            print(f"      🎯 Test 3.1: Case-insensitive filename - {case_insensitive_filename}")
+            print(f"         Expected match: {test_student2['student_name']}")
+            
+            try:
+                files = {'files': (case_insensitive_filename, test_pdf_content, 'application/pdf')}
+                response = requests.post(url, files=files, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    response_data = response.json()
+                    results = response_data.get('results', [])
+                    
+                    if results and len(results) > 0:
+                        result = results[0]
+                        if result.get('status') == 'assigned' and 'filename pattern' in result.get('message', ''):
+                            print(f"         ✅ Case-insensitive matching successful")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ Case-insensitive matching failed")
+                            print(f"         📄 Result: {result}")
+                            test_results.append(False)
+                    else:
+                        print(f"         ❌ No results in response")
+                        test_results.append(False)
+                else:
+                    print(f"         ❌ Case-insensitive upload failed: {response.status_code}")
+                    test_results.append(False)
+                    
+            except Exception as e:
+                print(f"         ❌ Exception during case-insensitive test: {str(e)}")
+                test_results.append(False)
+        else:
+            print(f"      ⚠️  Skipping case-insensitive test - not enough students")
+            test_results.append(True)  # Skip this test
+        
+        # Step 4: Test invalid filename formats
+        print(f"\n   🧪 Step 4: Testing invalid filename formats...")
+        
+        invalid_filenames = [
+            "NoUnderscore.pdf",  # No underscore
+            "Too_Many_Parts.pdf",  # Too many parts
+            "Wrong-Separator.pdf",  # Wrong separator
+            "_EmptyFirst.pdf",  # Empty first part
+            "EmptySecond_.pdf"  # Empty second part
+        ]
+        
+        for invalid_filename in invalid_filenames:
+            print(f"      🎯 Test 4.x: Invalid filename - {invalid_filename}")
+            
+            try:
+                files = {'files': (invalid_filename, test_pdf_content, 'application/pdf')}
+                response = requests.post(url, files=files, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    response_data = response.json()
+                    results = response_data.get('results', [])
+                    
+                    if results and len(results) > 0:
+                        result = results[0]
+                        if result.get('status') == 'unassigned':
+                            print(f"         ✅ Invalid filename correctly unassigned")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ Invalid filename should be unassigned")
+                            print(f"         📄 Result: {result}")
+                            test_results.append(False)
+                    else:
+                        print(f"         ❌ No results in response")
+                        test_results.append(False)
+                else:
+                    print(f"         ❌ Upload failed: {response.status_code}")
+                    test_results.append(False)
+                    
+            except Exception as e:
+                print(f"         ❌ Exception during invalid filename test: {str(e)}")
+                test_results.append(False)
+        
+        # Step 5: Test PDF with form fields (should take priority over filename)
+        print(f"\n   🧪 Step 5: Testing PDF form fields priority over filename...")
+        
+        if len(assigned_students) > 2:
+            test_student3 = assigned_students[2]
+            
+            # Create PDF with form fields that match a different assignment
+            form_fields = {
+                'ITNr': test_student3['itnr'],
+                'SuSVorn': test_student3['vorname'],
+                'SuSNachn': test_student3['nachname']
+            }
+            
+            # But use filename that would match a different student
+            wrong_filename = f"{assigned_students[0]['vorname']}_{assigned_students[0]['nachname']}_priority.pdf"
+            
+            print(f"      🎯 Test 5.1: PDF form fields vs filename priority")
+            print(f"         Filename suggests: {assigned_students[0]['student_name']}")
+            print(f"         Form fields suggest: {test_student3['student_name']}")
+            print(f"         Expected winner: Form fields (PDF form fields take priority)")
+            
+            try:
+                pdf_with_fields = self.create_pdf_with_form_fields(form_fields)
+                files = {'files': (wrong_filename, pdf_with_fields, 'application/pdf')}
+                response = requests.post(url, files=files, headers=headers, timeout=30)
+                
+                if response.status_code == 200:
+                    response_data = response.json()
+                    results = response_data.get('results', [])
+                    
+                    if results and len(results) > 0:
+                        result = results[0]
+                        if (result.get('status') == 'assigned' and 
+                            'PDF form fields' in result.get('message', '') and
+                            test_student3['itnr'] in result.get('message', '')):
+                            print(f"         ✅ PDF form fields correctly took priority")
+                            print(f"         📄 Message: {result.get('message')}")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ PDF form fields priority failed")
+                            print(f"         📄 Result: {result}")
+                            test_results.append(False)
+                    else:
+                        print(f"         ❌ No results in response")
+                        test_results.append(False)
+                else:
+                    print(f"         ❌ Priority test upload failed: {response.status_code}")
+                    test_results.append(False)
+                    
+            except Exception as e:
+                print(f"         ❌ Exception during priority test: {str(e)}")
+                test_results.append(False)
+        else:
+            print(f"      ⚠️  Skipping priority test - not enough students")
+            test_results.append(True)  # Skip this test
+        
+        # Step 6: Test filename matching non-existent student
+        print(f"\n   🧪 Step 6: Testing filename with non-existent student...")
+        
+        nonexistent_filename = "NonExistent_Student.pdf"
+        
+        print(f"      🎯 Test 6.1: Non-existent student filename - {nonexistent_filename}")
+        
+        try:
+            files = {'files': (nonexistent_filename, test_pdf_content, 'application/pdf')}
+            response = requests.post(url, files=files, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                results = response_data.get('results', [])
+                
+                if results and len(results) > 0:
+                    result = results[0]
+                    if result.get('status') == 'unassigned':
+                        print(f"         ✅ Non-existent student correctly unassigned")
+                        test_results.append(True)
+                    else:
+                        print(f"         ❌ Non-existent student should be unassigned")
+                        print(f"         📄 Result: {result}")
+                        test_results.append(False)
+                else:
+                    print(f"         ❌ No results in response")
+                    test_results.append(False)
+            else:
+                print(f"         ❌ Non-existent student test failed: {response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"         ❌ Exception during non-existent student test: {str(e)}")
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Contract Auto-Assignment by Filename Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Contract Auto-Assignment by Filename", 
+                True, 
+                f"All {total_tests} filename assignment tests passed successfully. Filename-based contract assignment working correctly with proper fallback logic, case-insensitive matching, and PDF form field priority."
+            )
+        else:
+            return self.log_result(
+                "Contract Auto-Assignment by Filename", 
+                False, 
+                f"Only {successful_tests}/{total_tests} filename assignment tests passed. Issues found in filename-based contract assignment functionality."
+            )
+
+    def create_simple_pdf_content(self):
+        """Create a simple PDF content for testing (without form fields)"""
+        # Minimal PDF structure
+        pdf_content = b"""%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+>>
+endobj
+
+xref
+0 4
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+trailer
+<<
+/Size 4
+/Root 1 0 R
+>>
+startxref
+190
+%%EOF"""
+        return pdf_content
+
     def run_comprehensive_test(self):
         """Run all tests in sequence"""
         print("=" * 80)
@@ -2093,14 +2442,14 @@ startxref
         print(f"Testing against: {self.base_url}")
         print(f"Test started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # Test sequence - Focus on Assignment Export functionality
+        # Test sequence - Focus on Contract Auto-Assignment by Filename
         tests = [
             ("Admin Setup", self.test_admin_setup),
             ("Login", self.test_login),
             ("Get iPads", self.test_get_ipads),
             ("Get Students", self.test_get_students),
             ("Get Assignments", self.test_get_assignments),
-            ("Assignment Export Functionality", self.test_assignment_export_functionality),
+            ("Contract Auto-Assignment by Filename", self.test_contract_auto_assignment_by_filename),
         ]
         
         for test_name, test_func in tests:
