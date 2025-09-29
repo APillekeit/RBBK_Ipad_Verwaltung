@@ -1509,7 +1509,7 @@ const AssignmentsManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>iPad ITNr</TableHead>
-                    <TableHead>Schüler</TableHead>
+                    <TableHead>Schüler (Klasse)</TableHead>
                     <TableHead>Zugewiesen am</TableHead>
                     <TableHead>Vertrag</TableHead>
                     <TableHead>Aktionen</TableHead>
