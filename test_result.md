@@ -117,20 +117,17 @@ backend:
         - agent: "main"
         - comment: "Implemented PUT /auth/change-password and PUT /auth/change-username endpoints with proper validation, current password verification, and security checks."
 
-  - task: "Inventory Import API endpoint"
+  - task: "Complete Inventory Import API endpoint (Anforderung 8)"
     implemented: true
-    working: true
+    working: "NA"
     file: "backend/server.py"
     stuck_count: 0
-    priority: "high"
-    needs_retesting: false
+    priority: "critical"
+    needs_retesting: true
     status_history:
         - working: "NA"
         - agent: "main"
-        - comment: "Implemented POST /api/imports/inventory endpoint for importing Excel/XLSX inventory lists to restore/update iPad data. Supports both .xlsx and .xls files, validates columns, creates new iPads or updates existing ones."
-        - working: true
-        - agent: "testing"
-        - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Inventory Import API working excellently! Tested all 6 requirement categories with 100% success rate (21/21 tests passed): 1) ✅ File Format Testing - XLSX import working, PDF/TXT/CSV properly rejected, openpyxl engine working correctly, 2) ✅ Column Validation - All required columns (ITNr, SNr, Typ, Pencil) validated, missing columns properly rejected, extra columns ignored as expected, 3) ✅ Data Processing - New iPad creation working (default status 'verfügbar'), existing iPad updates working, empty values handled correctly, duplicate ITNr handling working, data sanitization (whitespace trimming) working, 4) ✅ Creation vs Update Logic - Mixed scenarios working (new + existing iPads), proper default status assignment for new iPads, 5) ✅ Error Handling - Malformed Excel files rejected, empty files rejected, invalid data types handled gracefully, 6) ✅ Response Validation - All required response fields present (message, processed_count, created_count, updated_count, error_count, errors), error list properly limited to 10 entries, count fields accurate, success message formatting correct. Authentication properly required (403). All core functionality working as specified in review request."
+        - comment: "Fully implemented complete inventory import per Anforderung 8: imports complete Bestandsliste with iPads, students, and assignments. Skips existing iPads (ITNr) and students (Name + Class), creates new assignments automatically. Supports .xlsx/.xls files."
 
   - task: "Assignment Filter API Enhancement - IT Number Support"
     implemented: true
