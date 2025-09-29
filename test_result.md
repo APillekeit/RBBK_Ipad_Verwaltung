@@ -402,7 +402,8 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus: 
+    - "Session Management UI implementation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
