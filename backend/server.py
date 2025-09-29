@@ -360,7 +360,6 @@ async def upload_students(file: UploadFile = File(...), current_user: str = Depe
         for _, row in df.iterrows():
             sus_vorn = str(row.get('SuSVorn', ''))
             sus_nachn = str(row.get('SuSNachn', ''))
-            lfd_nr = str(row.get('lfdNr', ''))
             
             if not sus_vorn or not sus_nachn or sus_vorn == 'nan' or sus_nachn == 'nan':
                 continue
@@ -376,7 +375,6 @@ async def upload_students(file: UploadFile = File(...), current_user: str = Depe
                 continue
             
             student = Student(
-                lfd_nr=lfd_nr,
                 sname=str(row.get('Sname', '')),
                 sus_nachn=sus_nachn,
                 sus_vorn=sus_vorn,
