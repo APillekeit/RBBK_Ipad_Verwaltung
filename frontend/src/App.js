@@ -2192,8 +2192,9 @@ const Settings = () => {
             <div className="border-l-4 border-blue-400 bg-blue-50 p-4 rounded">
               <h4 className="font-medium text-blue-800 mb-2">Bestandsliste-Import (Datenwiederherstellung)</h4>
               <p className="text-sm text-blue-700 mb-4">
-                Importiert iPad-Daten aus Excel-Datei (.xlsx/.xls). Aktualisiert bestehende iPads oder erstellt neue.
-                Benötigte Spalten: ITNr, SNr, Typ, Pencil.
+                Importiert vollständige Bestandsliste aus Excel-Datei (.xlsx/.xls) mit iPads, Schülern und Zuordnungen.
+                Bereits vorhandene iPads (ITNr) und Schüler (Name + Klasse) werden übersprungen.
+                Neue Zuordnungen werden automatisch erstellt.
               </p>
               <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
                 <Input
