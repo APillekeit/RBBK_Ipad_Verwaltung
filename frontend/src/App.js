@@ -1533,7 +1533,17 @@ const AssignmentsManagement = () => {
                           {assignment.itnr}
                         </div>
                       </TableCell>
-                      <TableCell>{assignment.student_name}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{assignment.student_name}</div>
+                          <div className="text-sm text-gray-500">
+                            {(() => {
+                              const student = students.find(s => s.id === assignment.student_id);
+                              return student?.sus_kl ? `Klasse: ${student.sus_kl}` : 'Klasse: N/A';
+                            })()}
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>{new Date(assignment.assigned_at).toLocaleDateString('de-DE')}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
