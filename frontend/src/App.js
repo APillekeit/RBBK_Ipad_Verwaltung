@@ -522,6 +522,7 @@ const IPadsManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ITNr</TableHead>
+                    <TableHead>SNr</TableHead>
                     <TableHead>Typ</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Zugewiesen</TableHead>
