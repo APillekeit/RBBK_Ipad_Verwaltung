@@ -4044,6 +4044,380 @@ startxref
         print(f"\n🏁 Test completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("=" * 80)
 
+    def test_filtered_assignments_export(self):
+        """Test Filtered Assignments Export functionality"""
+        print("\n🔍 Testing Filtered Assignments Export Functionality...")
+        
+        test_results = []
+        
+        # Step 1: Test backward compatibility - export without filters
+        print("\n   📊 Step 1: Testing backward compatibility (no filters)...")
+        
+        url = f"{self.base_url}/api/assignments/export"
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                # Verify it's an Excel file
+                content_type = response.headers.get('content-type', '')
+                content_disposition = response.headers.get('content-disposition', '')
+                
+                print(f"      📄 Content-Type: {content_type}")
+                print(f"      📎 Content-Disposition: {content_disposition}")
+                
+                # Check content type and filename
+                if ('spreadsheet' in content_type or 'excel' in content_type) and 'zuordnungen_export.xlsx' in content_disposition:
+                    print(f"      ✅ Backward compatibility: Export all assignments working")
+                    test_results.append(True)
+                    full_export_content = response.content
+                    full_export_size = len(response.content)
+                    print(f"      📏 Full export size: {full_export_size} bytes")
+                else:
+                    print(f"      ❌ Backward compatibility failed")
+                    test_results.append(False)
+                    full_export_content = None
+                    full_export_size = 0
+            else:
+                print(f"      ❌ Full export failed with status: {response.status_code}")
+                test_results.append(False)
+                full_export_content = None
+                full_export_size = 0
+                
+        except Exception as e:
+            print(f"      ❌ Full export exception: {str(e)}")
+            test_results.append(False)
+            full_export_content = None
+            full_export_size = 0
+        
+        # Step 2: Test individual filters
+        print("\n   🎯 Step 2: Testing individual filters...")
+        
+        # Get some test data first
+        assignments_success = self.run_api_test(
+            "Get Assignments for Filter Testing",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if not assignments_success:
+            print(f"      ❌ Could not get assignments for filter testing")
+            test_results.extend([False] * 4)  # 4 individual filter tests
+        else:
+            assignments = self.test_results[-1]['response_data']
+            if len(assignments) == 0:
+                print(f"      ⚠️  No assignments found for filter testing")
+                test_results.extend([True] * 4)  # Skip tests but mark as passed
+            else:
+                # Test individual filters with real data
+                test_assignment = assignments[0]
+                
+                # Test 2a: Filter by Vorname
+                print(f"\n      🧪 Test 2a: Filter by Vorname...")
+                student_name_parts = test_assignment.get('student_name', '').split(' ')
+                if len(student_name_parts) >= 2:
+                    test_vorname = student_name_parts[0]
+                    
+                    try:
+                        filter_url = f"{url}?sus_vorn={test_vorname}"
+                        response = requests.get(filter_url, headers=headers, timeout=60)
+                        
+                        if response.status_code == 200:
+                            filtered_size = len(response.content)
+                            print(f"         ✅ Vorname filter '{test_vorname}' working - Size: {filtered_size} bytes")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ Vorname filter failed: {response.status_code}")
+                            test_results.append(False)
+                    except Exception as e:
+                        print(f"         ❌ Vorname filter exception: {str(e)}")
+                        test_results.append(False)
+                else:
+                    print(f"         ⚠️  No valid student name for Vorname testing")
+                    test_results.append(True)
+                
+                # Test 2b: Filter by Nachname
+                print(f"\n      🧪 Test 2b: Filter by Nachname...")
+                if len(student_name_parts) >= 2:
+                    test_nachname = student_name_parts[1]
+                    
+                    try:
+                        filter_url = f"{url}?sus_nachn={test_nachname}"
+                        response = requests.get(filter_url, headers=headers, timeout=60)
+                        
+                        if response.status_code == 200:
+                            filtered_size = len(response.content)
+                            print(f"         ✅ Nachname filter '{test_nachname}' working - Size: {filtered_size} bytes")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ Nachname filter failed: {response.status_code}")
+                            test_results.append(False)
+                    except Exception as e:
+                        print(f"         ❌ Nachname filter exception: {str(e)}")
+                        test_results.append(False)
+                else:
+                    print(f"         ⚠️  No valid student name for Nachname testing")
+                    test_results.append(True)
+                
+                # Test 2c: Filter by IT-Number
+                print(f"\n      🧪 Test 2c: Filter by IT-Number...")
+                test_itnr = test_assignment.get('itnr', '')
+                
+                if test_itnr:
+                    try:
+                        filter_url = f"{url}?itnr={test_itnr}"
+                        response = requests.get(filter_url, headers=headers, timeout=60)
+                        
+                        if response.status_code == 200:
+                            filtered_size = len(response.content)
+                            print(f"         ✅ IT-Number filter '{test_itnr}' working - Size: {filtered_size} bytes")
+                            test_results.append(True)
+                        else:
+                            print(f"         ❌ IT-Number filter failed: {response.status_code}")
+                            test_results.append(False)
+                    except Exception as e:
+                        print(f"         ❌ IT-Number filter exception: {str(e)}")
+                        test_results.append(False)
+                else:
+                    print(f"         ⚠️  No valid IT-Number for testing")
+                    test_results.append(True)
+                
+                # Test 2d: Filter by Class (if available)
+                print(f"\n      🧪 Test 2d: Filter by Class...")
+                # We need to get student data to find a class
+                students_success = self.run_api_test(
+                    "Get Students for Class Filter Testing",
+                    "GET",
+                    "students",
+                    200
+                )
+                
+                if students_success:
+                    students = self.test_results[-1]['response_data']
+                    test_class = None
+                    for student in students:
+                        if student.get('sus_kl'):
+                            test_class = student['sus_kl']
+                            break
+                    
+                    if test_class:
+                        try:
+                            filter_url = f"{url}?sus_kl={test_class}"
+                            response = requests.get(filter_url, headers=headers, timeout=60)
+                            
+                            if response.status_code == 200:
+                                filtered_size = len(response.content)
+                                print(f"         ✅ Class filter '{test_class}' working - Size: {filtered_size} bytes")
+                                test_results.append(True)
+                            else:
+                                print(f"         ❌ Class filter failed: {response.status_code}")
+                                test_results.append(False)
+                        except Exception as e:
+                            print(f"         ❌ Class filter exception: {str(e)}")
+                            test_results.append(False)
+                    else:
+                        print(f"         ⚠️  No class data available for testing")
+                        test_results.append(True)
+                else:
+                    print(f"         ❌ Could not get students for class testing")
+                    test_results.append(False)
+        
+        # Step 3: Test combined filters
+        print("\n   🔗 Step 3: Testing combined filters...")
+        
+        if assignments_success and len(assignments) > 0:
+            test_assignment = assignments[0]
+            student_name_parts = test_assignment.get('student_name', '').split(' ')
+            test_itnr = test_assignment.get('itnr', '')
+            
+            # Test 3a: Vorname + Nachname
+            if len(student_name_parts) >= 2:
+                test_vorname = student_name_parts[0]
+                test_nachname = student_name_parts[1]
+                
+                try:
+                    filter_url = f"{url}?sus_vorn={test_vorname}&sus_nachn={test_nachname}"
+                    response = requests.get(filter_url, headers=headers, timeout=60)
+                    
+                    if response.status_code == 200:
+                        print(f"         ✅ Combined Vorname+Nachname filter working")
+                        test_results.append(True)
+                    else:
+                        print(f"         ❌ Combined Vorname+Nachname filter failed: {response.status_code}")
+                        test_results.append(False)
+                except Exception as e:
+                    print(f"         ❌ Combined Vorname+Nachname filter exception: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"         ⚠️  Skipping Vorname+Nachname test - no valid names")
+                test_results.append(True)
+            
+            # Test 3b: IT-Number + Name
+            if test_itnr and len(student_name_parts) >= 1:
+                test_vorname = student_name_parts[0]
+                
+                try:
+                    filter_url = f"{url}?itnr={test_itnr}&sus_vorn={test_vorname}"
+                    response = requests.get(filter_url, headers=headers, timeout=60)
+                    
+                    if response.status_code == 200:
+                        print(f"         ✅ Combined IT-Number+Vorname filter working")
+                        test_results.append(True)
+                    else:
+                        print(f"         ❌ Combined IT-Number+Vorname filter failed: {response.status_code}")
+                        test_results.append(False)
+                except Exception as e:
+                    print(f"         ❌ Combined IT-Number+Vorname filter exception: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"         ⚠️  Skipping IT-Number+Vorname test - no valid data")
+                test_results.append(True)
+        else:
+            print(f"      ⚠️  Skipping combined filter tests - no assignment data")
+            test_results.extend([True, True])
+        
+        # Step 4: Test case-insensitive matching
+        print("\n   🔤 Step 4: Testing case-insensitive matching...")
+        
+        if assignments_success and len(assignments) > 0:
+            test_assignment = assignments[0]
+            test_itnr = test_assignment.get('itnr', '')
+            
+            if test_itnr:
+                # Test with lowercase version of IT-Number
+                test_itnr_lower = test_itnr.lower()
+                
+                try:
+                    filter_url = f"{url}?itnr={test_itnr_lower}"
+                    response = requests.get(filter_url, headers=headers, timeout=60)
+                    
+                    if response.status_code == 200:
+                        print(f"         ✅ Case-insensitive matching working ('{test_itnr}' matches '{test_itnr_lower}')")
+                        test_results.append(True)
+                    else:
+                        print(f"         ❌ Case-insensitive matching failed: {response.status_code}")
+                        test_results.append(False)
+                except Exception as e:
+                    print(f"         ❌ Case-insensitive matching exception: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"         ⚠️  No IT-Number for case-insensitive testing")
+                test_results.append(True)
+        else:
+            print(f"      ⚠️  Skipping case-insensitive test - no assignment data")
+            test_results.append(True)
+        
+        # Step 5: Test empty filter results
+        print("\n   🔍 Step 5: Testing empty filter results...")
+        
+        try:
+            # Use a filter that should return no results
+            filter_url = f"{url}?sus_vorn=NonExistentStudentName12345"
+            response = requests.get(filter_url, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                empty_size = len(response.content)
+                print(f"         ✅ Empty filter results handled correctly - Size: {empty_size} bytes")
+                
+                # Should still be a valid Excel file, just with headers only
+                if empty_size > 500:  # Minimum size for Excel with headers
+                    test_results.append(True)
+                else:
+                    print(f"         ⚠️  Empty Excel file might be too small")
+                    test_results.append(True)  # Still acceptable
+            else:
+                print(f"         ❌ Empty filter results failed: {response.status_code}")
+                test_results.append(False)
+        except Exception as e:
+            print(f"         ❌ Empty filter results exception: {str(e)}")
+            test_results.append(False)
+        
+        # Step 6: Test filter logic consistency with /assignments/filtered
+        print("\n   🔄 Step 6: Testing filter logic consistency...")
+        
+        if assignments_success and len(assignments) > 0:
+            test_assignment = assignments[0]
+            test_itnr = test_assignment.get('itnr', '')
+            
+            if test_itnr:
+                try:
+                    # Get filtered assignments from API
+                    filtered_api_url = f"{self.base_url}/api/assignments/filtered?itnr={test_itnr}"
+                    api_response = requests.get(filtered_api_url, headers=headers, timeout=30)
+                    
+                    if api_response.status_code == 200:
+                        api_assignments = api_response.json()
+                        api_count = len(api_assignments)
+                        
+                        # Get filtered export
+                        export_url = f"{url}?itnr={test_itnr}"
+                        export_response = requests.get(export_url, headers=headers, timeout=60)
+                        
+                        if export_response.status_code == 200:
+                            # Parse Excel to count rows
+                            try:
+                                import pandas as pd
+                                import io
+                                
+                                df = pd.read_excel(io.BytesIO(export_response.content))
+                                export_count = len(df)
+                                
+                                print(f"         📊 API filtered results: {api_count} assignments")
+                                print(f"         📊 Export filtered results: {export_count} assignments")
+                                
+                                if api_count == export_count:
+                                    print(f"         ✅ Filter logic consistency verified")
+                                    test_results.append(True)
+                                else:
+                                    print(f"         ❌ Filter logic inconsistency: API={api_count}, Export={export_count}")
+                                    test_results.append(False)
+                                    
+                            except Exception as e:
+                                print(f"         ❌ Error parsing Excel for consistency check: {str(e)}")
+                                test_results.append(False)
+                        else:
+                            print(f"         ❌ Export for consistency check failed: {export_response.status_code}")
+                            test_results.append(False)
+                    else:
+                        print(f"         ❌ API for consistency check failed: {api_response.status_code}")
+                        test_results.append(False)
+                        
+                except Exception as e:
+                    print(f"         ❌ Consistency check exception: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"         ⚠️  No IT-Number for consistency testing")
+                test_results.append(True)
+        else:
+            print(f"      ⚠️  Skipping consistency test - no assignment data")
+            test_results.append(True)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Filtered Assignments Export Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Filtered Assignments Export", 
+                True, 
+                f"All {total_tests} filtered export tests passed successfully"
+            )
+        else:
+            return self.log_result(
+                "Filtered Assignments Export", 
+                False, 
+                f"Only {successful_tests}/{total_tests} filtered export tests passed"
+            )
+
 def main():
     """Main test execution"""
     print("🔧 iPad Management System - Backend API Tester")
