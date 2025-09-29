@@ -105,6 +105,18 @@
 user_problem_statement: "Implementierung von globalen Einstellungen und Bestandsliste-Export: 1) Globale Einstellungen für Standard iPad-Typ und Pencil-Ausstattung in Einstellungen-Tab, 2) Bestandsliste-Export (Anforderung 2) mit Excel-Download aller iPads und Schülerzuordnungen in Einstellungen-Tab, 3) Nutzerfreundliche UI-Gestaltung für beide Features."
 
 backend:
+  - task: "Assignment Filter API Enhancement - IT Number Support"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Extended GET /api/assignments/filtered endpoint to support IT-Number (itnr) filter parameter in addition to existing student filters."
+
   - task: "Contract Auto-Assignment by filename"
     implemented: true
     working: true
