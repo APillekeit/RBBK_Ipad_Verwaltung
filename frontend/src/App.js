@@ -1486,7 +1486,7 @@ const AssignmentsManagement = () => {
             )}
             
             {/* Debug info for troubleshooting */}
-            {(vornameFilter || nachnameFilter || klasseFilter) && (
+            {(vornameFilter || nachnameFilter || klasseFilter || itnrFilter) && (
               <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
                 Debug: Filter aktiv - Gefiltert: {filteredAssignments.length}, Gesamt: {assignments.length}
                 {filteredAssignments.length > 0 && filteredAssignments.length < assignments.length ? ' → Batch-Button verfügbar' : ' → Kein Batch-Button'}
