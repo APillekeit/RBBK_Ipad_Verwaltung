@@ -1465,6 +1465,18 @@ async def import_inventory(file: UploadFile = File(...), current_user: str = Dep
                         )
                         
                         assignments_created += 1
+                # If no student data, ensure iPad stays available
+                else:
+                    # No student data present - iPad should remain available
+                    if not existing_ipad:  # Only update status if this is a newly created iPad
+                        await db.ipads.update_one(
+                            {"id": ipad_id},
+                            {"$set": {
+                                "status": "verfügbar",
+                                "current_assignment_id": None,
+                                "updated_at": datetime.now(timezone.utc).isoformat()
+                            }}
+                        )
                 
             except Exception as e:
                 error_count += 1
