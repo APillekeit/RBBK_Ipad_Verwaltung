@@ -1294,7 +1294,7 @@ async def update_global_settings(
 
 @api_router.post("/imports/inventory")
 async def import_inventory(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
-    """Import inventory list from Excel/XLSX file to restore/update iPad data"""
+    """Import complete inventory list with iPads and student assignments from Excel file"""
     try:
         # Validate file type
         if not file.filename.lower().endswith(('.xlsx', '.xls')):
@@ -1312,63 +1312,147 @@ async def import_inventory(file: UploadFile = File(...), current_user: str = Dep
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Error reading Excel file: {str(e)}")
         
-        # Validate required columns (based on our export format)
-        required_columns = ['ITNr', 'SNr', 'Typ', 'Pencil']
-        missing_columns = [col for col in required_columns if col not in df.columns]
+        # Validate required iPad columns
+        required_ipad_columns = ['ITNr']
+        missing_columns = [col for col in required_ipad_columns if col not in df.columns]
         if missing_columns:
             raise HTTPException(status_code=400, detail=f"Missing required columns: {missing_columns}")
         
-        processed_count = 0
-        updated_count = 0
-        created_count = 0
+        # Counters for different operations
+        ipads_created = 0
+        ipads_updated = 0
+        ipads_skipped = 0
+        students_created = 0
+        students_skipped = 0
+        assignments_created = 0
         error_count = 0
         errors = []
         
         for index, row in df.iterrows():
             try:
+                # Process iPad data
                 itnr = str(row.get('ITNr', '')).strip()
                 if not itnr:
                     continue  # Skip rows without ITNr
-                
-                # Prepare iPad data
-                ipad_data = {
-                    "itnr": itnr,
-                    "snr": str(row.get('SNr', '')).strip(),
-                    "typ": str(row.get('Typ', '')).strip(),
-                    "pencil": str(row.get('Pencil', '')).strip(),
-                    "ansch_jahr": str(row.get('AnschJahr', '')).strip(),
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }
-                
-                # Remove empty values
-                ipad_data = {k: v for k, v in ipad_data.items() if v}
                 
                 # Check if iPad already exists
                 existing_ipad = await db.ipads.find_one({"itnr": itnr})
                 
                 if existing_ipad:
-                    # Update existing iPad
-                    await db.ipads.update_one(
-                        {"itnr": itnr},
-                        {"$set": ipad_data}
-                    )
-                    updated_count += 1
+                    ipads_skipped += 1
+                    ipad_id = existing_ipad["id"]
                 else:
                     # Create new iPad
                     new_ipad = iPad(
                         itnr=itnr,
-                        snr=ipad_data.get("snr", ""),
-                        typ=ipad_data.get("typ", ""),
-                        pencil=ipad_data.get("pencil", ""),
-                        ansch_jahr=ipad_data.get("ansch_jahr", ""),
+                        snr=str(row.get('SNr', '')).strip(),
+                        typ=str(row.get('Typ', '')).strip(),
+                        pencil=str(row.get('Pencil', '')).strip(),
+                        ansch_jahr=str(row.get('AnschJahr', '')).strip(),
                         status="verfügbar"  # Default status for imported iPads
                     )
                     
                     ipad_dict = prepare_for_mongo(new_ipad.dict())
                     await db.ipads.insert_one(ipad_dict)
-                    created_count += 1
+                    ipad_id = new_ipad.id
+                    ipads_created += 1
                 
-                processed_count += 1
+                # Check if student data exists in row
+                sus_vorn = str(row.get('SuSVorn', '')).strip()
+                sus_nachn = str(row.get('SuSNachn', '')).strip()
+                sus_kl = str(row.get('SuSKl', '')).strip()
+                
+                if sus_vorn and sus_nachn:  # Student data present
+                    # Check if student already exists (by name + class)
+                    existing_student = await db.students.find_one({
+                        "sus_vorn": sus_vorn,
+                        "sus_nachn": sus_nachn,
+                        "sus_kl": sus_kl
+                    })
+                    
+                    if existing_student:
+                        students_skipped += 1
+                        student_id = existing_student["id"]
+                    else:
+                        # Create new student
+                        new_student = Student(
+                            lfd_nr=str(row.get('lfdNr', '')).strip(),
+                            sname=str(row.get('Sname', '')).strip(),
+                            sus_vorn=sus_vorn,
+                            sus_nachn=sus_nachn,
+                            sus_kl=sus_kl,
+                            sus_str_hnr=str(row.get('SuSStrHNr', '')).strip(),
+                            sus_plz=str(row.get('SuSPLZ', '')).strip(),
+                            sus_ort=str(row.get('SuSOrt', '')).strip(),
+                            sus_geb=str(row.get('SuSGeb', '')).strip(),
+                            erz1_nachn=str(row.get('Erz1Nachn', '')).strip(),
+                            erz1_vorn=str(row.get('Erz1Vorn', '')).strip(),
+                            erz1_str_hnr=str(row.get('Erz1StrHNr', '')).strip(),
+                            erz1_plz=str(row.get('Erz1PLZ', '')).strip(),
+                            erz1_ort=str(row.get('Erz1Ort', '')).strip(),
+                            erz2_nachn=str(row.get('Erz2Nachn', '')).strip(),
+                            erz2_vorn=str(row.get('Erz2Vorn', '')).strip(),
+                            erz2_str_hnr=str(row.get('Erz2StrHNr', '')).strip(),
+                            erz2_plz=str(row.get('Erz2PLZ', '')).strip(),
+                            erz2_ort=str(row.get('Erz2Ort', '')).strip()
+                        )
+                        
+                        student_dict = prepare_for_mongo(new_student.dict())
+                        await db.students.insert_one(student_dict)
+                        student_id = new_student.id
+                        students_created += 1
+                    
+                    # Check if assignment already exists
+                    existing_assignment = await db.assignments.find_one({
+                        "ipad_id": ipad_id,
+                        "is_active": True
+                    })
+                    
+                    if not existing_assignment:
+                        # Create new assignment
+                        ausleibe_datum = str(row.get('AusleiheDatum', '')).strip()
+                        assigned_at = datetime.now(timezone.utc).isoformat()
+                        
+                        # Try to parse AusleiheDatum if provided
+                        if ausleibe_datum:
+                            try:
+                                # Parse DD.MM.YYYY format
+                                date_obj = datetime.strptime(ausleibe_datum, "%d.%m.%Y")
+                                assigned_at = date_obj.replace(tzinfo=timezone.utc).isoformat()
+                            except:
+                                pass  # Use current datetime if parsing fails
+                        
+                        new_assignment = Assignment(
+                            ipad_id=ipad_id,
+                            student_id=student_id,
+                            itnr=itnr,
+                            student_name=f"{sus_vorn} {sus_nachn}",
+                            assigned_at=assigned_at
+                        )
+                        
+                        assignment_dict = prepare_for_mongo(new_assignment.dict())
+                        await db.assignments.insert_one(assignment_dict)
+                        
+                        # Update iPad status and assignment reference
+                        await db.ipads.update_one(
+                            {"id": ipad_id},
+                            {"$set": {
+                                "status": "zugewiesen",
+                                "current_assignment_id": new_assignment.id,
+                                "updated_at": datetime.now(timezone.utc).isoformat()
+                            }}
+                        )
+                        
+                        # Update student assignment reference
+                        await db.students.update_one(
+                            {"id": student_id},
+                            {"$set": {
+                                "current_assignment_id": new_assignment.id,
+                                "updated_at": datetime.now(timezone.utc).isoformat()
+                            }}
+                        )
+                        
+                        assignments_created += 1
                 
             except Exception as e:
                 error_count += 1
@@ -1376,15 +1460,20 @@ async def import_inventory(file: UploadFile = File(...), current_user: str = Dep
                 continue
         
         # Prepare response
-        message = f"Inventory import completed: {created_count} created, {updated_count} updated"
+        total_processed = ipads_created + ipads_skipped
+        message = f"Import completed: {ipads_created} iPads created, {ipads_skipped} iPads skipped, {students_created} students created, {students_skipped} students skipped, {assignments_created} assignments created"
+        
         if error_count > 0:
             message += f", {error_count} errors"
         
         return {
             "message": message,
-            "processed_count": processed_count,
-            "created_count": created_count,
-            "updated_count": updated_count,
+            "total_processed": total_processed,
+            "ipads_created": ipads_created,
+            "ipads_skipped": ipads_skipped,
+            "students_created": students_created,
+            "students_skipped": students_skipped,
+            "assignments_created": assignments_created,
             "error_count": error_count,
             "errors": errors[:10] if errors else []  # Limit error list to first 10
         }
