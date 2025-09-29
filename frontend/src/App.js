@@ -1112,7 +1112,7 @@ const AssignmentsManagement = () => {
   // Apply filters
   useEffect(() => {
     applyFilters();
-  }, [assignments, vornameFilter, nachnameFilter, klasseFilter]);
+  }, [assignments, vornameFilter, nachnameFilter, klasseFilter, itnrFilter]);
 
   const applyFilters = async () => {
     console.log('=== APPLYING FILTERS ===');
