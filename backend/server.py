@@ -1700,8 +1700,30 @@ async def export_assignments(
     current_user: str = Depends(get_current_user)
 ):
     """Export assignments to Excel (all or filtered)"""
-    # Get all assignments with related data
-    assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
+    # Build filter query for students
+    student_filter = {}
+    if sus_vorn:
+        student_filter["sus_vorn"] = {"$regex": sus_vorn, "$options": "i"}
+    if sus_nachn:
+        student_filter["sus_nachn"] = {"$regex": sus_nachn, "$options": "i"}
+    if sus_kl:
+        student_filter["sus_kl"] = {"$regex": sus_kl, "$options": "i"}
+    
+    # Build filter query for assignments (IT-Nummer)
+    assignment_filter = {"is_active": True}
+    if itnr:
+        assignment_filter["itnr"] = {"$regex": itnr, "$options": "i"}
+    
+    if student_filter:
+        # Get matching students
+        students = await db.students.find(student_filter).to_list(length=None)
+        student_ids = [s["id"] for s in students]
+        
+        # Add student filter to assignment filter
+        assignment_filter["student_id"] = {"$in": student_ids}
+    
+    # Get assignments matching all filters
+    assignments = await db.assignments.find(assignment_filter).to_list(length=None)
     
     export_data = []
     for assignment in assignments:
