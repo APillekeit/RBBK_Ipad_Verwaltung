@@ -1569,7 +1569,6 @@ async def export_inventory(current_user: str = Depends(get_current_user)):
             
             row = {
                 # Student data (empty if no assignment) - EXACT same order as assignment export
-                "lfdNr": student.get("lfd_nr", "") if student else "",
                 "Sname": student.get("sname", "") if student else "",
                 "SuSNachn": student.get("sus_nachn", "") if student else "",
                 "SuSVorn": student.get("sus_vorn", "") if student else "",
