@@ -3647,15 +3647,14 @@ startxref
         print(f"Testing against: {self.base_url}")
         print(f"Test started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # Test sequence - Focus on Inventory Import API Testing
+        # Test sequence - Focus on Complete Inventory Import Testing (Anforderung 8)
         tests = [
             ("Admin Setup", self.test_admin_setup),
             ("Login", self.test_login),
             ("Get iPads", self.test_get_ipads),
             ("Get Students", self.test_get_students),
             ("Get Assignments", self.test_get_assignments),
-            ("Assignment Filter API Enhancement", self.test_assignment_filter_api_enhancement),
-            ("Inventory Import API", self.test_inventory_import_api),
+            ("Complete Inventory Import (Anforderung 8)", self.test_complete_inventory_import),
         ]
         
         for test_name, test_func in tests:
