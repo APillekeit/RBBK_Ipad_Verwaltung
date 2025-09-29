@@ -64,7 +64,6 @@ class iPad(BaseModel):
 
 class Student(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    lfd_nr: Optional[str] = None
     sname: Optional[str] = None
     sus_nachn: str
     sus_vorn: str
