@@ -1478,13 +1478,24 @@ const AssignmentsManagement = () => {
           {/* Action Buttons */}
           <div className="flex gap-2 mb-4">
             <Button 
-              onClick={handleExport}
+              onClick={() => handleExport(false)}
               disabled={exporting}
               className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
             >
               <Download className="h-4 w-4 mr-2" />
               {exporting ? 'Exportiere...' : 'Alle Zuordnungen exportieren'}
             </Button>
+            
+            {(vornameFilter || nachnameFilter || klasseFilter || itnrFilter) && filteredAssignments.length > 0 && (
+              <Button 
+                onClick={() => handleExport(true)}
+                disabled={exporting}
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {exporting ? 'Exportiere...' : `Gefilterte Zuordnungen exportieren (${filteredAssignments.length})`}
+              </Button>
+            )}
             
             {filteredAssignments.length > 0 && filteredAssignments.length < assignments.length && (
               <Button 
