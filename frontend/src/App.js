@@ -1411,7 +1411,7 @@ const AssignmentsManagement = () => {
         </CardHeader>
         <CardContent>
           {/* Filter Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
             <div>
               <Label htmlFor="vorname">Vorname filtern:</Label>
               <Input
@@ -1439,6 +1439,16 @@ const AssignmentsManagement = () => {
                 value={klasseFilter}
                 onChange={(e) => setKlasseFilter(e.target.value)}
                 placeholder="z.B. 5A"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="itnr">IT-Nummer filtern:</Label>
+              <Input
+                id="itnr"
+                value={itnrFilter}
+                onChange={(e) => setItnrFilter(e.target.value)}
+                placeholder="z.B. IPAD001"
                 className="mt-1"
               />
             </div>
