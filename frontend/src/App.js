@@ -279,7 +279,7 @@ const IPadDetailViewer = ({ ipadId, onClose }) => {
           )}
 
           {/* Assignment History */}
-          {assignment_history.length > 0 && (
+          {assignment_history && assignment_history.length > 0 && (
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Zuordnungshistorie ({assignment_history.length})</CardTitle>
