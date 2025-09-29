@@ -1884,6 +1884,19 @@ const Settings = () => {
   });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
+  
+  // Account management states
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [changingUsername, setChangingUsername] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
+  const [usernameForm, setUsernameForm] = useState({
+    current_password: '',
+    new_username: ''
+  });
 
   // Load global settings on component mount
   useEffect(() => {
