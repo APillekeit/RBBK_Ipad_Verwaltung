@@ -533,6 +533,7 @@ const IPadsManagement = () => {
                   {ipads.map((ipad) => (
                     <TableRow key={ipad.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">{ipad.itnr}</TableCell>
+                      <TableCell>{ipad.snr || 'N/A'}</TableCell>
                       <TableCell>{ipad.typ || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(ipad.status)}>
