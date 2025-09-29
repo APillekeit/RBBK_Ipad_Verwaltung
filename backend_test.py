@@ -3996,7 +3996,7 @@ startxref
             ("Get iPads", self.test_get_ipads),
             ("Get Students", self.test_get_students),
             ("Get Assignments", self.test_get_assignments),
-            ("Complete Inventory Import (Anforderung 8)", self.test_complete_inventory_import),
+            ("Complete Inventory Import - CRITICAL FIXES (Anforderung 8)", self.test_complete_inventory_import_critical_fixes),
         ]
         
         for test_name, test_func in tests:
