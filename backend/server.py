@@ -1357,12 +1357,17 @@ async def import_inventory(file: UploadFile = File(...), current_user: str = Dep
                     ipad_id = new_ipad.id
                     ipads_created += 1
                 
-                # Check if student data exists in row
-                sus_vorn = str(row.get('SuSVorn', '')).strip()
-                sus_nachn = str(row.get('SuSNachn', '')).strip()
-                sus_kl = str(row.get('SuSKl', '')).strip()
+                # Check if student data exists in row (and is not NaN)
+                sus_vorn_raw = row.get('SuSVorn', '')
+                sus_nachn_raw = row.get('SuSNachn', '')
+                sus_kl_raw = row.get('SuSKl', '')
                 
-                if sus_vorn and sus_nachn:  # Student data present
+                # Handle NaN values from pandas
+                sus_vorn = str(sus_vorn_raw).strip() if pd.notna(sus_vorn_raw) else ''
+                sus_nachn = str(sus_nachn_raw).strip() if pd.notna(sus_nachn_raw) else ''
+                sus_kl = str(sus_kl_raw).strip() if pd.notna(sus_kl_raw) else ''
+                
+                if sus_vorn and sus_nachn and sus_vorn != 'nan' and sus_nachn != 'nan':  # Student data present and valid
                     # Check if student already exists (by name + class)
                     existing_student = await db.students.find_one({
                         "sus_vorn": sus_vorn,
