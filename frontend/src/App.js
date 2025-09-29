@@ -2001,6 +2001,68 @@ const Settings = () => {
     }
   };
 
+  const handlePasswordChange = async () => {
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      toast.error('Neue Passwörter stimmen nicht überein');
+      return;
+    }
+
+    if (passwordForm.new_password.length < 6) {
+      toast.error('Neues Passwort muss mindestens 6 Zeichen lang sein');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const response = await api.put('/auth/change-password', {
+        current_password: passwordForm.current_password,
+        new_password: passwordForm.new_password
+      });
+      
+      toast.success(response.data.message);
+      setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
+      
+    } catch (error) {
+      console.error('Failed to change password:', error);
+      toast.error(error.response?.data?.detail || 'Fehler beim Ändern des Passworts');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleUsernameChange = async () => {
+    if (usernameForm.new_username.length < 3) {
+      toast.error('Neuer Benutzername muss mindestens 3 Zeichen lang sein');
+      return;
+    }
+
+    setChangingUsername(true);
+    try {
+      const response = await api.put('/auth/change-username', {
+        current_password: usernameForm.current_password,
+        new_username: usernameForm.new_username
+      });
+      
+      toast.success(response.data.message);
+      toast.info('Bitte melden Sie sich mit dem neuen Benutzernamen an.');
+      
+      // Clear form and logout after username change
+      setUsernameForm({ current_password: '', new_username: '' });
+      
+      // Logout after 3 seconds to allow user to see the message
+      setTimeout(() => {
+        localStorage.removeItem('token');
+        window.location.reload();
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Failed to change username:', error);
+      toast.error(error.response?.data?.detail || 'Fehler beim Ändern des Benutzernamens');
+    } finally {
+      setChangingUsername(false);
+    }
+  };
+
   const handleDataProtectionCleanup = async () => {
     // Double-click protection
     const now = Date.now();
