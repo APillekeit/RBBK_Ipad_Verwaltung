@@ -194,8 +194,9 @@ const IPadDetailViewer = ({ ipadId, onClose }) => {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div><strong>ITNr:</strong> {ipad.itnr}</div>
+                <div><strong>SNr:</strong> {ipad.snr || 'N/A'}</div>
                 <div><strong>Typ:</strong> {ipad.typ || 'N/A'}</div>
-                <div><strong>Speicher:</strong> {ipad.speicher || 'N/A'}</div>
+                <div><strong>Pencil:</strong> {ipad.pencil || 'N/A'}</div>
                 <div><strong>Status:</strong> 
                   <Badge className={`ml-2 ${
                     ipad.status === 'verfügbar' ? 'bg-green-100 text-green-800' :
@@ -205,8 +206,6 @@ const IPadDetailViewer = ({ ipadId, onClose }) => {
                     {ipad.status}
                   </Badge>
                 </div>
-                <div><strong>Hülle:</strong> {ipad.huelle || 'N/A'}</div>
-                <div><strong>Stift:</strong> {ipad.stift || 'N/A'}</div>
                 <div><strong>Erstellt am:</strong> {ipad.created_at ? new Date(ipad.created_at).toLocaleDateString('de-DE') : 'N/A'}</div>
               </div>
             </CardContent>
