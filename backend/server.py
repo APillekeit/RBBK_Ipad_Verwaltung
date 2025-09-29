@@ -191,6 +191,93 @@ async def setup_admin():
     user_dict = prepare_for_mongo(user.dict())
     await db.users.insert_one(user_dict)
     return {"message": "Admin user created successfully", "username": "admin", "password": "admin123"}
+@api_router.put("/auth/change-password")
+async def change_password(
+    password_data: dict,
+    current_user: str = Depends(get_current_user)
+):
+    """Change user password"""
+    try:
+        current_password = password_data.get("current_password")
+        new_password = password_data.get("new_password")
+        
+        if not current_password or not new_password:
+            raise HTTPException(status_code=400, detail="Current password and new password are required")
+        
+        if len(new_password) < 6:
+            raise HTTPException(status_code=400, detail="New password must be at least 6 characters long")
+        
+        # Get current user
+        user = await db.users.find_one({"username": current_user})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Verify current password
+        if not verify_password(current_password, user["password_hash"]):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        
+        # Update password
+        hashed_new_password = get_password_hash(new_password)
+        await db.users.update_one(
+            {"username": current_user},
+            {"$set": {
+                "password_hash": hashed_new_password,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {"message": "Password changed successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error changing password: {str(e)}")
+
+@api_router.put("/auth/change-username")
+async def change_username(
+    username_data: dict,
+    current_user: str = Depends(get_current_user)
+):
+    """Change username"""
+    try:
+        current_password = username_data.get("current_password")
+        new_username = username_data.get("new_username")
+        
+        if not current_password or not new_username:
+            raise HTTPException(status_code=400, detail="Current password and new username are required")
+        
+        if len(new_username) < 3:
+            raise HTTPException(status_code=400, detail="New username must be at least 3 characters long")
+        
+        # Check if new username already exists
+        existing_user = await db.users.find_one({"username": new_username})
+        if existing_user and existing_user["username"] != current_user:
+            raise HTTPException(status_code=400, detail="Username already exists")
+        
+        # Get current user
+        user = await db.users.find_one({"username": current_user})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Verify current password
+        if not verify_password(current_password, user["password_hash"]):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        
+        # Update username
+        await db.users.update_one(
+            {"username": current_user},
+            {"$set": {
+                "username": new_username,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {"message": "Username changed successfully", "new_username": new_username}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error changing username: {str(e)}")
 
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(user_data: UserLogin):
