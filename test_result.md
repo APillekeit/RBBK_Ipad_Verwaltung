@@ -238,6 +238,21 @@ backend:
         - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Inventory Export API working excellently! Tested 7 scenarios: 1) Basic export returns proper Excel file with correct content-type and timestamped filename, 2) Excel structure verified with all 25 required headers and 9 data rows, 3) Global settings integration confirmed - Typ and Pencil columns use current global settings, 4) Authentication properly required (403 for unauthenticated requests), 5) File size appropriate (6391 bytes), 6) Data consistency verified - export contains all iPads with proper assignment status, 7) Both assigned (7) and unassigned (2) iPads correctly represented. Export uses MongoDB aggregation pipeline to join iPads, assignments, and students data. Minor: Authentication test expected 401 but got 403 (acceptable security behavior)."
 
 frontend:
+  - task: "Filtered Assignments Export UI implementation"
+    implemented: true
+    working: true
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Implemented filtered assignments export UI with conditional button display, proper styling, and integration with existing filter system."
+        - working: true
+        - agent: "testing"
+        - comment: "🎉 COMPREHENSIVE TESTING COMPLETE - Filtered Assignments Export UI working excellently! Tested all 11 requirement categories with 100% success rate: ✅ AUTHENTICATION & NAVIGATION: admin/admin123 login working perfectly, Assignments tab navigation successful, filter interface loaded correctly. ✅ UI DISPLAY & FUNCTIONALITY: 'Alle Zuordnungen exportieren' button always visible (green gradient), 'Gefilterte Zuordnungen exportieren' button appears only when filters active (blue gradient), correct count display in parentheses (e.g., '(1)'). ✅ FILTER APPLICATION: Single filters working (Vorname 'Sarah', Nachname 'Meyer', Klasse '6A', IT-Nummer 'IPAD001'), API integration perfect with /assignments/filtered endpoint, filter reset functionality working. ✅ EXPORT FUNCTIONALITY: All export downloads 'zuordnungen_export.xlsx' correctly, filtered export downloads 'zuordnungen_gefiltert_export.xlsx' correctly, different success messages for each export type. ✅ BUTTON STATE MANAGEMENT: Filtered button only appears when filters active AND results exist, button disappears when no results (0 assignments), proper button re-enabling after operations. ✅ FILTER SCENARIOS: All individual filters tested successfully, combined filters working (Sarah + Meyer), case-insensitive matching verified. ✅ INTEGRATION: Other assignment features preserved (auto-assign, dissolve, contract upload), filter persistence during interactions, assignment counter shows 'X von Y' format correctly. ✅ MOBILE RESPONSIVENESS: All export buttons accessible on mobile (390x844), filter grid responsive, functionality preserved on mobile devices. ✅ EDGE CASES: No-results filter handled properly ('Keine Zuordnungen entsprechen den Filterkriterien'), filtered button correctly hidden when 0 results. ✅ USER EXPERIENCE: Clear visual distinction between export buttons, descriptive filenames, informative button text with counts. ✅ ERROR HANDLING: Robust API error handling, proper loading states, graceful fallbacks. Console logs show excellent filter API integration with detailed logging. All requirements from review request fully implemented and tested. Feature ready for production use!"
+
   - task: "Session Management UI implementation"
     implemented: true
     working: "NA"
