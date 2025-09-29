@@ -1773,7 +1773,6 @@ async def export_assignments(
             # Combine data in EXACT same order as Bestandsliste export
             row_data = {
                 # Student data first (matching Bestandsliste order exactly)
-                "lfdNr": student.get("lfd_nr", ""),
                 "Sname": student.get("sname", ""),
                 "SuSNachn": student.get("sus_nachn", ""),
                 "SuSVorn": student.get("sus_vorn", ""),
