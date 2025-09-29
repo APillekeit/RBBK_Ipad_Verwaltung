@@ -2166,6 +2166,71 @@ const Settings = () => {
   );
 };
 
+// Session Timer Component
+const SessionTimer = ({ onLogout }) => {
+  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
+  const [lastActivity, setLastActivity] = useState(Date.now());
+
+  useEffect(() => {
+    const updateActivity = () => {
+      setLastActivity(Date.now());
+      setTimeLeft(30 * 60); // Reset timer on activity
+    };
+
+    // Activity events to monitor
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    events.forEach(event => {
+      document.addEventListener(event, updateActivity, true);
+    });
+
+    // Timer countdown
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          // Auto logout
+          toast.error('Session abgelaufen. Sie werden automatisch abgemeldet.');
+          setTimeout(() => {
+            onLogout();
+          }, 3000);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Warning at 5 minutes left
+    const warningTimer = setInterval(() => {
+      const current = Date.now();
+      const timeSinceActivity = (current - lastActivity) / 1000;
+      
+      if (timeSinceActivity >= 25 * 60 && timeSinceActivity < 25 * 60 + 5) { // 25 minutes
+        toast.warning('Session läuft in 5 Minuten ab. Bewegen Sie die Maus, um die Session zu verlängern.');
+      }
+    }, 5000);
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, updateActivity, true);
+      });
+      clearInterval(timer);
+      clearInterval(warningTimer);
+    };
+  }, [lastActivity, onLogout]);
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className={`text-sm px-3 py-1 rounded ${timeLeft < 5 * 60 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600'}`}>
+      Session: {formatTime(timeLeft)}
+    </div>
+  );
+};
+
 // Main Dashboard Component
 const Dashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('students');
