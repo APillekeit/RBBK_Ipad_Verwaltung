@@ -119,15 +119,18 @@ backend:
 
   - task: "Complete Inventory Import API endpoint (Anforderung 8)"
     implemented: true
-    working: "NA"
+    working: false
     file: "backend/server.py"
     stuck_count: 0
     priority: "critical"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Fully implemented complete inventory import per Anforderung 8: imports complete Bestandsliste with iPads, students, and assignments. Skips existing iPads (ITNr) and students (Name + Class), creates new assignments automatically. Supports .xlsx/.xls files."
+        - working: false
+        - agent: "testing"
+        - comment: "❌ CRITICAL ISSUES FOUND - Complete Inventory Import testing completed with 75% success rate (6/8 tests passed). MAJOR ISSUES: 1) ❌ Student Creation & Field Mapping - Empty parent fields (Erz2Vorn) being imported as 'nan' instead of empty strings, affecting data quality. 2) ❌ iPad Status Updates - IPAD102 (iPad-only entry with no student data) incorrectly assigned status 'zugewiesen' instead of 'verfügbar', and unexpectedly created an assignment when none should exist. ✅ WORKING CORRECTLY: Complete .xlsx import, skip logic for duplicates, automatic assignment creation for valid student-iPad pairs, date parsing (AusleiheDatum → assigned_at), error handling for invalid files and missing columns. The core import functionality works but has critical data integrity issues that need immediate fixing."
 
   - task: "Assignment Filter API Enhancement - IT Number Support"
     implemented: true
