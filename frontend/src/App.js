@@ -1982,8 +1982,22 @@ const Settings = () => {
       toast.success(response.data.message);
       
       // Show detailed results if available
-      if (response.data.created_count > 0 || response.data.updated_count > 0) {
-        toast.info(`Details: ${response.data.created_count} neue iPads, ${response.data.updated_count} aktualisiert`);
+      if (response.data.ipads_created > 0 || response.data.students_created > 0 || response.data.assignments_created > 0) {
+        const details = [];
+        if (response.data.ipads_created > 0) details.push(`${response.data.ipads_created} neue iPads`);
+        if (response.data.students_created > 0) details.push(`${response.data.students_created} neue Schüler`);
+        if (response.data.assignments_created > 0) details.push(`${response.data.assignments_created} neue Zuordnungen`);
+        
+        toast.info(`Erstellt: ${details.join(', ')}`);
+      }
+      
+      // Show skipped items
+      if (response.data.ipads_skipped > 0 || response.data.students_skipped > 0) {
+        const skipped = [];
+        if (response.data.ipads_skipped > 0) skipped.push(`${response.data.ipads_skipped} iPads übersprungen`);
+        if (response.data.students_skipped > 0) skipped.push(`${response.data.students_skipped} Schüler übersprungen`);
+        
+        toast.info(`Übersprungen: ${skipped.join(', ')}`);
       }
       
       // Show errors if any
