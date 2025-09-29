@@ -685,19 +685,25 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
             except:
                 form_fields = {}
             
-            # Check if contract has required fields for auto-assignment
+            # Check if contract has required fields for auto-assignment (PDF form fields)
             itnr = form_fields.get('ITNr')
             sus_vorn = form_fields.get('SuSVorn')
             sus_nachn = form_fields.get('SuSNachn')
             
+            assignment_found = False
+            assignment_method = ""
+            
             if itnr and sus_vorn and sus_nachn:
-                # Try auto-assignment (no validation errors)
+                # Try auto-assignment by PDF form fields
                 assignment = await db.assignments.find_one({
                     "itnr": str(itnr),
                     "is_active": True
                 })
                 
                 if assignment:
+                    assignment_found = True
+                    assignment_method = f"PDF form fields (iPad {itnr})"
+                    
                     # Create contract with assignment
                     contract = Contract(
                         assignment_id=assignment["id"],
@@ -718,8 +724,68 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
                     )
                     
                     processed_count += 1
-                    results.append({"filename": file.filename, "status": "assigned", "message": f"Assigned to iPad {itnr}"})
+                    results.append({"filename": file.filename, "status": "assigned", "message": f"Assigned by {assignment_method}"})
                     continue
+            
+            # If PDF form fields didn't work, try filename-based auto-assignment (Vorname_Nachname.pdf)
+            if not assignment_found:
+                filename_without_ext = file.filename.replace('.pdf', '').replace('.PDF', '')
+                if '_' in filename_without_ext:
+                    parts = filename_without_ext.split('_')
+                    if len(parts) == 2:
+                        vorname_file, nachname_file = parts[0].strip(), parts[1].strip()
+                        
+                        # Search for student with matching name in active assignments
+                        pipeline = [
+                            {
+                                "$lookup": {
+                                    "from": "students",
+                                    "localField": "student_id",
+                                    "foreignField": "id",
+                                    "as": "student"
+                                }
+                            },
+                            {
+                                "$match": {
+                                    "is_active": True,
+                                    "student.sus_vorn": {"$regex": f"^{vorname_file}$", "$options": "i"},
+                                    "student.sus_nachn": {"$regex": f"^{nachname_file}$", "$options": "i"}
+                                }
+                            }
+                        ]
+                        
+                        assignment_results = await db.assignments.aggregate(pipeline).to_list(length=None)
+                        
+                        if assignment_results:
+                            assignment = assignment_results[0]
+                            student_data = assignment["student"][0] if assignment["student"] else None
+                            
+                            if student_data:
+                                assignment_found = True
+                                assignment_method = f"filename pattern ({vorname_file}_{nachname_file})"
+                                
+                                # Create contract with assignment
+                                contract = Contract(
+                                    assignment_id=assignment["id"],
+                                    itnr=assignment["itnr"],
+                                    student_name=f"{student_data['sus_vorn']} {student_data['sus_nachn']}",
+                                    filename=file.filename,
+                                    file_data=contents,
+                                    form_fields=form_fields
+                                )
+                                
+                                contract_dict = prepare_for_mongo(contract.dict())
+                                await db.contracts.insert_one(contract_dict)
+                                
+                                # Update assignment with contract reference
+                                await db.assignments.update_one(
+                                    {"id": assignment["id"]},
+                                    {"$set": {"contract_id": contract.id}}
+                                )
+                                
+                                processed_count += 1
+                                results.append({"filename": file.filename, "status": "assigned", "message": f"Assigned by {assignment_method}"})
+                                continue
             
             # Create unassigned contract
             contract = Contract(
