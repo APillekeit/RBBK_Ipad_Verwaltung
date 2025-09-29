@@ -1078,6 +1078,7 @@ const AssignmentsManagement = () => {
   const [vornameFilter, setVornameFilter] = useState('');
   const [nachnameFilter, setNachnameFilter] = useState('');
   const [klasseFilter, setKlasseFilter] = useState('');
+  const [itnrFilter, setItnrFilter] = useState('');
 
   const loadAllData = async () => {
     try {
