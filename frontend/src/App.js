@@ -931,7 +931,6 @@ const StudentDetailViewer = ({ studentId, onClose }) => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                <div><strong>Lfd. Nr:</strong> {student.lfd_nr || 'N/A'}</div>
                 <div><strong>Schulname:</strong> {student.sname || 'N/A'}</div>
                 <div><strong>Klasse:</strong> {student.sus_kl || 'N/A'}</div>
                 <div><strong>Adresse:</strong> {student.sus_str_hnr || 'N/A'}</div>
