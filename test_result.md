@@ -105,6 +105,18 @@
 user_problem_statement: "Implementierung von globalen Einstellungen und Bestandsliste-Export: 1) Globale Einstellungen für Standard iPad-Typ und Pencil-Ausstattung in Einstellungen-Tab, 2) Bestandsliste-Export (Anforderung 2) mit Excel-Download aller iPads und Schülerzuordnungen in Einstellungen-Tab, 3) Nutzerfreundliche UI-Gestaltung für beide Features."
 
 backend:
+  - task: "Contract Auto-Assignment by filename"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Implemented automatic contract assignment by filename pattern (Vorname_Nachname.pdf) in addition to existing PDF form field assignment. Uses MongoDB aggregation pipeline to find matching students by name."
+
   - task: "Assignment Export API endpoint"
     implemented: true
     working: true
