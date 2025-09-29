@@ -1498,10 +1498,11 @@ async def get_filtered_assignments(
     sus_vorn: Optional[str] = None,
     sus_nachn: Optional[str] = None, 
     sus_kl: Optional[str] = None,
+    itnr: Optional[str] = None,
     current_user: str = Depends(get_current_user)
 ):
     try:
-        # Build filter query
+        # Build filter query for students
         student_filter = {}
         if sus_vorn:
             student_filter["sus_vorn"] = {"$regex": sus_vorn, "$options": "i"}
@@ -1510,16 +1511,24 @@ async def get_filtered_assignments(
         if sus_kl:
             student_filter["sus_kl"] = {"$regex": sus_kl, "$options": "i"}
         
+        # Build filter query for assignments (IT-Nummer)
+        assignment_filter = {"is_active": True}
+        if itnr:
+            assignment_filter["itnr"] = {"$regex": itnr, "$options": "i"}
+        
         if student_filter:
             # Get matching students
             students = await db.students.find(student_filter).to_list(length=None)
             student_ids = [s["id"] for s in students]
             
-            # Get assignments for these students
-            assignments = await db.assignments.find({
-                "is_active": True,
-                "student_id": {"$in": student_ids}
-            }).to_list(length=None)
+            # Add student filter to assignment filter
+            assignment_filter["student_id"] = {"$in": student_ids}
+            
+            # Get assignments matching both student and IT-number filters
+            assignments = await db.assignments.find(assignment_filter).to_list(length=None)
+        else:
+            # Only IT-number filter or no filters
+            assignments = await db.assignments.find(assignment_filter).to_list(length=None)
         else:
             # No filter, get all assignments
             assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
