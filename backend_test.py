@@ -3201,6 +3201,444 @@ startxref
                 f"Only {successful_tests}/{total_tests} inventory import tests passed"
             )
 
+    def test_complete_inventory_import(self):
+        """Test Complete Inventory Import functionality (Anforderung 8)"""
+        print("\n🔍 Testing Complete Inventory Import Functionality (Anforderung 8)...")
+        print("   This is the most critical requirement for data restoration")
+        
+        test_results = []
+        
+        # Step 1: Test Complete Bestandsliste Import with all columns
+        print("\n   📊 Step 1: Testing Complete Bestandsliste Import with all required columns...")
+        
+        # Create comprehensive test data with all columns from Anforderung 2
+        import pandas as pd
+        import io
+        
+        complete_test_data = [
+            {
+                'lfdNr': '001', 'Sname': 'Musterschule', 'SuSNachn': 'Müller', 'SuSVorn': 'Anna', 
+                'SuSKl': '10A', 'SuSStrHNr': 'Hauptstr. 1', 'SuSPLZ': '12345', 'SuSOrt': 'Berlin',
+                'SuSGeb': '15.03.2008', 'Erz1Nachn': 'Müller', 'Erz1Vorn': 'Hans', 
+                'Erz1StrHNr': 'Hauptstr. 1', 'Erz1PLZ': '12345', 'Erz1Ort': 'Berlin',
+                'Erz2Nachn': 'Müller', 'Erz2Vorn': 'Maria', 'Erz2StrHNr': 'Hauptstr. 1', 
+                'Erz2PLZ': '12345', 'Erz2Ort': 'Berlin', 'Pencil': 'mit Apple Pencil',
+                'ITNr': 'IPAD100', 'SNr': 'SN100001', 'Typ': 'Apple iPad Pro', 
+                'AnschJahr': '2024', 'AusleiheDatum': '15.09.2024', 'Rückgabe': ''
+            },
+            {
+                'lfdNr': '002', 'Sname': 'Musterschule', 'SuSNachn': 'Schmidt', 'SuSVorn': 'Max', 
+                'SuSKl': '10B', 'SuSStrHNr': 'Nebenstr. 5', 'SuSPLZ': '12346', 'SuSOrt': 'Hamburg',
+                'SuSGeb': '22.07.2008', 'Erz1Nachn': 'Schmidt', 'Erz1Vorn': 'Peter', 
+                'Erz1StrHNr': 'Nebenstr. 5', 'Erz1PLZ': '12346', 'Erz1Ort': 'Hamburg',
+                'Erz2Nachn': '', 'Erz2Vorn': '', 'Erz2StrHNr': '', 
+                'Erz2PLZ': '', 'Erz2Ort': '', 'Pencil': 'ohne Apple Pencil',
+                'ITNr': 'IPAD101', 'SNr': 'SN100002', 'Typ': 'Apple iPad Air', 
+                'AnschJahr': '2024', 'AusleiheDatum': '16.09.2024', 'Rückgabe': ''
+            },
+            {
+                # iPad-only entry (no student data)
+                'lfdNr': '', 'Sname': '', 'SuSNachn': '', 'SuSVorn': '', 
+                'SuSKl': '', 'SuSStrHNr': '', 'SuSPLZ': '', 'SuSOrt': '',
+                'SuSGeb': '', 'Erz1Nachn': '', 'Erz1Vorn': '', 
+                'Erz1StrHNr': '', 'Erz1PLZ': '', 'Erz1Ort': '',
+                'Erz2Nachn': '', 'Erz2Vorn': '', 'Erz2StrHNr': '', 
+                'Erz2PLZ': '', 'Erz2Ort': '', 'Pencil': 'mit Apple Pencil 2',
+                'ITNr': 'IPAD102', 'SNr': 'SN100003', 'Typ': 'Apple iPad', 
+                'AnschJahr': '2024', 'AusleiheDatum': '', 'Rückgabe': ''
+            }
+        ]
+        
+        # Create Excel file in memory
+        df = pd.DataFrame(complete_test_data)
+        excel_buffer = io.BytesIO()
+        df.to_excel(excel_buffer, index=False, engine='openpyxl')
+        excel_buffer.seek(0)
+        
+        # Test XLSX import
+        print("      🧪 Testing .xlsx file import...")
+        
+        url = f"{self.base_url}/api/imports/inventory"
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        files = {'file': ('complete_bestandsliste.xlsx', excel_buffer.getvalue(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+        
+        try:
+            response = requests.post(url, files=files, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                import_response = response.json()
+                print(f"         ✅ XLSX import successful")
+                print(f"         📊 Response: {import_response.get('message', 'N/A')}")
+                print(f"         📈 iPads created: {import_response.get('ipads_created', 0)}")
+                print(f"         📈 iPads skipped: {import_response.get('ipads_skipped', 0)}")
+                print(f"         👥 Students created: {import_response.get('students_created', 0)}")
+                print(f"         👥 Students skipped: {import_response.get('students_skipped', 0)}")
+                print(f"         🔗 Assignments created: {import_response.get('assignments_created', 0)}")
+                
+                # Verify response structure
+                required_fields = ['ipads_created', 'ipads_skipped', 'students_created', 'students_skipped', 'assignments_created']
+                missing_fields = [field for field in required_fields if field not in import_response]
+                
+                if not missing_fields:
+                    print(f"         ✅ All required response fields present")
+                    test_results.append(True)
+                else:
+                    print(f"         ❌ Missing response fields: {missing_fields}")
+                    test_results.append(False)
+                
+            else:
+                print(f"         ❌ XLSX import failed: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"            Error: {error_data.get('detail', 'Unknown error')}")
+                except:
+                    print(f"            Raw response: {response.text[:200]}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"         ❌ XLSX import exception: {str(e)}")
+            test_results.append(False)
+        
+        # Step 2: Test Skip Logic - existing iPads and students should be skipped
+        print("\n   🔄 Step 2: Testing Skip Logic for existing data...")
+        
+        # Import the same data again - should skip existing entries
+        excel_buffer.seek(0)
+        files = {'file': ('duplicate_bestandsliste.xlsx', excel_buffer.getvalue(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+        
+        try:
+            response = requests.post(url, files=files, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                skip_response = response.json()
+                print(f"         ✅ Duplicate import successful")
+                print(f"         📊 Response: {skip_response.get('message', 'N/A')}")
+                print(f"         📈 iPads created: {skip_response.get('ipads_created', 0)}")
+                print(f"         📈 iPads skipped: {skip_response.get('ipads_skipped', 0)}")
+                print(f"         👥 Students created: {skip_response.get('students_created', 0)}")
+                print(f"         👥 Students skipped: {skip_response.get('students_skipped', 0)}")
+                
+                # Should have skipped existing iPads and students
+                if (skip_response.get('ipads_skipped', 0) >= 3 and 
+                    skip_response.get('ipads_created', 0) == 0 and
+                    skip_response.get('students_skipped', 0) >= 2):
+                    print(f"         ✅ Skip logic working correctly")
+                    test_results.append(True)
+                else:
+                    print(f"         ❌ Skip logic not working as expected")
+                    test_results.append(False)
+                
+            else:
+                print(f"         ❌ Duplicate import failed: {response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"         ❌ Duplicate import exception: {str(e)}")
+            test_results.append(False)
+        
+        # Step 3: Test Student Creation and Field Mapping
+        print("\n   👥 Step 3: Verifying Student Creation and Field Mapping...")
+        
+        # Get students to verify they were created correctly
+        students_success = self.run_api_test(
+            "Get Students After Import",
+            "GET",
+            "students",
+            200
+        )
+        
+        if students_success:
+            students = self.test_results[-1]['response_data']
+            
+            # Find our imported students
+            anna_student = next((s for s in students if s.get('sus_vorn') == 'Anna' and s.get('sus_nachn') == 'Müller'), None)
+            max_student = next((s for s in students if s.get('sus_vorn') == 'Max' and s.get('sus_nachn') == 'Schmidt'), None)
+            
+            if anna_student and max_student:
+                print(f"         ✅ Both imported students found in database")
+                
+                # Verify Anna's data
+                print(f"         🔍 Verifying Anna Müller's data:")
+                print(f"            Class: {anna_student.get('sus_kl')} (expected: 10A)")
+                print(f"            Address: {anna_student.get('sus_str_hnr')}, {anna_student.get('sus_plz')} {anna_student.get('sus_ort')}")
+                print(f"            Birthday: {anna_student.get('sus_geb')} (expected: 15.03.2008)")
+                print(f"            Parent 1: {anna_student.get('erz1_vorn')} {anna_student.get('erz1_nachn')}")
+                print(f"            Parent 2: {anna_student.get('erz2_vorn')} {anna_student.get('erz2_nachn')}")
+                
+                # Verify Max's data (with empty parent 2)
+                print(f"         🔍 Verifying Max Schmidt's data:")
+                print(f"            Class: {max_student.get('sus_kl')} (expected: 10B)")
+                print(f"            Parent 1: {max_student.get('erz1_vorn')} {max_student.get('erz1_nachn')}")
+                print(f"            Parent 2: '{max_student.get('erz2_vorn')}' (should be empty)")
+                
+                # Check if all fields were imported correctly
+                anna_correct = (anna_student.get('sus_kl') == '10A' and 
+                               anna_student.get('sus_geb') == '15.03.2008' and
+                               anna_student.get('erz1_vorn') == 'Hans')
+                
+                max_correct = (max_student.get('sus_kl') == '10B' and 
+                              max_student.get('erz1_vorn') == 'Peter' and
+                              not max_student.get('erz2_vorn'))
+                
+                if anna_correct and max_correct:
+                    print(f"         ✅ All student fields imported correctly")
+                    test_results.append(True)
+                else:
+                    print(f"         ❌ Some student fields not imported correctly")
+                    test_results.append(False)
+                
+            else:
+                print(f"         ❌ Imported students not found in database")
+                test_results.append(False)
+        else:
+            print(f"         ❌ Could not retrieve students for verification")
+            test_results.append(False)
+        
+        # Step 4: Test Automatic Assignment Creation
+        print("\n   🔗 Step 4: Testing Automatic Assignment Creation...")
+        
+        # Get assignments to verify they were created
+        assignments_success = self.run_api_test(
+            "Get Assignments After Import",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if assignments_success:
+            assignments = self.test_results[-1]['response_data']
+            
+            # Find assignments for our imported iPads
+            ipad100_assignment = next((a for a in assignments if a.get('itnr') == 'IPAD100'), None)
+            ipad101_assignment = next((a for a in assignments if a.get('itnr') == 'IPAD101'), None)
+            ipad102_assignment = next((a for a in assignments if a.get('itnr') == 'IPAD102'), None)
+            
+            print(f"         📊 Assignment verification:")
+            print(f"            IPAD100 → Anna Müller: {'✅' if ipad100_assignment else '❌'}")
+            print(f"            IPAD101 → Max Schmidt: {'✅' if ipad101_assignment else '❌'}")
+            print(f"            IPAD102 (iPad-only): {'❌ No assignment expected' if not ipad102_assignment else '⚠️ Unexpected assignment'}")
+            
+            # Verify assignment details
+            assignments_correct = 0
+            total_expected = 2
+            
+            if ipad100_assignment:
+                if (ipad100_assignment.get('student_name') == 'Anna Müller' and 
+                    ipad100_assignment.get('is_active') == True):
+                    print(f"            ✅ IPAD100 assignment correct")
+                    assignments_correct += 1
+                else:
+                    print(f"            ❌ IPAD100 assignment incorrect")
+            
+            if ipad101_assignment:
+                if (ipad101_assignment.get('student_name') == 'Max Schmidt' and 
+                    ipad101_assignment.get('is_active') == True):
+                    print(f"            ✅ IPAD101 assignment correct")
+                    assignments_correct += 1
+                else:
+                    print(f"            ❌ IPAD101 assignment incorrect")
+            
+            # IPAD102 should NOT have an assignment (iPad-only import)
+            if not ipad102_assignment:
+                print(f"            ✅ IPAD102 correctly has no assignment (iPad-only)")
+                assignments_correct += 1
+                total_expected = 3
+            
+            if assignments_correct == total_expected:
+                print(f"         ✅ All assignments created correctly")
+                test_results.append(True)
+            else:
+                print(f"         ❌ Assignment creation issues: {assignments_correct}/{total_expected} correct")
+                test_results.append(False)
+        else:
+            print(f"         ❌ Could not retrieve assignments for verification")
+            test_results.append(False)
+        
+        # Step 5: Test iPad Status Updates
+        print("\n   📱 Step 5: Testing iPad Status Updates...")
+        
+        # Get iPads to verify status updates
+        ipads_success = self.run_api_test(
+            "Get iPads After Import",
+            "GET",
+            "ipads",
+            200
+        )
+        
+        if ipads_success:
+            ipads = self.test_results[-1]['response_data']
+            
+            # Find our imported iPads
+            ipad100 = next((i for i in ipads if i.get('itnr') == 'IPAD100'), None)
+            ipad101 = next((i for i in ipads if i.get('itnr') == 'IPAD101'), None)
+            ipad102 = next((i for i in ipads if i.get('itnr') == 'IPAD102'), None)
+            
+            print(f"         📊 iPad status verification:")
+            
+            status_correct = 0
+            total_ipads = 3
+            
+            if ipad100:
+                expected_status = 'zugewiesen'  # Should be assigned
+                actual_status = ipad100.get('status')
+                print(f"            IPAD100: {actual_status} (expected: {expected_status}) {'✅' if actual_status == expected_status else '❌'}")
+                if actual_status == expected_status:
+                    status_correct += 1
+            
+            if ipad101:
+                expected_status = 'zugewiesen'  # Should be assigned
+                actual_status = ipad101.get('status')
+                print(f"            IPAD101: {actual_status} (expected: {expected_status}) {'✅' if actual_status == expected_status else '❌'}")
+                if actual_status == expected_status:
+                    status_correct += 1
+            
+            if ipad102:
+                expected_status = 'verfügbar'  # Should remain available (no student)
+                actual_status = ipad102.get('status')
+                print(f"            IPAD102: {actual_status} (expected: {expected_status}) {'✅' if actual_status == expected_status else '❌'}")
+                if actual_status == expected_status:
+                    status_correct += 1
+            
+            if status_correct == total_ipads:
+                print(f"         ✅ All iPad statuses correct")
+                test_results.append(True)
+            else:
+                print(f"         ❌ iPad status issues: {status_correct}/{total_ipads} correct")
+                test_results.append(False)
+        else:
+            print(f"         ❌ Could not retrieve iPads for verification")
+            test_results.append(False)
+        
+        # Step 6: Test Date Handling
+        print("\n   📅 Step 6: Testing Date Handling (AusleiheDatum parsing)...")
+        
+        if assignments_success and ipad100_assignment:
+            # Check if AusleiheDatum was parsed correctly
+            assigned_at = ipad100_assignment.get('assigned_at')
+            print(f"         📅 IPAD100 assigned_at: {assigned_at}")
+            
+            # The assigned_at should reflect the AusleiheDatum (15.09.2024)
+            if assigned_at:
+                try:
+                    from datetime import datetime
+                    if isinstance(assigned_at, str):
+                        assigned_date = datetime.fromisoformat(assigned_at.replace('Z', '+00:00'))
+                    else:
+                        assigned_date = assigned_at
+                    
+                    # Check if it's September 15, 2024
+                    if (assigned_date.day == 15 and assigned_date.month == 9 and assigned_date.year == 2024):
+                        print(f"         ✅ AusleiheDatum parsed correctly to assigned_at")
+                        test_results.append(True)
+                    else:
+                        print(f"         ❌ AusleiheDatum not parsed correctly")
+                        print(f"            Expected: 15.09.2024, Got: {assigned_date.strftime('%d.%m.%Y')}")
+                        test_results.append(False)
+                except Exception as e:
+                    print(f"         ❌ Error parsing assigned_at date: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"         ❌ No assigned_at date found")
+                test_results.append(False)
+        else:
+            print(f"         ⚠️ Cannot test date handling - no assignment found")
+            test_results.append(False)
+        
+        # Step 7: Test Error Handling
+        print("\n   ⚠️ Step 7: Testing Error Handling...")
+        
+        # Test with invalid file format
+        print("      🧪 Testing invalid file format...")
+        
+        invalid_files = {'file': ('test.txt', b'This is not an Excel file', 'text/plain')}
+        
+        try:
+            response = requests.post(url, files=invalid_files, headers=headers, timeout=30)
+            
+            if response.status_code == 400:
+                print(f"         ✅ Invalid file format properly rejected (400)")
+                test_results.append(True)
+            else:
+                print(f"         ❌ Invalid file format not properly rejected: {response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"         ❌ Invalid file test exception: {str(e)}")
+            test_results.append(False)
+        
+        # Test with missing required columns
+        print("      🧪 Testing missing required columns...")
+        
+        invalid_data = [{'SomeColumn': 'value', 'AnotherColumn': 'value2'}]  # Missing ITNr
+        df_invalid = pd.DataFrame(invalid_data)
+        excel_buffer_invalid = io.BytesIO()
+        df_invalid.to_excel(excel_buffer_invalid, index=False, engine='openpyxl')
+        excel_buffer_invalid.seek(0)
+        
+        invalid_excel_files = {'file': ('invalid.xlsx', excel_buffer_invalid.getvalue(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+        
+        try:
+            response = requests.post(url, files=invalid_excel_files, headers=headers, timeout=30)
+            
+            if response.status_code == 400:
+                error_response = response.json()
+                if 'ITNr' in error_response.get('detail', ''):
+                    print(f"         ✅ Missing required columns properly detected")
+                    test_results.append(True)
+                else:
+                    print(f"         ❌ Missing columns error message unclear: {error_response.get('detail')}")
+                    test_results.append(False)
+            else:
+                print(f"         ❌ Missing columns not properly rejected: {response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"         ❌ Missing columns test exception: {str(e)}")
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Complete Inventory Import Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        # Detailed breakdown
+        test_categories = [
+            "Complete Bestandsliste Import (.xlsx)",
+            "Skip Logic (existing data)",
+            "Student Creation & Field Mapping", 
+            "Automatic Assignment Creation",
+            "iPad Status Updates",
+            "Date Handling (AusleiheDatum)",
+            "Error Handling (Invalid format)",
+            "Error Handling (Missing columns)"
+        ]
+        
+        print(f"\n   📋 Test Results Breakdown:")
+        for i, category in enumerate(test_categories):
+            if i < len(test_results):
+                status = "✅ PASS" if test_results[i] else "❌ FAIL"
+                print(f"      {status} - {category}")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Complete Inventory Import (Anforderung 8)", 
+                True, 
+                f"All {total_tests} inventory import tests passed successfully. Critical data restoration functionality working perfectly!"
+            )
+        else:
+            return self.log_result(
+                "Complete Inventory Import (Anforderung 8)", 
+                False, 
+                f"Only {successful_tests}/{total_tests} inventory import tests passed. Critical issues found in data restoration functionality."
+            )
+
     def run_comprehensive_test(self):
         """Run all tests in sequence"""
         print("=" * 80)
