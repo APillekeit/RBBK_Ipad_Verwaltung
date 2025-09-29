@@ -2069,19 +2069,20 @@ const Settings = () => {
         </CardContent>
       </Card>
 
-      {/* Inventory Export */}
+      {/* Inventory Export & Import */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
-            Bestandsliste-Export
+            Bestandsliste-Export & Import
           </CardTitle>
           <CardDescription>
-            Komplette Bestandsliste aller iPads mit Schülerzuordnungen exportieren
+            Bestandsliste exportieren oder importieren für Datenwiederherstellung
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {/* Export Section */}
             <div className="border-l-4 border-green-400 bg-green-50 p-4 rounded">
               <h4 className="font-medium text-green-800 mb-2">Bestandsliste-Export (Anforderung 2)</h4>
               <p className="text-sm text-green-700 mb-4">
@@ -2096,6 +2097,29 @@ const Settings = () => {
                 <Download className="h-4 w-4 mr-2" />
                 {exporting ? 'Exportiert...' : 'Bestandsliste exportieren'}
               </Button>
+            </div>
+
+            {/* Import Section */}
+            <div className="border-l-4 border-blue-400 bg-blue-50 p-4 rounded">
+              <h4 className="font-medium text-blue-800 mb-2">Bestandsliste-Import (Datenwiederherstellung)</h4>
+              <p className="text-sm text-blue-700 mb-4">
+                Importiert iPad-Daten aus Excel-Datei (.xlsx/.xls). Aktualisiert bestehende iPads oder erstellt neue.
+                Benötigte Spalten: ITNr, SNr, Typ, Pencil.
+              </p>
+              <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                <Input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => e.target.files[0] && handleInventoryImport(e.target.files[0])}
+                  disabled={importing}
+                  className="mb-2"
+                />
+                {importing && (
+                  <div className="text-sm text-blue-600">
+                    Bestandsliste wird importiert...
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
