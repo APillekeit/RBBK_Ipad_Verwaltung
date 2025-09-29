@@ -194,7 +194,7 @@ const IPadDetailViewer = ({ ipadId, onClose }) => {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div><strong>ITNr:</strong> {ipad.itnr}</div>
-                <div><strong>Modell:</strong> {ipad.modell || 'N/A'}</div>
+                <div><strong>Typ:</strong> {ipad.typ || 'N/A'}</div>
                 <div><strong>Speicher:</strong> {ipad.speicher || 'N/A'}</div>
                 <div><strong>Status:</strong> 
                   <Badge className={`ml-2 ${
