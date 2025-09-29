@@ -1606,6 +1606,372 @@ startxref
                 f"Only {successful_tests}/{total_tests} integration tests passed"
             )
 
+    def test_assignment_export_column_order(self):
+        """Test Assignment Export column order and content as specified in review request"""
+        print("\n🔍 Testing Assignment Export Column Order and Content...")
+        
+        test_results = []
+        
+        # Step 1: Test unfiltered assignment export
+        print("\n   📊 Step 1: Testing unfiltered assignment export...")
+        
+        url = f"{self.base_url}/api/assignments/export"
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                # Verify it's an Excel file
+                content_type = response.headers.get('content-type', '')
+                content_disposition = response.headers.get('content-disposition', '')
+                
+                print(f"      📄 Content-Type: {content_type}")
+                print(f"      📎 Content-Disposition: {content_disposition}")
+                
+                # Check content type
+                if 'spreadsheet' in content_type or 'excel' in content_type:
+                    print(f"      ✅ Correct Excel content type")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Incorrect content type: {content_type}")
+                    test_results.append(False)
+                
+                # Check filename
+                if 'zuordnungen_export.xlsx' in content_disposition:
+                    print(f"      ✅ Correct filename: zuordnungen_export.xlsx")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Incorrect filename: {content_disposition}")
+                    test_results.append(False)
+                
+                # Check file size
+                file_size = len(response.content)
+                print(f"      📏 File size: {file_size} bytes")
+                
+                if file_size > 1000:
+                    print(f"      ✅ File size indicates proper Excel content")
+                    test_results.append(True)
+                    assignment_export_content = response.content
+                else:
+                    print(f"      ❌ File size too small: {file_size} bytes")
+                    test_results.append(False)
+                    assignment_export_content = None
+                
+            else:
+                print(f"      ❌ Export failed with status: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"         Error: {error_data.get('detail', 'Unknown error')}")
+                except:
+                    print(f"         Raw response: {response.text[:200]}")
+                test_results.append(False)
+                assignment_export_content = None
+                
+        except Exception as e:
+            print(f"      ❌ Export request exception: {str(e)}")
+            test_results.append(False)
+            assignment_export_content = None
+        
+        # Step 2: Verify column order matches Bestandsliste export exactly
+        if assignment_export_content:
+            print("\n   🔍 Step 2: Verifying column order matches Bestandsliste export...")
+            
+            try:
+                import pandas as pd
+                import io
+                
+                # Read assignment export
+                assignment_df = pd.read_excel(io.BytesIO(assignment_export_content))
+                assignment_columns = list(assignment_df.columns)
+                
+                print(f"      📊 Assignment export columns ({len(assignment_columns)}): {assignment_columns}")
+                
+                # Get inventory export for comparison
+                inventory_url = f"{self.base_url}/api/exports/inventory"
+                inventory_response = requests.get(inventory_url, headers=headers, timeout=60)
+                
+                if inventory_response.status_code == 200:
+                    inventory_df = pd.read_excel(io.BytesIO(inventory_response.content))
+                    inventory_columns = list(inventory_df.columns)
+                    
+                    print(f"      📊 Inventory export columns ({len(inventory_columns)}): {inventory_columns}")
+                    
+                    # Expected column order (from review request)
+                    expected_columns = [
+                        'lfdNr', 'Sname', 'SuSNachn', 'SuSVorn', 'SuSKl', 'SuSStrHNr', 'SuSPLZ', 'SuSOrt', 'SuSGeb',
+                        'Erz1Nachn', 'Erz1Vorn', 'Erz1StrHNr', 'Erz1PLZ', 'Erz1Ort',
+                        'Erz2Nachn', 'Erz2Vorn', 'Erz2StrHNr', 'Erz2PLZ', 'Erz2Ort',
+                        'Pencil', 'ITNr', 'SNr', 'Typ', 'AnschJahr', 'AusleiheDatum', 'Rückgabe'
+                    ]
+                    
+                    print(f"      📋 Expected column order ({len(expected_columns)}): {expected_columns}")
+                    
+                    # Check if assignment export columns match expected order
+                    if assignment_columns == expected_columns:
+                        print(f"      ✅ Assignment export column order matches expected order exactly")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ Assignment export column order does NOT match expected order")
+                        print(f"         Missing columns: {set(expected_columns) - set(assignment_columns)}")
+                        print(f"         Extra columns: {set(assignment_columns) - set(expected_columns)}")
+                        test_results.append(False)
+                    
+                    # Check if assignment export columns match inventory export columns
+                    if assignment_columns == inventory_columns:
+                        print(f"      ✅ Assignment export column order matches inventory export exactly")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ Assignment export column order does NOT match inventory export")
+                        print(f"         Assignment columns: {assignment_columns}")
+                        print(f"         Inventory columns: {inventory_columns}")
+                        test_results.append(False)
+                    
+                    # Verify Pencil column comes before ITNr (as specified in review request)
+                    try:
+                        pencil_index = assignment_columns.index('Pencil')
+                        itnr_index = assignment_columns.index('ITNr')
+                        
+                        if pencil_index < itnr_index:
+                            print(f"      ✅ Pencil column (index {pencil_index}) comes before ITNr column (index {itnr_index})")
+                            test_results.append(True)
+                        else:
+                            print(f"      ❌ Pencil column (index {pencil_index}) does NOT come before ITNr column (index {itnr_index})")
+                            test_results.append(False)
+                    except ValueError as e:
+                        print(f"      ❌ Error checking Pencil/ITNr column positions: {str(e)}")
+                        test_results.append(False)
+                    
+                else:
+                    print(f"      ❌ Could not get inventory export for comparison: {inventory_response.status_code}")
+                    test_results.append(False)
+                    
+            except Exception as e:
+                print(f"      ❌ Error analyzing column order: {str(e)}")
+                test_results.append(False)
+        else:
+            print("\n   ⚠️  Step 2: Skipped - no assignment export content to analyze")
+            test_results.append(False)
+        
+        # Step 3: Verify removed columns are NOT present
+        if assignment_export_content:
+            print("\n   🚫 Step 3: Verifying removed columns are NOT present...")
+            
+            try:
+                import pandas as pd
+                import io
+                
+                assignment_df = pd.read_excel(io.BytesIO(assignment_export_content))
+                assignment_columns = list(assignment_df.columns)
+                
+                # Columns that should be removed (from review request)
+                removed_columns = ['Zugewiesen_am', 'Vertrag_vorhanden']
+                
+                found_removed_columns = [col for col in removed_columns if col in assignment_columns]
+                
+                if not found_removed_columns:
+                    print(f"      ✅ Removed columns are NOT present: {removed_columns}")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ Found removed columns that should NOT be present: {found_removed_columns}")
+                    test_results.append(False)
+                    
+            except Exception as e:
+                print(f"      ❌ Error checking removed columns: {str(e)}")
+                test_results.append(False)
+        else:
+            print("\n   ⚠️  Step 3: Skipped - no assignment export content to analyze")
+            test_results.append(False)
+        
+        # Step 4: Verify new "Rückgabe" column is present and empty
+        if assignment_export_content:
+            print("\n   📝 Step 4: Verifying 'Rückgabe' column is present and empty...")
+            
+            try:
+                import pandas as pd
+                import io
+                
+                assignment_df = pd.read_excel(io.BytesIO(assignment_export_content))
+                
+                if 'Rückgabe' in assignment_df.columns:
+                    print(f"      ✅ 'Rückgabe' column is present")
+                    
+                    # Check if it's the last column
+                    last_column = assignment_df.columns[-1]
+                    if last_column == 'Rückgabe':
+                        print(f"      ✅ 'Rückgabe' column is in correct position (last column)")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ 'Rückgabe' column is NOT the last column. Last column is: {last_column}")
+                        test_results.append(False)
+                    
+                    # Check if all values are empty
+                    rueckgabe_values = assignment_df['Rückgabe'].dropna()
+                    non_empty_values = rueckgabe_values[rueckgabe_values != '']
+                    
+                    if len(non_empty_values) == 0:
+                        print(f"      ✅ 'Rückgabe' column is empty (as expected)")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ 'Rückgabe' column contains non-empty values: {list(non_empty_values)}")
+                        test_results.append(False)
+                else:
+                    print(f"      ❌ 'Rückgabe' column is NOT present")
+                    test_results.append(False)
+                    
+            except Exception as e:
+                print(f"      ❌ Error checking 'Rückgabe' column: {str(e)}")
+                test_results.append(False)
+        else:
+            print("\n   ⚠️  Step 4: Skipped - no assignment export content to analyze")
+            test_results.append(False)
+        
+        # Step 5: Verify data content remains correct
+        if assignment_export_content:
+            print("\n   📊 Step 5: Verifying data content remains correct...")
+            
+            try:
+                import pandas as pd
+                import io
+                
+                assignment_df = pd.read_excel(io.BytesIO(assignment_export_content))
+                
+                print(f"      📏 Export contains {len(assignment_df)} records")
+                
+                if len(assignment_df) > 0:
+                    # Check date formats
+                    sample_row = assignment_df.iloc[0]
+                    
+                    # Check SuSGeb format (TT.MM.JJJJ)
+                    if 'SuSGeb' in sample_row and pd.notna(sample_row['SuSGeb']) and sample_row['SuSGeb'] != '':
+                        sus_geb = str(sample_row['SuSGeb'])
+                        if '.' in sus_geb and len(sus_geb.split('.')) == 3:
+                            day, month, year = sus_geb.split('.')
+                            if len(day) == 2 and len(month) == 2 and len(year) == 4:
+                                print(f"      ✅ SuSGeb date format correct (TT.MM.JJJJ): {sus_geb}")
+                                test_results.append(True)
+                            else:
+                                print(f"      ❌ SuSGeb date format incorrect: {sus_geb}")
+                                test_results.append(False)
+                        else:
+                            print(f"      ⚠️  SuSGeb date format unclear: {sus_geb}")
+                            test_results.append(True)  # Don't fail if unclear
+                    else:
+                        print(f"      ⚠️  No SuSGeb data to check in sample")
+                        test_results.append(True)
+                    
+                    # Check AusleiheDatum format (TT.MM.JJJJ)
+                    if 'AusleiheDatum' in sample_row and pd.notna(sample_row['AusleiheDatum']) and sample_row['AusleiheDatum'] != '':
+                        ausleihe_datum = str(sample_row['AusleiheDatum'])
+                        if '.' in ausleihe_datum and len(ausleihe_datum.split('.')) == 3:
+                            day, month, year = ausleihe_datum.split('.')
+                            if len(day) == 2 and len(month) == 2 and len(year) == 4:
+                                print(f"      ✅ AusleiheDatum date format correct (TT.MM.JJJJ): {ausleihe_datum}")
+                                test_results.append(True)
+                            else:
+                                print(f"      ❌ AusleiheDatum date format incorrect: {ausleihe_datum}")
+                                test_results.append(False)
+                        else:
+                            print(f"      ❌ AusleiheDatum date format incorrect: {ausleihe_datum}")
+                            test_results.append(False)
+                    else:
+                        print(f"      ⚠️  No AusleiheDatum data to check in sample")
+                        test_results.append(True)
+                    
+                    # Check that we have student and iPad data
+                    required_fields = ['SuSVorn', 'SuSNachn', 'ITNr']
+                    missing_fields = [field for field in required_fields if field not in assignment_df.columns]
+                    
+                    if not missing_fields:
+                        print(f"      ✅ All required data fields present: {required_fields}")
+                        test_results.append(True)
+                    else:
+                        print(f"      ❌ Missing required data fields: {missing_fields}")
+                        test_results.append(False)
+                    
+                    # Show sample data
+                    print(f"      📋 Sample record:")
+                    for col in ['SuSVorn', 'SuSNachn', 'SuSKl', 'ITNr', 'Typ', 'AusleiheDatum']:
+                        if col in sample_row:
+                            print(f"         {col}: {sample_row[col]}")
+                else:
+                    print(f"      ⚠️  Export is empty (no records to verify)")
+                    test_results.append(True)  # Empty is valid if no assignments exist
+                    
+            except Exception as e:
+                print(f"      ❌ Error verifying data content: {str(e)}")
+                test_results.append(False)
+        else:
+            print("\n   ⚠️  Step 5: Skipped - no assignment export content to analyze")
+            test_results.append(False)
+        
+        # Step 6: Test filtered assignment export uses same column order
+        print("\n   🔍 Step 6: Testing filtered assignment export uses same column order...")
+        
+        try:
+            # Test with a filter parameter
+            filtered_url = f"{self.base_url}/api/assignments/export?sus_vorn=Sarah"
+            filtered_response = requests.get(filtered_url, headers=headers, timeout=60)
+            
+            if filtered_response.status_code == 200:
+                try:
+                    import pandas as pd
+                    import io
+                    
+                    filtered_df = pd.read_excel(io.BytesIO(filtered_response.content))
+                    filtered_columns = list(filtered_df.columns)
+                    
+                    print(f"      📊 Filtered export columns: {filtered_columns}")
+                    
+                    if assignment_export_content:
+                        assignment_df = pd.read_excel(io.BytesIO(assignment_export_content))
+                        assignment_columns = list(assignment_df.columns)
+                        
+                        if filtered_columns == assignment_columns:
+                            print(f"      ✅ Filtered export uses same column order as unfiltered export")
+                            test_results.append(True)
+                        else:
+                            print(f"      ❌ Filtered export column order differs from unfiltered export")
+                            test_results.append(False)
+                    else:
+                        print(f"      ⚠️  Cannot compare - no unfiltered export to compare with")
+                        test_results.append(False)
+                        
+                except Exception as e:
+                    print(f"      ❌ Error analyzing filtered export: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"      ❌ Filtered export failed with status: {filtered_response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Filtered export request exception: {str(e)}")
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Assignment Export Column Order Testing Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Assignment Export Column Order", 
+                True, 
+                f"All {total_tests} column order and content tests passed successfully"
+            )
+        else:
+            return self.log_result(
+                "Assignment Export Column Order", 
+                False, 
+                f"Only {successful_tests}/{total_tests} column order and content tests passed"
+            )
+
     def test_assignment_export_functionality(self):
         """Test Assignment Export functionality with corrected requirements"""
         print("\n🔍 Testing Assignment Export Functionality...")
