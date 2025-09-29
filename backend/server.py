@@ -1523,15 +1523,9 @@ async def get_filtered_assignments(
             
             # Add student filter to assignment filter
             assignment_filter["student_id"] = {"$in": student_ids}
-            
-            # Get assignments matching both student and IT-number filters
-            assignments = await db.assignments.find(assignment_filter).to_list(length=None)
-        else:
-            # Only IT-number filter or no filters
-            assignments = await db.assignments.find(assignment_filter).to_list(length=None)
-        else:
-            # No filter, get all assignments
-            assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
+        
+        # Get assignments matching all filters
+        assignments = await db.assignments.find(assignment_filter).to_list(length=None)
         
         # Safe parsing
         result = []
