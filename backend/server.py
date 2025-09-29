@@ -1774,9 +1774,9 @@ async def export_assignments(
                 except:
                     ausleihe_datum_formatted = ""
             
-            # Combine data in order: student fields first, then iPad fields
+            # Combine data in EXACT same order as Bestandsliste export
             row_data = {
-                # Student data first (matching schildexport.xlsx order)
+                # Student data first (matching Bestandsliste order exactly)
                 "lfdNr": student.get("lfd_nr", ""),
                 "Sname": student.get("sname", ""),
                 "SuSNachn": student.get("sus_nachn", ""),
@@ -1796,16 +1796,15 @@ async def export_assignments(
                 "Erz2StrHNr": student.get("erz2_str_hnr", ""),
                 "Erz2PLZ": student.get("erz2_plz", ""),
                 "Erz2Ort": student.get("erz2_ort", ""),
-                # iPad data second (REMOVED Karton column as requested)
+                # iPad data in EXACT same order as Bestandsliste export
+                "Pencil": ipad.get("pencil", ""),
                 "ITNr": ipad.get("itnr", ""),
                 "SNr": ipad.get("snr", ""),
-                "Pencil": ipad.get("pencil", ""),
                 "Typ": ipad.get("typ", ""),
                 "AnschJahr": ipad.get("ansch_jahr", ""),
                 "AusleiheDatum": ausleihe_datum_formatted,  # From assigned_at, formatted to TT.MM.JJJJ
-                # Assignment data
-                "Zugewiesen_am": assignment.get("assigned_at", ""),
-                "Vertrag_vorhanden": "Ja" if assignment.get("contract_id") else "Nein"
+                "Rückgabe": ""  # Empty as in Bestandsliste export
+                # REMOVED: "Zugewiesen_am" and "Vertrag_vorhanden" as requested
             }
             export_data.append(row_data)
     
