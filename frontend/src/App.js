@@ -1321,10 +1321,22 @@ const AssignmentsManagement = () => {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (filtered = false) => {
     setExporting(true);
     try {
-      const response = await api.get('/assignments/export', {
+      // Build query parameters for filtered export
+      const params = new URLSearchParams();
+      if (filtered) {
+        if (vornameFilter) params.append('sus_vorn', vornameFilter);
+        if (nachnameFilter) params.append('sus_nachn', nachnameFilter);
+        if (klasseFilter) params.append('sus_kl', klasseFilter);
+        if (itnrFilter) params.append('itnr', itnrFilter);
+      }
+      
+      const queryString = params.toString();
+      const url = queryString ? `/assignments/export?${queryString}` : '/assignments/export';
+      
+      const response = await api.get(url, {
         responseType: 'blob'
       });
       
@@ -1332,16 +1344,20 @@ const AssignmentsManagement = () => {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
       
-      const url = window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = 'zuordnungen_export.xlsx';
+      link.href = downloadUrl;
+      
+      // Different filename for filtered vs all exports
+      const filename = filtered ? 'zuordnungen_gefiltert_export.xlsx' : 'zuordnungen_export.xlsx';
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(link);
       
-      toast.success('Export erfolgreich heruntergeladen');
+      const message = filtered ? 'Gefilterte Zuordnungen erfolgreich exportiert' : 'Alle Zuordnungen erfolgreich exportiert';
+      toast.success(message);
     } catch (error) {
       toast.error('Fehler beim Export');
       console.error('Export error:', error);
