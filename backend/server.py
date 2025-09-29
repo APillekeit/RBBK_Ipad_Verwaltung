@@ -1379,27 +1379,34 @@ async def import_inventory(file: UploadFile = File(...), current_user: str = Dep
                         students_skipped += 1
                         student_id = existing_student["id"]
                     else:
-                        # Create new student
+                        # Helper function to safely convert values and handle NaN
+                        def safe_str(value):
+                            if pd.isna(value) or value is None:
+                                return ''
+                            str_val = str(value).strip()
+                            return '' if str_val == 'nan' else str_val
+                        
+                        # Create new student with proper NaN handling
                         new_student = Student(
-                            lfd_nr=str(row.get('lfdNr', '')).strip(),
-                            sname=str(row.get('Sname', '')).strip(),
+                            lfd_nr=safe_str(row.get('lfdNr', '')),
+                            sname=safe_str(row.get('Sname', '')),
                             sus_vorn=sus_vorn,
                             sus_nachn=sus_nachn,
                             sus_kl=sus_kl,
-                            sus_str_hnr=str(row.get('SuSStrHNr', '')).strip(),
-                            sus_plz=str(row.get('SuSPLZ', '')).strip(),
-                            sus_ort=str(row.get('SuSOrt', '')).strip(),
-                            sus_geb=str(row.get('SuSGeb', '')).strip(),
-                            erz1_nachn=str(row.get('Erz1Nachn', '')).strip(),
-                            erz1_vorn=str(row.get('Erz1Vorn', '')).strip(),
-                            erz1_str_hnr=str(row.get('Erz1StrHNr', '')).strip(),
-                            erz1_plz=str(row.get('Erz1PLZ', '')).strip(),
-                            erz1_ort=str(row.get('Erz1Ort', '')).strip(),
-                            erz2_nachn=str(row.get('Erz2Nachn', '')).strip(),
-                            erz2_vorn=str(row.get('Erz2Vorn', '')).strip(),
-                            erz2_str_hnr=str(row.get('Erz2StrHNr', '')).strip(),
-                            erz2_plz=str(row.get('Erz2PLZ', '')).strip(),
-                            erz2_ort=str(row.get('Erz2Ort', '')).strip()
+                            sus_str_hnr=safe_str(row.get('SuSStrHNr', '')),
+                            sus_plz=safe_str(row.get('SuSPLZ', '')),
+                            sus_ort=safe_str(row.get('SuSOrt', '')),
+                            sus_geb=safe_str(row.get('SuSGeb', '')),
+                            erz1_nachn=safe_str(row.get('Erz1Nachn', '')),
+                            erz1_vorn=safe_str(row.get('Erz1Vorn', '')),
+                            erz1_str_hnr=safe_str(row.get('Erz1StrHNr', '')),
+                            erz1_plz=safe_str(row.get('Erz1PLZ', '')),
+                            erz1_ort=safe_str(row.get('Erz1Ort', '')),
+                            erz2_nachn=safe_str(row.get('Erz2Nachn', '')),
+                            erz2_vorn=safe_str(row.get('Erz2Vorn', '')),
+                            erz2_str_hnr=safe_str(row.get('Erz2StrHNr', '')),
+                            erz2_plz=safe_str(row.get('Erz2PLZ', '')),
+                            erz2_ort=safe_str(row.get('Erz2Ort', ''))
                         )
                         
                         student_dict = prepare_for_mongo(new_student.dict())
