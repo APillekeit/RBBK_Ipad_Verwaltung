@@ -2200,6 +2200,105 @@ const Settings = () => {
         </CardContent>
       </Card>
 
+      {/* Account Management */}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Konto-Verwaltung
+          </CardTitle>
+          <CardDescription>
+            Passwort und Benutzername ändern
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Password Change */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-800 mb-4">Passwort ändern</h4>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="current_password">Aktuelles Passwort</Label>
+                  <Input
+                    id="current_password"
+                    type="password"
+                    value={passwordForm.current_password}
+                    onChange={(e) => setPasswordForm({...passwordForm, current_password: e.target.value})}
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new_password">Neues Passwort</Label>
+                  <Input
+                    id="new_password"
+                    type="password"
+                    value={passwordForm.new_password}
+                    onChange={(e) => setPasswordForm({...passwordForm, new_password: e.target.value})}
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="confirm_password">Neues Passwort bestätigen</Label>
+                  <Input
+                    id="confirm_password"
+                    type="password"
+                    value={passwordForm.confirm_password}
+                    onChange={(e) => setPasswordForm({...passwordForm, confirm_password: e.target.value})}
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <Button 
+                  onClick={handlePasswordChange}
+                  disabled={changingPassword || !passwordForm.current_password || !passwordForm.new_password || !passwordForm.confirm_password}
+                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                >
+                  {changingPassword ? 'Ändert Passwort...' : 'Passwort ändern'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Username Change */}
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-800 mb-4">Benutzername ändern</h4>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="username_current_password">Aktuelles Passwort</Label>
+                  <Input
+                    id="username_current_password"
+                    type="password"
+                    value={usernameForm.current_password}
+                    onChange={(e) => setUsernameForm({...usernameForm, current_password: e.target.value})}
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new_username">Neuer Benutzername</Label>
+                  <Input
+                    id="new_username"
+                    type="text"
+                    value={usernameForm.new_username}
+                    onChange={(e) => setUsernameForm({...usernameForm, new_username: e.target.value})}
+                    className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="bg-yellow-50 p-3 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Hinweis:</strong> Nach der Änderung des Benutzernamens werden Sie automatisch abgemeldet.
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleUsernameChange}
+                  disabled={changingUsername || !usernameForm.current_password || !usernameForm.new_username}
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                >
+                  {changingUsername ? 'Ändert Benutzername...' : 'Benutzername ändern'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Data Protection Settings */}
       <Card className="shadow-lg">
         <CardHeader>
