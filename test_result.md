@@ -107,27 +107,33 @@ user_problem_statement: "Implementierung von globalen Einstellungen und Bestands
 backend:
   - task: "Inventory Import API endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Implemented POST /api/imports/inventory endpoint for importing Excel/XLSX inventory lists to restore/update iPad data. Supports both .xlsx and .xls files, validates columns, creates new iPads or updates existing ones."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Inventory Import API working excellently! Tested all 6 requirement categories with 100% success rate (21/21 tests passed): 1) ✅ File Format Testing - XLSX import working, PDF/TXT/CSV properly rejected, openpyxl engine working correctly, 2) ✅ Column Validation - All required columns (ITNr, SNr, Typ, Pencil) validated, missing columns properly rejected, extra columns ignored as expected, 3) ✅ Data Processing - New iPad creation working (default status 'verfügbar'), existing iPad updates working, empty values handled correctly, duplicate ITNr handling working, data sanitization (whitespace trimming) working, 4) ✅ Creation vs Update Logic - Mixed scenarios working (new + existing iPads), proper default status assignment for new iPads, 5) ✅ Error Handling - Malformed Excel files rejected, empty files rejected, invalid data types handled gracefully, 6) ✅ Response Validation - All required response fields present (message, processed_count, created_count, updated_count, error_count, errors), error list properly limited to 10 entries, count fields accurate, success message formatting correct. Authentication properly required (403). All core functionality working as specified in review request."
 
   - task: "Assignment Filter API Enhancement - IT Number Support"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
         - agent: "main"
         - comment: "Extended GET /api/assignments/filtered endpoint to support IT-Number (itnr) filter parameter in addition to existing student filters."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Assignment Filter API Enhancement working excellently! Tested 12 comprehensive scenarios with 100% success rate: 1) ✅ Exact IT-number matching working correctly, 2) ✅ Case-insensitive matching working (ipad005 matches IPAD005), 3) ✅ Partial matching working ('005' matches IPAD005), 4) ✅ Non-existent IT-number handling (returns empty results), 5) ✅ Combined filters working (IT-number + student name, IT-number + class, all filters combined), 6) ✅ Parameter validation working (empty IT-number returns all assignments), 7) ✅ Special characters handling working correctly, 8) ✅ Backwards compatibility maintained (existing student filters still work), 9) ✅ Data accuracy verified (correct assignment data structure and values), 10) ✅ Performance excellent (all queries under 0.1s). All requirements from review request fully implemented and tested. Feature ready for production use."
 
   - task: "Contract Auto-Assignment by filename"
     implemented: true
