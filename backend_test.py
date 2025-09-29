@@ -3639,6 +3639,348 @@ startxref
                 f"Only {successful_tests}/{total_tests} inventory import tests passed. Critical issues found in data restoration functionality."
             )
 
+    def test_complete_inventory_import_critical_fixes(self):
+        """Test Complete Inventory Import with focus on critical fixes from review request"""
+        print("\n🔍 Testing Complete Inventory Import - CRITICAL FIXES (Anforderung 8)...")
+        print("   Focus: iPad-only import logic, empty field handling, data quality")
+        
+        test_results = []
+        
+        # Create test Excel file with mixed scenarios
+        print("\n   📋 Step 1: Creating comprehensive test data...")
+        
+        try:
+            import pandas as pd
+            import io
+            
+            # Test data with mixed scenarios - some iPads with students, some without
+            test_data = [
+                # iPad with complete student data
+                {
+                    'ITNr': 'IPAD101', 'SNr': 'SN101', 'Typ': 'Apple iPad Pro', 'Pencil': 'mit Apple Pencil',
+                    'SuSVorn': 'Max', 'SuSNachn': 'Mustermann', 'SuSKl': '10A',
+                    'SuSStrHNr': 'Musterstr. 1', 'SuSPLZ': '12345', 'SuSOrt': 'Berlin',
+                    'SuSGeb': '01.01.2005', 'Erz1Vorn': 'Hans', 'Erz1Nachn': 'Mustermann',
+                    'Erz2Vorn': 'Maria', 'Erz2Nachn': 'Mustermann', 'AusleiheDatum': '15.09.2024'
+                },
+                # iPad WITHOUT student data (empty/NaN fields) - CRITICAL TEST CASE
+                {
+                    'ITNr': 'IPAD102', 'SNr': 'SN102', 'Typ': 'Apple iPad', 'Pencil': 'ohne Apple Pencil',
+                    'SuSVorn': None, 'SuSNachn': None, 'SuSKl': None,
+                    'SuSStrHNr': None, 'SuSPLZ': None, 'SuSOrt': None,
+                    'SuSGeb': None, 'Erz1Vorn': None, 'Erz1Nachn': None,
+                    'Erz2Vorn': None, 'Erz2Nachn': None, 'AusleiheDatum': None
+                },
+                # iPad with partial student data (only names, empty parent fields)
+                {
+                    'ITNr': 'IPAD103', 'SNr': 'SN103', 'Typ': 'Apple iPad Air', 'Pencil': 'mit Apple Pencil 2',
+                    'SuSVorn': 'Anna', 'SuSNachn': 'Schmidt', 'SuSKl': '9B',
+                    'SuSStrHNr': 'Teststr. 5', 'SuSPLZ': '54321', 'SuSOrt': 'Hamburg',
+                    'SuSGeb': '15.03.2006', 'Erz1Vorn': 'Peter', 'Erz1Nachn': 'Schmidt',
+                    'Erz2Vorn': None, 'Erz2Nachn': None, 'AusleiheDatum': '20.09.2024'
+                },
+                # Another iPad-only entry with different empty value patterns
+                {
+                    'ITNr': 'IPAD104', 'SNr': 'SN104', 'Typ': 'Apple iPad Mini', 'Pencil': 'ohne Apple Pencil',
+                    'SuSVorn': '', 'SuSNachn': '', 'SuSKl': '',
+                    'SuSStrHNr': '', 'SuSPLZ': '', 'SuSOrt': '',
+                    'SuSGeb': '', 'Erz1Vorn': '', 'Erz1Nachn': '',
+                    'Erz2Vorn': '', 'Erz2Nachn': '', 'AusleiheDatum': ''
+                },
+                # iPad with student but empty parent fields (test NaN handling)
+                {
+                    'ITNr': 'IPAD105', 'SNr': 'SN105', 'Typ': 'Apple iPad', 'Pencil': 'mit Apple Pencil',
+                    'SuSVorn': 'Lisa', 'SuSNachn': 'Weber', 'SuSKl': '11C',
+                    'SuSStrHNr': 'Weberstr. 10', 'SuSPLZ': '67890', 'SuSOrt': 'München',
+                    'SuSGeb': '22.07.2004', 'Erz1Vorn': 'Klaus', 'Erz1Nachn': 'Weber',
+                    'Erz2Vorn': None, 'Erz2Nachn': None, 'AusleiheDatum': '25.09.2024'
+                }
+            ]
+            
+            # Create DataFrame and save to Excel
+            df = pd.DataFrame(test_data)
+            excel_buffer = io.BytesIO()
+            df.to_excel(excel_buffer, index=False, engine='openpyxl')
+            excel_buffer.seek(0)
+            
+            print(f"      ✅ Created test data with {len(test_data)} records")
+            print(f"         - 3 iPads with student data")
+            print(f"         - 2 iPads WITHOUT student data (IPAD102, IPAD104)")
+            print(f"         - Mixed empty field scenarios (None, empty strings)")
+            
+        except Exception as e:
+            print(f"      ❌ Failed to create test data: {str(e)}")
+            return self.log_result("Complete Inventory Import - Critical Fixes", False, "Could not create test data")
+        
+        # Step 2: Perform the import
+        print("\n   📤 Step 2: Performing complete inventory import...")
+        
+        try:
+            url = f"{self.base_url}/api/imports/inventory"
+            headers = {}
+            if self.token:
+                headers['Authorization'] = f'Bearer {self.token}'
+            
+            files = {'file': ('test_inventory.xlsx', excel_buffer.getvalue(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+            
+            response = requests.post(url, files=files, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                import_response = response.json()
+                print(f"      ✅ Import successful")
+                print(f"         Message: {import_response.get('message', 'N/A')}")
+                print(f"         iPads created: {import_response.get('ipads_created', 0)}")
+                print(f"         Students created: {import_response.get('students_created', 0)}")
+                print(f"         Assignments created: {import_response.get('assignments_created', 0)}")
+                print(f"         Errors: {import_response.get('error_count', 0)}")
+                
+                # Store response for analysis
+                import_data = import_response
+                test_results.append(True)
+                
+            else:
+                print(f"      ❌ Import failed with status: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print(f"         Error: {error_data.get('detail', 'Unknown error')}")
+                except:
+                    print(f"         Raw response: {response.text[:200]}")
+                test_results.append(False)
+                return self.log_result("Complete Inventory Import - Critical Fixes", False, f"Import failed: {response.status_code}")
+                
+        except Exception as e:
+            print(f"      ❌ Import request exception: {str(e)}")
+            test_results.append(False)
+            return self.log_result("Complete Inventory Import - Critical Fixes", False, f"Import exception: {str(e)}")
+        
+        # Step 3: CRITICAL FIX 1 - Test iPad-only import logic
+        print("\n   🔍 Step 3: CRITICAL FIX 1 - Testing iPad-only import logic...")
+        
+        # Get all iPads to check status
+        ipads_success = self.run_api_test(
+            "Get iPads After Import",
+            "GET",
+            "ipads",
+            200
+        )
+        
+        if ipads_success:
+            ipads = self.test_results[-1]['response_data']
+            
+            # Check IPAD102 and IPAD104 (iPad-only entries)
+            ipad_only_tests = []
+            
+            for ipad_itnr in ['IPAD102', 'IPAD104']:
+                ipad = next((i for i in ipads if i.get('itnr') == ipad_itnr), None)
+                
+                if ipad:
+                    status = ipad.get('status')
+                    current_assignment_id = ipad.get('current_assignment_id')
+                    
+                    print(f"      📱 {ipad_itnr}:")
+                    print(f"         Status: {status}")
+                    print(f"         Assignment ID: {current_assignment_id}")
+                    
+                    # CRITICAL: iPad-only entries should be "verfügbar" with no assignment
+                    if status == 'verfügbar' and current_assignment_id is None:
+                        print(f"         ✅ CORRECT: iPad-only entry has status 'verfügbar' and no assignment")
+                        ipad_only_tests.append(True)
+                    else:
+                        print(f"         ❌ CRITICAL ERROR: iPad-only entry has incorrect status/assignment")
+                        print(f"            Expected: status='verfügbar', assignment=None")
+                        print(f"            Got: status='{status}', assignment={current_assignment_id}")
+                        ipad_only_tests.append(False)
+                else:
+                    print(f"      ❌ {ipad_itnr} not found in database")
+                    ipad_only_tests.append(False)
+            
+            if all(ipad_only_tests):
+                print(f"      ✅ CRITICAL FIX 1 PASSED: iPad-only import logic working correctly")
+                test_results.append(True)
+            else:
+                print(f"      ❌ CRITICAL FIX 1 FAILED: iPad-only import logic broken")
+                test_results.append(False)
+        else:
+            print(f"      ❌ Could not get iPads for testing")
+            test_results.append(False)
+        
+        # Step 4: CRITICAL FIX 2 - Test empty field handling (no 'nan' strings)
+        print("\n   🔍 Step 4: CRITICAL FIX 2 - Testing empty field handling...")
+        
+        # Get students to check for 'nan' strings
+        students_success = self.run_api_test(
+            "Get Students After Import",
+            "GET",
+            "students",
+            200
+        )
+        
+        if students_success:
+            students = self.test_results[-1]['response_data']
+            
+            # Check students created from our test data
+            test_students = ['Max Mustermann', 'Anna Schmidt', 'Lisa Weber']
+            nan_field_tests = []
+            
+            for student_name in test_students:
+                first_name, last_name = student_name.split(' ')
+                student = next((s for s in students if s.get('sus_vorn') == first_name and s.get('sus_nachn') == last_name), None)
+                
+                if student:
+                    print(f"      👤 {student_name}:")
+                    
+                    # Check all fields for 'nan' strings
+                    nan_fields = []
+                    for field_name, field_value in student.items():
+                        if isinstance(field_value, str) and field_value.lower() == 'nan':
+                            nan_fields.append(field_name)
+                    
+                    # Specifically check parent fields that were None/empty in test data
+                    parent_fields = ['erz2_vorn', 'erz2_nachn', 'erz1_str_hnr', 'erz1_plz', 'erz1_ort', 'erz2_str_hnr', 'erz2_plz', 'erz2_ort']
+                    for field in parent_fields:
+                        field_value = student.get(field, '')
+                        print(f"         {field}: '{field_value}'")
+                        
+                        if isinstance(field_value, str) and field_value.lower() == 'nan':
+                            nan_fields.append(field)
+                    
+                    if not nan_fields:
+                        print(f"         ✅ CORRECT: No 'nan' strings found in student data")
+                        nan_field_tests.append(True)
+                    else:
+                        print(f"         ❌ CRITICAL ERROR: Found 'nan' strings in fields: {nan_fields}")
+                        nan_field_tests.append(False)
+                else:
+                    print(f"      ❌ Student {student_name} not found")
+                    nan_field_tests.append(False)
+            
+            if all(nan_field_tests):
+                print(f"      ✅ CRITICAL FIX 2 PASSED: Empty field handling working correctly")
+                test_results.append(True)
+            else:
+                print(f"      ❌ CRITICAL FIX 2 FAILED: Found 'nan' strings in student data")
+                test_results.append(False)
+        else:
+            print(f"      ❌ Could not get students for testing")
+            test_results.append(False)
+        
+        # Step 5: Test assignment creation logic
+        print("\n   🔍 Step 5: Testing assignment creation logic...")
+        
+        # Get assignments to verify correct creation
+        assignments_success = self.run_api_test(
+            "Get Assignments After Import",
+            "GET",
+            "assignments",
+            200
+        )
+        
+        if assignments_success:
+            assignments = self.test_results[-1]['response_data']
+            
+            # Should have assignments for iPads with student data (IPAD101, IPAD103, IPAD105)
+            # Should NOT have assignments for iPad-only entries (IPAD102, IPAD104)
+            
+            expected_assignments = ['IPAD101', 'IPAD103', 'IPAD105']
+            forbidden_assignments = ['IPAD102', 'IPAD104']
+            
+            assignment_tests = []
+            
+            # Check expected assignments exist
+            for itnr in expected_assignments:
+                assignment = next((a for a in assignments if a.get('itnr') == itnr), None)
+                if assignment:
+                    print(f"      ✅ Assignment exists for {itnr} → {assignment.get('student_name')}")
+                    assignment_tests.append(True)
+                else:
+                    print(f"      ❌ Missing assignment for {itnr}")
+                    assignment_tests.append(False)
+            
+            # Check forbidden assignments don't exist
+            for itnr in forbidden_assignments:
+                assignment = next((a for a in assignments if a.get('itnr') == itnr), None)
+                if assignment:
+                    print(f"      ❌ CRITICAL ERROR: Unexpected assignment for iPad-only {itnr}")
+                    assignment_tests.append(False)
+                else:
+                    print(f"      ✅ Correctly no assignment for iPad-only {itnr}")
+                    assignment_tests.append(True)
+            
+            if all(assignment_tests):
+                print(f"      ✅ Assignment creation logic working correctly")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Assignment creation logic has errors")
+                test_results.append(False)
+        else:
+            print(f"      ❌ Could not get assignments for testing")
+            test_results.append(False)
+        
+        # Step 6: Verify response counters accuracy
+        print("\n   🔍 Step 6: Verifying response counter accuracy...")
+        
+        if 'import_data' in locals():
+            expected_students_created = 3  # Only 3 students (Max, Anna, Lisa)
+            expected_assignments_created = 3  # Only 3 assignments (for iPads with students)
+            
+            actual_students = import_data.get('students_created', 0)
+            actual_assignments = import_data.get('assignments_created', 0)
+            
+            print(f"      📊 Response counters:")
+            print(f"         Students created: {actual_students} (expected: {expected_students_created})")
+            print(f"         Assignments created: {actual_assignments} (expected: {expected_assignments_created})")
+            
+            counter_tests = []
+            
+            # Students should be exactly 3
+            if actual_students == expected_students_created:
+                print(f"         ✅ Student count correct")
+                counter_tests.append(True)
+            else:
+                print(f"         ❌ Student count incorrect")
+                counter_tests.append(False)
+            
+            # Assignments should be exactly 3
+            if actual_assignments == expected_assignments_created:
+                print(f"         ✅ Assignment count correct")
+                counter_tests.append(True)
+            else:
+                print(f"         ❌ Assignment count incorrect")
+                counter_tests.append(False)
+            
+            if all(counter_tests):
+                print(f"      ✅ Response counters accurate")
+                test_results.append(True)
+            else:
+                print(f"      ❌ Response counters inaccurate")
+                test_results.append(False)
+        else:
+            print(f"      ❌ No import data to verify")
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Complete Inventory Import - Critical Fixes Summary:")
+        print(f"      Total critical tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        # This is CRITICAL functionality - must have high success rate
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Complete Inventory Import - Critical Fixes", 
+                True, 
+                f"🎉 ALL {total_tests} critical fixes verified! iPad-only import logic and empty field handling working correctly."
+            )
+        else:
+            return self.log_result(
+                "Complete Inventory Import - Critical Fixes", 
+                False, 
+                f"🚨 CRITICAL ISSUES FOUND: Only {successful_tests}/{total_tests} tests passed. iPad-only import or empty field handling has problems."
+            )
+
     def run_comprehensive_test(self):
         """Run all tests in sequence"""
         print("=" * 80)
