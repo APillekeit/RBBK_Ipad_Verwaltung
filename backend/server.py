@@ -1692,7 +1692,14 @@ async def add_missing_timestamps():
 
 # Export functionality
 @api_router.get("/assignments/export")
-async def export_assignments(current_user: str = Depends(get_current_user)):
+async def export_assignments(
+    sus_vorn: Optional[str] = None,
+    sus_nachn: Optional[str] = None, 
+    sus_kl: Optional[str] = None,
+    itnr: Optional[str] = None,
+    current_user: str = Depends(get_current_user)
+):
+    """Export assignments to Excel (all or filtered)"""
     # Get all assignments with related data
     assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
     
