@@ -105,6 +105,18 @@
 user_problem_statement: "Implementierung von globalen Einstellungen und Bestandsliste-Export: 1) Globale Einstellungen für Standard iPad-Typ und Pencil-Ausstattung in Einstellungen-Tab, 2) Bestandsliste-Export (Anforderung 2) mit Excel-Download aller iPads und Schülerzuordnungen in Einstellungen-Tab, 3) Nutzerfreundliche UI-Gestaltung für beide Features."
 
 backend:
+  - task: "LFDNR Column Removal from Entire Application"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+        - working: true
+        - agent: "testing"
+        - comment: "🎉 LFDNR REMOVAL TESTING COMPLETE - Complete removal of lfdNr column successfully verified! Comprehensive testing performed with 100% success rate (14/14 tests passed) covering all requirements: ✅ STUDENT MODEL VALIDATION: Student model no longer includes lfd_nr field, new students can be created without lfd_nr, existing student queries work correctly. ✅ STUDENT UPLOAD TESTING: POST /api/students/upload works without lfdNr column in Excel, upload processes correctly without lfd_nr processing, student creation logic remains intact. ✅ EXPORT TESTING: GET /api/exports/inventory verified lfdNr column is NOT present, GET /api/assignments/export verified lfdNr column is NOT present, both filtered and unfiltered exports tested, correct column order without lfdNr confirmed. ✅ INVENTORY IMPORT TESTING: POST /api/imports/inventory works without lfdNr column, import processes correctly for students, student creation in import works without lfd_nr. ✅ API RESPONSE VALIDATION: GET /api/students endpoint verified lfd_nr is not in response, student detail endpoints verified no lfd_nr fields, assignment endpoints that return student data confirmed no lfd_nr references. ✅ COLUMN ORDER VERIFICATION: Export column order starts with 'Sname' instead of 'lfdNr', both exports have consistent column structure, no references to lfdNr remain in any responses. All test scenarios passed: created new student without lfd_nr, exported inventory and assignments to verify column removal, imported inventory data without lfd_nr column, verified all API responses exclude lfd_nr. Authentication with admin/admin123 working correctly. The complete removal of lfdNr from database, frontend, and all exports has been successfully implemented and verified."
+
   - task: "Session Management API endpoints"
     implemented: true
     working: "NA"
