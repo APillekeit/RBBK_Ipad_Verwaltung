@@ -2200,7 +2200,7 @@ const Settings = () => {
           <div className="space-y-4">
             {/* Export Section */}
             <div className="border-l-4 border-green-400 bg-green-50 p-4 rounded">
-              <h4 className="font-medium text-green-800 mb-2">Bestandsliste-Export (Anforderung 2)</h4>
+              <h4 className="font-medium text-green-800 mb-2">Bestandsliste-Export (Backup)</h4>
               <p className="text-sm text-green-700 mb-4">
                 Exportiert eine vollständige Excel-Datei mit allen iPads und zugehörigen Schülerdaten. 
                 Beinhaltet alle Spalten: Schülerdaten, iPad-Details, Zuordnungsinformationen.
