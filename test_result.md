@@ -177,6 +177,21 @@ backend:
         - agent: "testing"
         - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Assignment Export functionality working perfectly! All 15 tests passed (100% success rate). Key corrections verified: 1) Karton column successfully removed from export, 2) SuSGeb (Geburtstag) dates in correct TT.MM.JJJJ format with leading zeros, 3) AusleiheDatum dates in correct TT.MM.JJJJ format derived from assignment assigned_at (not old iPad ausleihe_datum), 4) Proper Excel MIME type and filename 'zuordnungen_export.xlsx', 5) Correct column order (student fields first, then iPad fields), 6) Only active assignments exported with proper student/iPad data joins, 7) Contract status accuracy (Ja/Nein), 8) Authentication required. Fixed minor date formatting issue to ensure leading zeros in all date fields."
 
+  - task: "Filtered Assignments Export API endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Enhanced GET /api/assignments/export endpoint with filter parameters (sus_vorn, sus_nachn, sus_kl, itnr) for filtered export functionality. Uses same filtering logic as /api/assignments/filtered endpoint."
+        - working: true
+        - agent: "testing"
+        - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Filtered Assignments Export functionality working excellently! All 10 tests passed (100% success rate). Comprehensive testing verified all requirements: 1) ✅ Backward Compatibility - Export without parameters works correctly (7865 bytes), maintains filename 'zuordnungen_export.xlsx' and Excel MIME type, 2) ✅ Individual Filters - Vorname filter ('Sarah'), Nachname filter ('Meyer'), IT-Number filter ('IPAD005'), and Class filter ('6A') all working with proper size reduction, 3) ✅ Combined Filters - Vorname+Nachname and IT-Number+Vorname combinations working correctly, 4) ✅ Case-insensitive Matching - 'IPAD005' matches 'ipad005' successfully, 5) ✅ Empty Filter Results - Non-existent filters return valid empty Excel files (4928 bytes), 6) ✅ Filter Logic Consistency - Export results match /api/assignments/filtered endpoint (1 assignment = 1 export row), 7) ✅ Export Content Structure - All required columns present, proper data formats maintained. All filtering scenarios tested successfully with real data. Feature ready for production use."
+
   - task: "Assignment-specific contract upload API endpoint"
     implemented: true
     working: true
