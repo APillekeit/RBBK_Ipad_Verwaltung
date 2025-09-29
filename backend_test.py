@@ -2924,6 +2924,283 @@ startxref
                 f"Only {successful_tests}/{total_tests} assignment filter tests passed. Issues found in filter functionality."
             )
 
+    def test_inventory_import_api(self):
+        """Test Inventory Import API endpoint with comprehensive scenarios"""
+        print("\n🔍 Testing Inventory Import API Functionality...")
+        
+        test_results = []
+        
+        # Step 1: Create test Excel files for different scenarios
+        print("\n   📁 Step 1: Creating test Excel files...")
+        
+        try:
+            import pandas as pd
+            import io
+            
+            # Test file 1: Valid XLSX with new iPads
+            new_ipads_data = {
+                'ITNr': ['IPAD101', 'IPAD102', 'IPAD103'],
+                'SNr': ['SN101', 'SN102', 'SN103'],
+                'Typ': ['Apple iPad Pro', 'Apple iPad Air', 'Apple iPad'],
+                'Pencil': ['mit Apple Pencil', 'ohne Apple Pencil', 'mit Apple Pencil 2'],
+                'AnschJahr': ['2024', '2023', '2024']
+            }
+            
+            # Test file 2: Valid XLSX with existing iPads (for update testing)
+            # First get existing iPads to create update scenarios
+            existing_ipads = []
+            ipads_success = self.run_api_test(
+                "Get Existing iPads for Import Testing",
+                "GET",
+                "ipads",
+                200
+            )
+            
+            if ipads_success:
+                existing_ipads = self.test_results[-1]['response_data']
+                print(f"      📱 Found {len(existing_ipads)} existing iPads")
+            
+            # Create update test data using existing iPads
+            update_ipads_data = {
+                'ITNr': [],
+                'SNr': [],
+                'Typ': [],
+                'Pencil': [],
+                'AnschJahr': []
+            }
+            
+            # Use first 2 existing iPads for update testing
+            for i, ipad in enumerate(existing_ipads[:2]):
+                update_ipads_data['ITNr'].append(ipad['itnr'])
+                update_ipads_data['SNr'].append(f"UPDATED_SN_{i}")
+                update_ipads_data['Typ'].append('Apple iPad Pro Updated')
+                update_ipads_data['Pencil'].append('mit Apple Pencil Updated')
+                update_ipads_data['AnschJahr'].append('2024')
+            
+            # Test file 3: Invalid format (missing required columns)
+            invalid_data = {
+                'ITNr': ['IPAD201', 'IPAD202'],
+                'SNr': ['SN201', 'SN202'],
+                # Missing 'Typ' and 'Pencil' columns
+                'AnschJahr': ['2024', '2024']
+            }
+            
+            # Test file 4: Mixed scenario (new + existing iPads)
+            mixed_data = {
+                'ITNr': ['IPAD301', 'IPAD302'] + (update_ipads_data['ITNr'][:1] if update_ipads_data['ITNr'] else []),
+                'SNr': ['SN301', 'SN302'] + (['MIXED_UPDATE'] if update_ipads_data['ITNr'] else []),
+                'Typ': ['Apple iPad Mini', 'Apple iPad Pro'] + (['Mixed Update Type'] if update_ipads_data['ITNr'] else []),
+                'Pencil': ['ohne Apple Pencil', 'mit Apple Pencil'] + (['Mixed Update Pencil'] if update_ipads_data['ITNr'] else []),
+                'AnschJahr': ['2024', '2024'] + (['2024'] if update_ipads_data['ITNr'] else [])
+            }
+            
+            # Test file 5: Empty values and edge cases
+            edge_case_data = {
+                'ITNr': ['IPAD401', '', 'IPAD403', 'IPAD404'],  # Empty ITNr should be skipped
+                'SNr': ['SN401', 'SN402', '', 'SN404'],  # Empty SNr should be handled
+                'Typ': ['Apple iPad', 'Apple iPad Pro', 'Apple iPad Air', ''],  # Empty Typ
+                'Pencil': ['mit Apple Pencil', '', 'ohne Apple Pencil', 'mit Apple Pencil 2'],  # Empty Pencil
+                'AnschJahr': ['2024', '2023', '', '2024']  # Empty AnschJahr
+            }
+            
+            # Create Excel files
+            test_files = {
+                'new_ipads.xlsx': new_ipads_data,
+                'update_ipads.xlsx': update_ipads_data,
+                'invalid_columns.xlsx': invalid_data,
+                'mixed_scenario.xlsx': mixed_data,
+                'edge_cases.xlsx': edge_case_data
+            }
+            
+            created_files = []
+            for filename, data in test_files.items():
+                if data['ITNr']:  # Only create if we have data
+                    try:
+                        df = pd.DataFrame(data)
+                        filepath = f'/app/{filename}'
+                        df.to_excel(filepath, index=False, engine='openpyxl')
+                        created_files.append((filename, filepath))
+                        print(f"      ✅ Created {filename} with {len(df)} rows")
+                    except Exception as e:
+                        print(f"      ❌ Failed to create {filename}: {str(e)}")
+            
+            print(f"      📁 Successfully created {len(created_files)} test files")
+            test_results.append(True)
+            
+        except Exception as e:
+            print(f"      ❌ Error creating test files: {str(e)}")
+            test_results.append(False)
+            created_files = []
+        
+        # Step 2: Test file format validation
+        print("\n   📋 Step 2: Testing file format validation...")
+        
+        # Test 2a: Valid XLSX file
+        if created_files:
+            test_file = created_files[0]  # Use first created file
+            filename, filepath = test_file
+            
+            try:
+                with open(filepath, 'rb') as f:
+                    files = {'file': (filename, f, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+                    success = self.run_api_test(
+                        f"Import Valid XLSX - {filename}",
+                        "POST",
+                        "imports/inventory",
+                        200,
+                        files=files
+                    )
+                    
+                    if success:
+                        response_data = self.test_results[-1]['response_data']
+                        print(f"      ✅ XLSX import successful")
+                        print(f"         Message: {response_data.get('message', 'N/A')}")
+                        print(f"         Processed: {response_data.get('processed_count', 0)}")
+                        print(f"         Created: {response_data.get('created_count', 0)}")
+                        print(f"         Updated: {response_data.get('updated_count', 0)}")
+                        print(f"         Errors: {response_data.get('error_count', 0)}")
+                        test_results.append(True)
+                    else:
+                        test_results.append(False)
+                        
+            except FileNotFoundError:
+                print(f"      ❌ Test file not found: {filepath}")
+                test_results.append(False)
+        else:
+            print(f"      ⚠️  No test files available for format testing")
+            test_results.append(False)
+        
+        # Test 2b: Invalid file format (PDF)
+        try:
+            # Create a fake PDF file
+            fake_pdf_content = b"%PDF-1.4\nFake PDF content for testing"
+            files = {'file': ('test.pdf', io.BytesIO(fake_pdf_content), 'application/pdf')}
+            
+            success = self.run_api_test(
+                "Import Invalid Format - PDF",
+                "POST",
+                "imports/inventory",
+                400,  # Should return 400 for invalid format
+                files=files
+            )
+            
+            if success:
+                print(f"      ✅ PDF rejection working correctly")
+                test_results.append(True)
+            else:
+                print(f"      ❌ PDF should be rejected")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Error testing invalid format: {str(e)}")
+            test_results.append(False)
+        
+        # Test 2c: Invalid file format (TXT)
+        try:
+            fake_txt_content = b"This is a text file, not Excel"
+            files = {'file': ('test.txt', io.BytesIO(fake_txt_content), 'text/plain')}
+            
+            success = self.run_api_test(
+                "Import Invalid Format - TXT",
+                "POST",
+                "imports/inventory",
+                400,  # Should return 400 for invalid format
+                files=files
+            )
+            
+            if success:
+                print(f"      ✅ TXT rejection working correctly")
+                test_results.append(True)
+            else:
+                print(f"      ❌ TXT should be rejected")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Error testing TXT format: {str(e)}")
+            test_results.append(False)
+        
+        # Step 3: Test column validation
+        print("\n   📊 Step 3: Testing column validation...")
+        
+        # Test 3a: Missing required columns
+        invalid_file = None
+        for filename, filepath in created_files:
+            if 'invalid_columns' in filename:
+                invalid_file = (filename, filepath)
+                break
+        
+        if invalid_file:
+            filename, filepath = invalid_file
+            try:
+                with open(filepath, 'rb') as f:
+                    files = {'file': (filename, f, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')}
+                    success = self.run_api_test(
+                        "Import Missing Columns",
+                        "POST",
+                        "imports/inventory",
+                        400,  # Should return 400 for missing columns
+                        files=files
+                    )
+                    
+                    if success:
+                        response_data = self.test_results[-1]['response_data']
+                        error_detail = response_data.get('detail', '')
+                        if 'Missing required columns' in error_detail:
+                            print(f"      ✅ Missing columns properly detected")
+                            print(f"         Error: {error_detail}")
+                            test_results.append(True)
+                        else:
+                            print(f"      ❌ Wrong error message: {error_detail}")
+                            test_results.append(False)
+                    else:
+                        print(f"      ❌ Missing columns should return 400")
+                        test_results.append(False)
+                        
+            except FileNotFoundError:
+                print(f"      ❌ Invalid columns test file not found")
+                test_results.append(False)
+        else:
+            print(f"      ⚠️  No invalid columns test file available")
+            test_results.append(False)
+        
+        # Calculate overall success
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 Inventory Import API Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        # Cleanup test files
+        print(f"\n   🧹 Cleaning up test files...")
+        cleanup_files = [
+            '/app/new_ipads.xlsx', '/app/update_ipads.xlsx', '/app/invalid_columns.xlsx',
+            '/app/mixed_scenario.xlsx', '/app/edge_cases.xlsx', '/app/extra_columns.xlsx',
+            '/app/empty_file.xlsx'
+        ]
+        
+        for filepath in cleanup_files:
+            try:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    print(f"      🗑️  Removed {filepath}")
+            except Exception as e:
+                print(f"      ⚠️  Could not remove {filepath}: {str(e)}")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "Inventory Import API", 
+                True, 
+                f"All {total_tests} inventory import tests passed successfully"
+            )
+        else:
+            return self.log_result(
+                "Inventory Import API", 
+                False, 
+                f"Only {successful_tests}/{total_tests} inventory import tests passed"
+            )
+
     def run_comprehensive_test(self):
         """Run all tests in sequence"""
         print("=" * 80)
@@ -2932,7 +3209,7 @@ startxref
         print(f"Testing against: {self.base_url}")
         print(f"Test started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # Test sequence - Focus on Assignment Filter API Enhancement
+        # Test sequence - Focus on Inventory Import API Testing
         tests = [
             ("Admin Setup", self.test_admin_setup),
             ("Login", self.test_login),
@@ -2940,6 +3217,7 @@ startxref
             ("Get Students", self.test_get_students),
             ("Get Assignments", self.test_get_assignments),
             ("Assignment Filter API Enhancement", self.test_assignment_filter_api_enhancement),
+            ("Inventory Import API", self.test_inventory_import_api),
         ]
         
         for test_name, test_func in tests:
