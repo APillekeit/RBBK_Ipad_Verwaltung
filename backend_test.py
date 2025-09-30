@@ -4785,19 +4785,225 @@ startxref
                 f"Only {successful_tests}/{total_tests} filtered export tests passed"
             )
 
+    def test_lfdnr_export_verification(self):
+        """URGENT: Test if lfdNr column is still being exported despite removal"""
+        print("\n🚨 URGENT VERIFICATION: Testing lfdNr Column Export Status...")
+        
+        test_results = []
+        
+        # Step 1: Test Inventory Export for lfdNr column
+        print("\n   📊 Step 1: Testing GET /api/exports/inventory for lfdNr column...")
+        
+        url = f"{self.base_url}/api/exports/inventory"
+        headers = {}
+        if self.token:
+            headers['Authorization'] = f'Bearer {self.token}'
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                try:
+                    import pandas as pd
+                    import io
+                    
+                    # Read Excel file
+                    df = pd.read_excel(io.BytesIO(response.content))
+                    
+                    print(f"      📋 Inventory Export Column Headers: {list(df.columns)}")
+                    
+                    # Check if lfdNr is present
+                    if 'lfdNr' in df.columns:
+                        print(f"      ❌ CRITICAL ISSUE: lfdNr column FOUND in inventory export!")
+                        print(f"         Column position: {df.columns.get_loc('lfdNr') + 1}")
+                        print(f"         First column: {df.columns[0]}")
+                        test_results.append(False)
+                    else:
+                        print(f"      ✅ GOOD: lfdNr column NOT found in inventory export")
+                        print(f"         First column: {df.columns[0]} (should be 'Sname')")
+                        test_results.append(True)
+                    
+                    # Show actual column structure
+                    print(f"      📋 Complete column order:")
+                    for i, col in enumerate(df.columns, 1):
+                        print(f"         {i:2d}. {col}")
+                        
+                except Exception as e:
+                    print(f"      ❌ Error analyzing inventory export: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"      ❌ Inventory export failed: {response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Inventory export request failed: {str(e)}")
+            test_results.append(False)
+        
+        # Step 2: Test Assignment Export for lfdNr column
+        print("\n   📊 Step 2: Testing GET /api/assignments/export for lfdNr column...")
+        
+        url = f"{self.base_url}/api/assignments/export"
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=60)
+            
+            if response.status_code == 200:
+                try:
+                    import pandas as pd
+                    import io
+                    
+                    # Read Excel file
+                    df = pd.read_excel(io.BytesIO(response.content))
+                    
+                    print(f"      📋 Assignment Export Column Headers: {list(df.columns)}")
+                    
+                    # Check if lfdNr is present
+                    if 'lfdNr' in df.columns:
+                        print(f"      ❌ CRITICAL ISSUE: lfdNr column FOUND in assignment export!")
+                        print(f"         Column position: {df.columns.get_loc('lfdNr') + 1}")
+                        print(f"         First column: {df.columns[0]}")
+                        test_results.append(False)
+                    else:
+                        print(f"      ✅ GOOD: lfdNr column NOT found in assignment export")
+                        print(f"         First column: {df.columns[0]} (should be 'Sname')")
+                        test_results.append(True)
+                    
+                    # Show actual column structure
+                    print(f"      📋 Complete column order:")
+                    for i, col in enumerate(df.columns, 1):
+                        print(f"         {i:2d}. {col}")
+                        
+                except Exception as e:
+                    print(f"      ❌ Error analyzing assignment export: {str(e)}")
+                    test_results.append(False)
+            else:
+                print(f"      ❌ Assignment export failed: {response.status_code}")
+                test_results.append(False)
+                
+        except Exception as e:
+            print(f"      ❌ Assignment export request failed: {str(e)}")
+            test_results.append(False)
+        
+        # Step 3: Compare column structures
+        print("\n   🔍 Step 3: Column Structure Analysis...")
+        
+        # Get both exports again for comparison
+        inventory_columns = []
+        assignment_columns = []
+        
+        try:
+            # Inventory export
+            response = requests.get(f"{self.base_url}/api/exports/inventory", headers=headers, timeout=60)
+            if response.status_code == 200:
+                df = pd.read_excel(io.BytesIO(response.content))
+                inventory_columns = list(df.columns)
+            
+            # Assignment export
+            response = requests.get(f"{self.base_url}/api/assignments/export", headers=headers, timeout=60)
+            if response.status_code == 200:
+                df = pd.read_excel(io.BytesIO(response.content))
+                assignment_columns = list(df.columns)
+            
+            if inventory_columns and assignment_columns:
+                print(f"      📊 Inventory export has {len(inventory_columns)} columns")
+                print(f"      📊 Assignment export has {len(assignment_columns)} columns")
+                
+                # Check if both start with same column (should be 'Sname' not 'lfdNr')
+                if inventory_columns and assignment_columns:
+                    inv_first = inventory_columns[0]
+                    ass_first = assignment_columns[0]
+                    
+                    print(f"      🔍 Inventory first column: '{inv_first}'")
+                    print(f"      🔍 Assignment first column: '{ass_first}'")
+                    
+                    if inv_first == 'Sname' and ass_first == 'Sname':
+                        print(f"      ✅ Both exports correctly start with 'Sname' (not 'lfdNr')")
+                        test_results.append(True)
+                    elif inv_first == 'lfdNr' or ass_first == 'lfdNr':
+                        print(f"      ❌ CRITICAL: One or both exports still start with 'lfdNr'!")
+                        test_results.append(False)
+                    else:
+                        print(f"      ⚠️  Unexpected first columns: {inv_first}, {ass_first}")
+                        test_results.append(False)
+                
+                # Check for any lfdNr references in either export
+                lfdnr_in_inventory = 'lfdNr' in inventory_columns
+                lfdnr_in_assignment = 'lfdNr' in assignment_columns
+                
+                if not lfdnr_in_inventory and not lfdnr_in_assignment:
+                    print(f"      ✅ CONFIRMED: lfdNr column completely removed from both exports")
+                    test_results.append(True)
+                else:
+                    print(f"      ❌ CRITICAL: lfdNr still present in exports!")
+                    print(f"         Inventory: {'YES' if lfdnr_in_inventory else 'NO'}")
+                    print(f"         Assignment: {'YES' if lfdnr_in_assignment else 'NO'}")
+                    test_results.append(False)
+                    
+        except Exception as e:
+            print(f"      ❌ Error in column structure analysis: {str(e)}")
+            test_results.append(False)
+        
+        # Calculate results
+        successful_tests = sum(test_results)
+        total_tests = len(test_results)
+        
+        print(f"\n   📊 lfdNr Export Verification Summary:")
+        print(f"      Total tests: {total_tests}")
+        print(f"      Successful tests: {successful_tests}")
+        print(f"      Success rate: {(successful_tests/total_tests*100):.1f}%")
+        
+        if successful_tests == total_tests:
+            return self.log_result(
+                "lfdNr Export Verification", 
+                True, 
+                f"✅ VERIFIED: lfdNr column successfully removed from all exports"
+            )
+        else:
+            return self.log_result(
+                "lfdNr Export Verification", 
+                False, 
+                f"❌ CRITICAL: lfdNr column still present in exports - {successful_tests}/{total_tests} tests passed"
+            )
+
 def main():
-    """Main test execution"""
-    print("🔧 iPad Management System - Backend API Tester")
-    print("Testing all endpoints with authentication and file uploads\n")
+    """Main test execution - URGENT lfdNr verification"""
+    print("🚨 URGENT: iPad Management System - lfdNr Export Verification")
+    print("Testing if lfdNr column is still being exported despite removal\n")
     
     # Initialize tester
     tester = IPadManagementTester()
     
-    # Run comprehensive tests
-    success = tester.run_comprehensive_test()
+    # Authentication
+    tester.test_admin_setup()
+    if not tester.test_login():
+        print("❌ Login failed - cannot continue with authenticated tests")
+        return 1
+    
+    # Run urgent lfdNr verification test
+    tester.test_lfdnr_export_verification()
+    
+    # Print final summary
+    print(f"\n{'='*80}")
+    print(f"📊 URGENT TEST SUMMARY")
+    print(f"{'='*80}")
+    print(f"Total Tests Run: {tester.tests_run}")
+    print(f"Tests Passed: {tester.tests_passed}")
+    print(f"Tests Failed: {tester.tests_run - tester.tests_passed}")
+    print(f"Success Rate: {(tester.tests_passed/tester.tests_run*100):.1f}%")
+    
+    if tester.tests_passed == tester.tests_run:
+        print("🎉 ALL TESTS PASSED!")
+    else:
+        print("❌ SOME TESTS FAILED!")
+        print("\nFailed Tests:")
+        for result in tester.test_results:
+            if not result['success']:
+                print(f"  - {result['test']}: {result['message']}")
+    
+    print(f"{'='*80}")
     
     # Return appropriate exit code
-    return 0 if success else 1
+    return 0 if tester.tests_passed == tester.tests_run else 1
 
 if __name__ == "__main__":
     sys.exit(main())
