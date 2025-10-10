@@ -31,7 +31,12 @@ db = client["iPadDatabase"]
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
-SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-change-this")
+# Generate strong random secret key if not provided
+import secrets
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY or len(SECRET_KEY) < 32:
+    print("WARNING: No secure SECRET_KEY found. Generating random key for this session.")
+    SECRET_KEY = secrets.token_urlsafe(64)
 
 # Create the main app
 app = FastAPI(title="iPad Management System")
