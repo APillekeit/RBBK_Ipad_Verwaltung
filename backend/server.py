@@ -1981,6 +1981,9 @@ async def get_filtered_assignments(
 # Include the router
 app.include_router(api_router)
 
+# Add security middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
