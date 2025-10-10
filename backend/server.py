@@ -389,7 +389,8 @@ async def change_username(
         raise HTTPException(status_code=500, detail=f"Error changing username: {str(e)}")
 
 @api_router.post("/auth/login", response_model=LoginResponse)
-async def login(user_data: UserLogin):
+@limiter.limit("5/minute")  # Max 5 login attempts per minute
+async def login(request: Request, user_data: UserLogin):
     user = await db.users.find_one({"username": user_data.username})
     if not user or not verify_password(user_data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
