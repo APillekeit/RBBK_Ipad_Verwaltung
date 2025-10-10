@@ -196,6 +196,24 @@ async def validate_resource_access(resource_type: str, resource_id: str, current
     # For now, only admin has access to all resources
     raise HTTPException(status_code=403, detail="Access denied to this resource")
 
+# Security: Input sanitization
+def sanitize_input(value: str, max_length: int = 255, allow_html: bool = False) -> str:
+    """Sanitize user input to prevent XSS and injection attacks"""
+    if not isinstance(value, str):
+        value = str(value)
+    
+    # Limit length
+    value = value[:max_length]
+    
+    if not allow_html:
+        # Strip all HTML tags and decode HTML entities
+        value = bleach.clean(value, tags=[], attributes={}, strip=True)
+    
+    # Remove null bytes and other dangerous characters
+    value = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', value)
+    
+    return value.strip()
+
 # Security: File validation function
 def validate_uploaded_file(file_content: bytes, filename: str, max_size_mb: int = 10, allowed_types: list = None):
     """Validate uploaded file for security"""
