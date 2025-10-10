@@ -47,8 +47,14 @@ if not SECRET_KEY or len(SECRET_KEY) < 32:
     print("WARNING: No secure SECRET_KEY found. Generating random key for this session.")
     SECRET_KEY = secrets.token_urlsafe(64)
 
+# Create rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Create the main app
 app = FastAPI(title="iPad Management System")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 api_router = APIRouter(prefix="/api")
 
 # Data Models
