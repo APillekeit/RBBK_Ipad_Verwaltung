@@ -183,6 +183,17 @@ def parse_from_mongo(item):
                     pass
     return item
 
+# Security: Resource access validation
+async def validate_resource_access(resource_type: str, resource_id: str, current_user: str):
+    """Validate that current user has access to resource"""
+    # For admin users, allow all access (extend this for role-based access)
+    if current_user == "admin":
+        return True
+    
+    # Add more granular access control as needed
+    # For now, only admin has access to all resources
+    raise HTTPException(status_code=403, detail="Access denied to this resource")
+
 # Security: File validation function
 def validate_uploaded_file(file_content: bytes, filename: str, max_size_mb: int = 10, allowed_types: list = None):
     """Validate uploaded file for security"""
