@@ -19,6 +19,7 @@ import xlsxwriter
 from passlib.context import CryptContext
 import jwt
 from datetime import timedelta
+import magic
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
