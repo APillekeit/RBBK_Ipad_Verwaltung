@@ -183,6 +183,35 @@ def parse_from_mongo(item):
                     pass
     return item
 
+# Security: File validation function
+def validate_uploaded_file(file_content: bytes, filename: str, max_size_mb: int = 10, allowed_types: list = None):
+    """Validate uploaded file for security"""
+    if len(file_content) > max_size_mb * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"File too large. Maximum {max_size_mb}MB allowed")
+    
+    # Validate file extension
+    allowed_extensions = {'.pdf', '.xlsx', '.xls'} if allowed_types is None else set(allowed_types)
+    file_ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    if f'.{file_ext}' not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"File type not allowed. Allowed: {allowed_extensions}")
+    
+    # Validate MIME type matches extension
+    try:
+        mime_type = magic.from_buffer(file_content[:2048], mime=True)
+        expected_mimes = {
+            '.pdf': 'application/pdf',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.xls': 'application/vnd.ms-excel'
+        }
+        expected_mime = expected_mimes.get(f'.{file_ext}')
+        if expected_mime and mime_type != expected_mime:
+            raise HTTPException(status_code=400, detail=f"File content doesn't match extension. Expected: {expected_mime}, Got: {mime_type}")
+    except:
+        # If magic detection fails, allow but log warning
+        print(f"Warning: Could not validate MIME type for {filename}")
+    
+    return True
+
 # Authentication endpoints
 @api_router.post("/auth/setup", response_model=dict)
 async def setup_admin():
