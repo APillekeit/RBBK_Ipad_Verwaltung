@@ -682,6 +682,8 @@ async def upload_contract_for_assignment(
     
     try:
         contents = await file.read()
+        # Security: Validate uploaded file
+        validate_uploaded_file(contents, file.filename, max_size_mb=5, allowed_types=['.pdf'])
         
         # Extract form fields from PDF
         reader = PyPDF2.PdfReader(io.BytesIO(contents))
