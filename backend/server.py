@@ -330,6 +330,8 @@ async def upload_ipads(file: UploadFile = File(...), current_user: str = Depends
     
     try:
         contents = await file.read()
+        # Security: Validate uploaded file
+        validate_uploaded_file(contents, file.filename, max_size_mb=5, allowed_types=['.xlsx'])
         df = pd.read_excel(io.BytesIO(contents))
         
         processed_count = 0
