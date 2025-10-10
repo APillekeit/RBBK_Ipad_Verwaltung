@@ -1342,6 +1342,8 @@ async def import_inventory(file: UploadFile = File(...), current_user: str = Dep
         
         # Read Excel file
         contents = await file.read()
+        # Security: Validate uploaded file
+        validate_uploaded_file(contents, file.filename, max_size_mb=10, allowed_types=['.xlsx', '.xls'])
         
         # Try to read with different engines for .xls/.xlsx support
         try:
