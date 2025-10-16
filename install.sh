@@ -198,21 +198,23 @@ create_backup() {
 cleanup_installation() {
     local silent=$1
     
-    # Stoppe laufende Container
-    if docker ps | grep -q "ipad\|mongodb\|nginx"; then
-        [ "$silent" = false ] && print_step "Stoppe laufende Container..."
-        cd config 2>/dev/null && $DOCKER_COMPOSE_CMD down 2>/dev/null || true
+    # Stoppe und entferne Container in einem Schritt
+    [ "$silent" = false ] && print_step "Stoppe und entferne existierende Container..."
+    
+    # Versuche docker-compose down
+    if [ -d "config" ]; then
+        cd config 2>/dev/null && $DOCKER_COMPOSE_CMD down -v 2>/dev/null || true
         cd .. 2>/dev/null || true
-        docker stop $(docker ps -a -q --filter "name=ipad\|mongodb\|nginx") 2>/dev/null || true
-        [ "$silent" = false ] && print_success "Container gestoppt"
     fi
     
-    # Entferne Container
-    if docker ps -a | grep -q "ipad\|mongodb\|nginx"; then
-        [ "$silent" = false ] && print_step "Entferne Container..."
-        docker rm -f $(docker ps -a -q --filter "name=ipad\|mongodb\|nginx") 2>/dev/null || true
-        [ "$silent" = false ] && print_success "Container entfernt"
+    # Entferne Container direkt (auch wenn gestoppt)
+    # Suche nach allen Containern mit ipad, mongodb oder config im Namen
+    local containers=$(docker ps -a -q --filter "name=ipad" --filter "name=mongodb" --filter "name=config" 2>/dev/null)
+    if [ ! -z "$containers" ]; then
+        docker rm -f $containers 2>/dev/null || true
     fi
+    
+    [ "$silent" = false ] && print_success "Container entfernt"
     
     # Entferne Volumes (Datenverlust!)
     if docker volume ls | grep -q "ipad\|mongodb"; then
