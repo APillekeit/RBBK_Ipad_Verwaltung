@@ -114,6 +114,7 @@ class Student(BaseModel):
 
 class Assignment(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str  # Owner of this assignment
     student_id: str
     ipad_id: str
     itnr: str
