@@ -2491,7 +2491,7 @@ const Dashboard = ({ onLogout, userRole, currentUsername }) => {
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 mb-8">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'} mb-8`}>
             <TabsTrigger value="students" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Schüler
@@ -2512,6 +2512,12 @@ const Dashboard = ({ onLogout, userRole, currentUsername }) => {
               <SettingsIcon className="h-4 w-4" />
               Einstellungen
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="users" className="flex items-center gap-2 bg-gradient-to-r from-yellow-400/10 to-orange-500/10">
+                <Users className="h-4 w-4" />
+                Benutzer
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="students">
