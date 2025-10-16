@@ -71,10 +71,10 @@ const Login = ({ onLogin }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-teal-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-2xl">
+    <div className="min-h-screen bg-gradient-to-br from-ipad-beige via-gray-50 to-ipad-teal/20 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-2xl border-ipad-beige/20">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-ipad-teal to-ipad-blue rounded-full flex items-center justify-center mx-auto mb-4">
             <Tablet className="h-8 w-8 text-white" />
           </div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-ipad-teal to-ipad-blue bg-clip-text text-transparent">
