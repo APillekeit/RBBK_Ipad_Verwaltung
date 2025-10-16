@@ -1066,6 +1066,7 @@ async def upload_contract_for_assignment(
         
         # Create new contract
         new_contract = Contract(
+            user_id=current_user["id"],
             assignment_id=assignment_id,
             itnr=assignment["itnr"],
             student_name=assignment["student_name"],
