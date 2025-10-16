@@ -1567,6 +1567,9 @@ async def get_ipad_history(ipad_id: str, current_user: dict = Depends(get_curren
 # Assignment dissolution
 @api_router.delete("/assignments/{assignment_id}")
 async def dissolve_assignment(assignment_id: str, current_user: dict = Depends(get_current_user)):
+    # Validate resource ownership
+    await validate_resource_ownership("assignment", assignment_id, current_user)
+    
     assignment = await db.assignments.find_one({"id": assignment_id})
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
