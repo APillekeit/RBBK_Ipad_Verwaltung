@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Implementierung von globalen Einstellungen und Bestandsliste-Export: 1) Globale Einstellungen für Standard iPad-Typ und Pencil-Ausstattung in Einstellungen-Tab, 2) Bestandsliste-Export (Anforderung 2) mit Excel-Download aller iPads und Schülerzuordnungen in Einstellungen-Tab, 3) Nutzerfreundliche UI-Gestaltung für beide Features."
+user_problem_statement: "RBAC (Role-Based Access Control) Implementation: 1) Add role field ('admin' or 'user') to all users, 2) Add user_id ownership to all resources (iPads, students, assignments, contracts), 3) Implement user-specific resource isolation (users see only their own data), 4) Create admin user management endpoints (create/list/update/delete users), 5) Admins can see ALL resources across all users, 6) Frontend user management UI for admins"
 
 backend:
   - task: "LFDNR Column Removal from Entire Application"
