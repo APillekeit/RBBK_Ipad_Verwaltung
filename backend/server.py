@@ -128,6 +128,7 @@ class Assignment(BaseModel):
 
 class Contract(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str  # Owner of this contract
     assignment_id: Optional[str] = None
     itnr: Optional[str] = None
     student_name: Optional[str] = None
