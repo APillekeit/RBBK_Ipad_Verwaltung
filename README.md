@@ -106,12 +106,15 @@ Rolle: Administrator
 ## 🔒 Sicherheit
 
 Das System implementiert umfassende Sicherheitsmaßnahmen:
-- JWT-Authentifizierung mit 512-Bit Secret Keys
-- Rate Limiting (5 Login-Versuche/Minute)
-- Input Sanitization gegen XSS
-- File Upload Validation mit MIME-Type Checking
-- HTTP Security Headers (CSP, HSTS, X-Frame-Options)
-- Strikte CORS-Konfiguration
+- **RBAC**: Role-Based Access Control mit User/Admin-Rollen
+- **IDOR-Schutz**: Ownership-Validierung auf allen Ressourcen
+- **JWT-Authentifizierung**: 512-Bit Secret Keys mit User-ID im Token
+- **Rate Limiting**: 5 Login-Versuche/Minute
+- **Input Sanitization**: XSS-Schutz mit Bleach
+- **File Upload Validation**: MIME-Type Checking und Größenlimits
+- **HTTP Security Headers**: CSP, HSTS, X-Frame-Options
+- **CORS-Konfiguration**: Strikte Origin-Policies
+- **Datenisolation**: Vollständige Trennung zwischen Benutzern
 
 ## 📊 API Dokumentierung
 
