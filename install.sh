@@ -50,13 +50,18 @@ check_dependencies() {
     fi
     print_success "Docker gefunden: $(docker --version | cut -d' ' -f3)"
     
-    # Check Docker Compose
-    if ! command -v docker-compose &> /dev/null; then
+    # Check Docker Compose (v1 oder v2)
+    if command -v docker-compose &> /dev/null; then
+        DOCKER_COMPOSE_CMD="docker-compose"
+        print_success "Docker Compose gefunden: $(docker-compose --version | cut -d' ' -f4)"
+    elif docker compose version &> /dev/null; then
+        DOCKER_COMPOSE_CMD="docker compose"
+        print_success "Docker Compose gefunden: $(docker compose version --short)"
+    else
         print_error "Docker Compose ist nicht installiert!"
         echo "Installation: https://docs.docker.com/compose/install/"
         exit 1
     fi
-    print_success "Docker Compose gefunden: $(docker-compose --version | cut -d' ' -f4)"
     
     # Check Python
     if ! command -v python3 &> /dev/null; then
