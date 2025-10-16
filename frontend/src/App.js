@@ -1480,7 +1480,7 @@ const AssignmentsManagement = () => {
             <Button 
               onClick={() => handleExport(false)}
               disabled={exporting}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+              className="bg-gradient-to-r from-ipad-teal to-ipad-blue hover:from-ipad-blue hover:to-ipad-dark-blue"
             >
               <Download className="h-4 w-4 mr-2" />
               {exporting ? 'Exportiere...' : 'Alle Zuordnungen exportieren'}
