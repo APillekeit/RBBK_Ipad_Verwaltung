@@ -512,9 +512,7 @@ metadata:
   run_ui: true
 
 test_plan:
-  current_focus: 
-    - "RBAC System - Frontend User Management UI"
-    - "RBAC System - Frontend Auth Updates"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
