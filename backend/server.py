@@ -62,7 +62,11 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     username: str
     password_hash: str
+    role: str = "user"  # "admin" or "user"
+    is_active: bool = True
+    created_by: Optional[str] = None  # User ID of creator
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserLogin(BaseModel):
     username: str
