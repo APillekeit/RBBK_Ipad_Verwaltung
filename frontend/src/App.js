@@ -1490,7 +1490,7 @@ const AssignmentsManagement = () => {
               <Button 
                 onClick={() => handleExport(true)}
                 disabled={exporting}
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                className="bg-gradient-to-r from-ipad-blue to-ipad-dark-blue hover:from-ipad-dark-blue hover:to-ipad-dark-gray"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {exporting ? 'Exportiere...' : `Gefilterte Zuordnungen exportieren (${filteredAssignments.length})`}
