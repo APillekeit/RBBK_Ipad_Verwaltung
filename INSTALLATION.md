@@ -39,7 +39,13 @@ Das Script führt automatisch folgende Schritte aus:
    - Überprüft Docker Compose-Installation
    - Zeigt gefundene Versionen an
 
-2. ✅ **Umgebungsvariablen erstellen**
+2. ✅ **Vorherige Installation prüfen**
+   - Sucht nach existierenden Containern
+   - Sucht nach existierenden Volumes
+   - Sucht nach .env-Dateien
+   - Bietet Optionen zum Löschen oder Backup
+
+3. ✅ **Umgebungsvariablen erstellen**
    - Generiert sichere SECRET_KEY (64 Zeichen, zufällig)
    - Erstellt `backend/.env` mit MongoDB-Verbindung
    - Erstellt `frontend/.env` mit Backend-URL
