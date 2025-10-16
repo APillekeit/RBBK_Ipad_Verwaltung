@@ -201,7 +201,7 @@ cleanup_installation() {
     # Stoppe laufende Container
     if docker ps | grep -q "ipad\|mongodb\|nginx"; then
         [ "$silent" = false ] && print_step "Stoppe laufende Container..."
-        cd config 2>/dev/null && docker-compose down 2>/dev/null || true
+        cd config 2>/dev/null && $DOCKER_COMPOSE_CMD down 2>/dev/null || true
         cd .. 2>/dev/null || true
         docker stop $(docker ps -a -q --filter "name=ipad\|mongodb\|nginx") 2>/dev/null || true
         [ "$silent" = false ] && print_success "Container gestoppt"
