@@ -149,6 +149,8 @@ class AssignmentHistory(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str
+    role: str
+    username: str
 
 class UploadResponse(BaseModel):
     message: str
