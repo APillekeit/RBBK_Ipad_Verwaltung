@@ -112,7 +112,7 @@ const Login = ({ onLogin }) => {
             </div>
             <Button 
               type="submit" 
-              className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 transition-all duration-200"
+              className="w-full bg-gradient-to-r from-ipad-teal to-ipad-dark-blue hover:from-ipad-blue hover:to-ipad-dark-gray transition-all duration-200"
               disabled={loading}
             >
               {loading ? 'Anmeldung läuft...' : 'Anmelden'}
