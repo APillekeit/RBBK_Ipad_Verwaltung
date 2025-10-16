@@ -1755,8 +1755,8 @@ async def import_inventory(file: UploadFile = File(...), current_user: dict = De
                 if not itnr:
                     continue  # Skip rows without ITNr
                 
-                # Check if iPad already exists
-                existing_ipad = await db.ipads.find_one({"itnr": itnr})
+                # Check if iPad already exists for this user
+                existing_ipad = await db.ipads.find_one({"itnr": itnr, "user_id": current_user["id"]})
                 
                 if existing_ipad:
                     ipads_skipped += 1
@@ -1764,6 +1764,7 @@ async def import_inventory(file: UploadFile = File(...), current_user: dict = De
                 else:
                     # Create new iPad
                     new_ipad = iPad(
+                        user_id=current_user["id"],
                         itnr=itnr,
                         snr=str(row.get('SNr', '')).strip(),
                         typ=str(row.get('Typ', '')).strip(),
