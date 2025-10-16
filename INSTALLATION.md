@@ -143,6 +143,72 @@ docker exec mongodb mongorestore /tmp/mongodb_backup
 ➜ Erstelle Umgebungsvariablen...
 ✓ Backend .env erstellt mit sicherem SECRET_KEY
 ✓ Frontend .env erstellt
+```
+
+**Bei vorhandener Installation:**
+```
+═══════════════════════════════════════════════════════
+    iPad-Verwaltungssystem - Installation
+    Version 2.0 mit RBAC
+═══════════════════════════════════════════════════════
+
+➜ Überprüfe System-Voraussetzungen...
+✓ Docker gefunden: 24.0.7
+✓ Docker Compose gefunden: 2.23.0
+
+➜ Prüfe auf vorherige Installation...
+⚠ Existierende Container gefunden
+⚠ Existierende Docker-Volumes gefunden
+⚠ Existierende .env-Dateien gefunden
+
+═══════════════════════════════════════════════════════
+    ⚠  VORHERIGE INSTALLATION GEFUNDEN
+═══════════════════════════════════════════════════════
+
+Gefundene Container:
+  - config_backend_1 (Up 2 hours)
+  - config_frontend_1 (Up 2 hours)
+  - mongodb (Up 2 hours)
+
+Gefundene Volumes:
+  - config_mongodb_data
+  - config_mongodb_config
+
+Gefundene Konfigurationsdateien:
+  - backend/.env
+  - frontend/.env
+
+WARNUNG: Das Löschen entfernt alle Daten (iPads, Schüler, Zuordnungen, Verträge)!
+
+Optionen:
+  1) Alte Installation löschen und neu installieren
+  2) Backup erstellen, dann löschen und neu installieren
+  3) Installation abbrechen
+
+Ihre Wahl (1/2/3): 2
+
+➜ Erstelle Backup...
+✓ Backend .env gesichert
+✓ Frontend .env gesichert
+➜ Sichere MongoDB-Daten...
+✓ MongoDB-Daten gesichert
+
+Backup erstellt in: ./backup_20241016_153042
+
+➜ Lösche alte Installation...
+➜ Stoppe laufende Container...
+✓ Container gestoppt
+➜ Entferne Container...
+✓ Container entfernt
+➜ Entferne Volumes...
+✓ Volumes entfernt
+➜ Entferne alte Images...
+✓ Images entfernt
+✓ Backup erstellt und alte Installation gelöscht
+
+➜ Erstelle Umgebungsvariablen...
+✓ Backend .env erstellt mit sicherem SECRET_KEY
+✓ Frontend .env erstellt
 
 ➜ Baue Docker-Container...
 ✓ Docker-Container erfolgreich gebaut
