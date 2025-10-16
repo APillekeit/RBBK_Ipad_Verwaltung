@@ -384,35 +384,74 @@ class RBACTester:
         """Upload test iPads and students for a user"""
         print(f"\n=== Uploading Test Data for {user_type} ===")
         
-        # Create test iPad data
-        ipad_data = f"""ITNr,SNr,Karton,Pencil,Typ,AnschJahr,AusleiheDatum
-IPAD{user_type}001,SN{user_type}001,K{user_type}001,mit Apple Pencil,iPad Pro,2023,01.09.2023
-IPAD{user_type}002,SN{user_type}002,K{user_type}002,ohne Apple Pencil,iPad Air,2023,01.09.2023"""
+        # Create test iPad Excel file
+        import io
+        import pandas as pd
+        
+        ipad_data = {
+            'ITNr': [f'IPAD{user_type}001', f'IPAD{user_type}002'],
+            'SNr': [f'SN{user_type}001', f'SN{user_type}002'],
+            'Karton': [f'K{user_type}001', f'K{user_type}002'],
+            'Pencil': ['mit Apple Pencil', 'ohne Apple Pencil'],
+            'Typ': ['iPad Pro', 'iPad Air'],
+            'AnschJahr': ['2023', '2023'],
+            'AusleiheDatum': ['01.09.2023', '01.09.2023']
+        }
+        
+        df = pd.DataFrame(ipad_data)
+        excel_buffer = io.BytesIO()
+        df.to_excel(excel_buffer, index=False)
+        excel_buffer.seek(0)
         
         # Upload iPads
-        files = {"file": ("test_ipads.xlsx", ipad_data.encode(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        files = {"file": ("test_ipads.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
         response = self.make_request("POST", "/ipads/upload", token=token, files=files)
         
         if response and response.status_code == 200:
             self.log_test(f"Upload iPads ({user_type})", True, f"Successfully uploaded iPads for {user_type}")
         else:
-            self.log_test(f"Upload iPads ({user_type})", False, f"iPad upload failed for {user_type}")
+            error_msg = f"iPad upload failed for {user_type} - Status: {response.status_code if response else 'No response'}"
+            if response:
+                try:
+                    error_detail = response.json()
+                    error_msg += f" - {error_detail}"
+                except:
+                    error_msg += f" - {response.text}"
+            self.log_test(f"Upload iPads ({user_type})", False, error_msg)
             return False
         
-        # Create test student data
-        student_data = f"""SuSVorn,SuSNachn,SuSKl,SuSStrHNr,SuSPLZ,SuSOrt,SuSGeb
-{user_type}Student1,{user_type}Last1,6A,Street 1,12345,City1,01.01.2010
-{user_type}Student2,{user_type}Last2,6B,Street 2,12346,City2,02.02.2010"""
+        # Create test student Excel file
+        student_data = {
+            'SuSVorn': [f'{user_type}Student1', f'{user_type}Student2'],
+            'SuSNachn': [f'{user_type}Last1', f'{user_type}Last2'],
+            'SuSKl': ['6A', '6B'],
+            'SuSStrHNr': ['Street 1', 'Street 2'],
+            'SuSPLZ': ['12345', '12346'],
+            'SuSOrt': ['City1', 'City2'],
+            'SuSGeb': ['01.01.2010', '02.02.2010']
+        }
+        
+        df = pd.DataFrame(student_data)
+        excel_buffer = io.BytesIO()
+        df.to_excel(excel_buffer, index=False)
+        excel_buffer.seek(0)
         
         # Upload students
-        files = {"file": ("test_students.xlsx", student_data.encode(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        files = {"file": ("test_students.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
         response = self.make_request("POST", "/students/upload", token=token, files=files)
         
         if response and response.status_code == 200:
             self.log_test(f"Upload Students ({user_type})", True, f"Successfully uploaded students for {user_type}")
             return True
         else:
-            self.log_test(f"Upload Students ({user_type})", False, f"Student upload failed for {user_type}")
+            error_msg = f"Student upload failed for {user_type} - Status: {response.status_code if response else 'No response'}"
+            if response:
+                try:
+                    error_detail = response.json()
+                    error_msg += f" - {error_detail}"
+                except:
+                    error_msg += f" - {response.text}"
+            self.log_test(f"Upload Students ({user_type})", False, error_msg)
             return False
     
     def test_resource_isolation(self):
