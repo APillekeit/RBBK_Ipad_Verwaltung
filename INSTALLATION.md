@@ -50,7 +50,7 @@ Das Script führt automatisch folgende Schritte aus:
    - Erstellt `backend/.env` mit MongoDB-Verbindung
    - Erstellt `frontend/.env` mit Backend-URL
 
-3. ✅ **Docker-Container bauen**
+4. ✅ **Docker-Container bauen**
    - Baut Backend-Container (FastAPI + Python 3.11)
    - Baut Frontend-Container (React + Node 20)
    - Baut MongoDB-Container (Version 4.4)
