@@ -791,8 +791,11 @@ async def get_students(current_user: dict = Depends(get_current_user)):
     return [Student(**parse_from_mongo(student)) for student in students]
 
 @api_router.get("/students/{student_id}")
-async def get_student_details(student_id: str, current_user: str = Depends(get_current_user)):
+async def get_student_details(student_id: str, current_user: dict = Depends(get_current_user)):
     """Get detailed information about a specific student"""
+    # Validate resource ownership
+    await validate_resource_ownership("student", student_id, current_user)
+    
     student = await db.students.find_one({"id": student_id})
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
