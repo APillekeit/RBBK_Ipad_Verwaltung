@@ -41,25 +41,44 @@ Ein sicheres, webbasiertes System zur Verwaltung von iPad-Zuordnungen an einer B
 - Minimum 2GB RAM
 - 10GB freier Speicherplatz
 
-### Schnellstart
+### Schnellstart mit Installations-Script
 ```bash
 # 1. Repository klonen
 git clone <repository-url>
 cd ipad-management
 
-# 2. Umgebung starten
+# 2. Installations-Script ausführen (empfohlen)
+./install.sh
+```
+
+Das Script führt automatisch aus:
+- ✓ Prüft System-Voraussetzungen
+- ✓ Erstellt Umgebungsvariablen mit sicheren Keys
+- ✓ Baut und startet alle Docker-Container
+- ✓ Initialisiert Datenbank und Admin-Benutzer
+- ✓ Führt RBAC-Datenmigration aus
+
+**ODER** Manueller Start:
+```bash
+# Umgebung starten
 docker-compose -f config/docker-compose.yml up -d
 
-# 3. System aufrufen
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8001/docs
+# Admin-Benutzer erstellen
+curl -X POST http://localhost:8001/api/auth/setup
 ```
+
+### Zugriff
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8001
+- **API Docs**: http://localhost:8001/docs
 
 ### Standard-Anmeldedaten
 ```
 Benutzername: admin
 Passwort: admin123
+Rolle: Administrator
 ```
+⚠️ **WICHTIG**: Passwort nach dem ersten Login ändern!
 
 ## 📁 Projektstruktur
 
