@@ -653,7 +653,7 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
 
 # iPad management endpoints
 @api_router.post("/ipads/upload", response_model=UploadResponse)
-async def upload_ipads(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
+async def upload_ipads(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     if not file.filename.endswith('.xlsx'):
         raise HTTPException(status_code=400, detail="Only .xlsx files are allowed")
     
@@ -672,14 +672,15 @@ async def upload_ipads(file: UploadFile = File(...), current_user: str = Depends
             if not itnr or itnr == 'nan':
                 continue
                 
-            # Check if iPad already exists
-            existing = await db.ipads.find_one({"itnr": itnr})
+            # Check if iPad already exists for this user (users can have same ITNr)
+            existing = await db.ipads.find_one({"itnr": itnr, "user_id": current_user["id"]})
             if existing:
                 skipped_count += 1
                 details.append(f"iPad {itnr} already exists - skipped")
                 continue
             
             ipad = iPad(
+                user_id=current_user["id"],
                 itnr=itnr,
                 snr=str(row.get('SNr', '')),
                 karton=str(row.get('Karton', '')),
