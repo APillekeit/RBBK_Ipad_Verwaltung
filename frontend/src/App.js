@@ -2539,6 +2539,12 @@ const Dashboard = ({ onLogout, userRole, currentUsername }) => {
           <TabsContent value="settings">
             <Settings />
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="users">
+              <UserManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
