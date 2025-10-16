@@ -129,6 +129,9 @@ class RBACTester:
         }
         
         response = self.make_request("POST", "/admin/users", token=self.admin_token, data=user_data)
+        print(f"DEBUG: User creation response status: {response.status_code if response else 'No response'}")
+        if response:
+            print(f"DEBUG: User creation response: {response.text}")
         
         if not response or response.status_code != 200:
             self.log_test("Create Test User", False, f"User creation failed with status {response.status_code if response else 'No response'}")
