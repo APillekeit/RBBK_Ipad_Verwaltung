@@ -2453,15 +2453,15 @@ const Dashboard = ({ onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-ipad-dark-gray shadow-sm border-b border-ipad-beige">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-br from-ipad-teal to-ipad-blue rounded-lg flex items-center justify-center">
                   <Tablet className="h-5 w-5 text-white" />
                 </div>
-                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-ipad-teal to-ipad-blue bg-clip-text text-transparent">
                   iPad-Verwaltung
                 </span>
               </div>
