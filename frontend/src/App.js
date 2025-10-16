@@ -2583,7 +2583,11 @@ function App() {
             path="/" 
             element={
               isAuthenticated ? (
-                <Dashboard onLogout={handleLogout} />
+                <Dashboard 
+                  onLogout={handleLogout} 
+                  userRole={userRole} 
+                  currentUsername={currentUsername}
+                />
               ) : (
                 <Login onLogin={handleLogin} />
               )
