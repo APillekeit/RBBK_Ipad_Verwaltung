@@ -1346,6 +1346,10 @@ async def get_assignments_available_for_contracts(current_user: dict = Depends(g
 
 @api_router.post("/contracts/{contract_id}/assign/{assignment_id}")
 async def assign_contract_to_assignment(contract_id: str, assignment_id: str, current_user: dict = Depends(get_current_user)):
+    # Validate ownership of both resources
+    await validate_resource_ownership("contract", contract_id, current_user)
+    await validate_resource_ownership("assignment", assignment_id, current_user)
+    
     # Get contract and assignment
     contract = await db.contracts.find_one({"id": contract_id})
     assignment = await db.assignments.find_one({"id": assignment_id})
