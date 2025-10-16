@@ -140,13 +140,6 @@ docker exec mongodb mongorestore /tmp/mongodb_backup
     Version 2.0 mit RBAC
 ═══════════════════════════════════════════════════════
 
-➜ Überprüfe System-Voraussetzungen...
-✓ Docker gefunden: 24.0.7
-✓ Docker Compose gefunden: 2.23.0
-
-➜ Prüfe auf vorherige Installation...
-✓ Keine vorherige Installation gefunden
-
 ➜ Erstelle Umgebungsvariablen...
 ✓ Backend .env erstellt mit sicherem SECRET_KEY
 ✓ Frontend .env erstellt
