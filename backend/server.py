@@ -838,8 +838,11 @@ async def get_student_details(student_id: str, current_user: dict = Depends(get_
     }
 
 @api_router.delete("/students/{student_id}")
-async def delete_student(student_id: str, current_user: str = Depends(get_current_user)):
+async def delete_student(student_id: str, current_user: dict = Depends(get_current_user)):
     """Delete a student and all related data (assignments, contracts, history)"""
+    # Validate resource ownership
+    await validate_resource_ownership("student", student_id, current_user)
+    
     student = await db.students.find_one({"id": student_id})
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
