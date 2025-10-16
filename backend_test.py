@@ -15,6 +15,8 @@ import requests
 import json
 import time
 import sys
+import io
+import pandas as pd
 from datetime import datetime
 
 # Configuration
