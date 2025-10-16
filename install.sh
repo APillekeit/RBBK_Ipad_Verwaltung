@@ -68,6 +68,162 @@ check_dependencies() {
     echo ""
 }
 
+check_existing_installation() {
+    print_step "Prüfe auf vorherige Installation..."
+    
+    local has_containers=false
+    local has_volumes=false
+    local has_env_files=false
+    
+    # Prüfe auf laufende/existierende Container
+    if docker ps -a | grep -q "ipad\|mongodb\|nginx"; then
+        has_containers=true
+        print_warning "Existierende Container gefunden"
+    fi
+    
+    # Prüfe auf Docker Volumes
+    if docker volume ls | grep -q "ipad\|mongodb"; then
+        has_volumes=true
+        print_warning "Existierende Docker-Volumes gefunden"
+    fi
+    
+    # Prüfe auf .env Dateien
+    if [ -f "./backend/.env" ] || [ -f "./frontend/.env" ]; then
+        has_env_files=true
+        print_warning "Existierende .env-Dateien gefunden"
+    fi
+    
+    # Wenn keine vorherige Installation gefunden wurde
+    if [ "$has_containers" = false ] && [ "$has_volumes" = false ] && [ "$has_env_files" = false ]; then
+        print_success "Keine vorherige Installation gefunden"
+        echo ""
+        return 0
+    fi
+    
+    # Vorherige Installation gefunden - Benutzer fragen
+    echo ""
+    echo -e "${YELLOW}═══════════════════════════════════════════════════════${NC}"
+    echo -e "${YELLOW}    ⚠  VORHERIGE INSTALLATION GEFUNDEN${NC}"
+    echo -e "${YELLOW}═══════════════════════════════════════════════════════${NC}"
+    echo ""
+    
+    if [ "$has_containers" = true ]; then
+        echo -e "${YELLOW}Gefundene Container:${NC}"
+        docker ps -a --filter "name=ipad\|mongodb\|nginx" --format "  - {{.Names}} ({{.Status}})"
+        echo ""
+    fi
+    
+    if [ "$has_volumes" = true ]; then
+        echo -e "${YELLOW}Gefundene Volumes:${NC}"
+        docker volume ls --filter "name=ipad\|mongodb" --format "  - {{.Name}}"
+        echo ""
+    fi
+    
+    if [ "$has_env_files" = true ]; then
+        echo -e "${YELLOW}Gefundene Konfigurationsdateien:${NC}"
+        [ -f "./backend/.env" ] && echo "  - backend/.env"
+        [ -f "./frontend/.env" ] && echo "  - frontend/.env"
+        echo ""
+    fi
+    
+    echo -e "${RED}WARNUNG: Das Löschen entfernt alle Daten (iPads, Schüler, Zuordnungen, Verträge)!${NC}"
+    echo ""
+    echo "Optionen:"
+    echo "  1) Alte Installation löschen und neu installieren"
+    echo "  2) Backup erstellen, dann löschen und neu installieren"
+    echo "  3) Installation abbrechen"
+    echo ""
+    read -p "Ihre Wahl (1/2/3): " choice
+    
+    case $choice in
+        1)
+            print_step "Lösche alte Installation..."
+            cleanup_installation false
+            print_success "Alte Installation gelöscht"
+            echo ""
+            ;;
+        2)
+            print_step "Erstelle Backup..."
+            create_backup
+            print_step "Lösche alte Installation..."
+            cleanup_installation false
+            print_success "Backup erstellt und alte Installation gelöscht"
+            echo ""
+            ;;
+        3)
+            echo ""
+            print_warning "Installation abgebrochen"
+            exit 0
+            ;;
+        *)
+            print_error "Ungültige Auswahl"
+            exit 1
+            ;;
+    esac
+}
+
+create_backup() {
+    local backup_dir="./backup_$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$backup_dir"
+    
+    # Backup .env Dateien
+    if [ -f "./backend/.env" ]; then
+        cp ./backend/.env "$backup_dir/backend.env.bak"
+        print_success "Backend .env gesichert"
+    fi
+    
+    if [ -f "./frontend/.env" ]; then
+        cp ./frontend/.env "$backup_dir/frontend.env.bak"
+        print_success "Frontend .env gesichert"
+    fi
+    
+    # MongoDB Backup wenn Container läuft
+    if docker ps | grep -q mongodb; then
+        print_step "Sichere MongoDB-Daten..."
+        docker exec mongodb mongodump --out /tmp/mongodb_backup 2>/dev/null || true
+        docker cp mongodb:/tmp/mongodb_backup "$backup_dir/mongodb_backup" 2>/dev/null || true
+        print_success "MongoDB-Daten gesichert"
+    fi
+    
+    echo ""
+    echo -e "${GREEN}Backup erstellt in: ${backup_dir}${NC}"
+    echo ""
+}
+
+cleanup_installation() {
+    local silent=$1
+    
+    # Stoppe laufende Container
+    if docker ps | grep -q "ipad\|mongodb\|nginx"; then
+        [ "$silent" = false ] && print_step "Stoppe laufende Container..."
+        cd config 2>/dev/null && docker-compose down 2>/dev/null || true
+        cd .. 2>/dev/null || true
+        docker stop $(docker ps -a -q --filter "name=ipad\|mongodb\|nginx") 2>/dev/null || true
+        [ "$silent" = false ] && print_success "Container gestoppt"
+    fi
+    
+    # Entferne Container
+    if docker ps -a | grep -q "ipad\|mongodb\|nginx"; then
+        [ "$silent" = false ] && print_step "Entferne Container..."
+        docker rm -f $(docker ps -a -q --filter "name=ipad\|mongodb\|nginx") 2>/dev/null || true
+        [ "$silent" = false ] && print_success "Container entfernt"
+    fi
+    
+    # Entferne Volumes (Datenverlust!)
+    if docker volume ls | grep -q "ipad\|mongodb"; then
+        [ "$silent" = false ] && print_step "Entferne Volumes..."
+        docker volume rm $(docker volume ls -q --filter "name=ipad\|mongodb") 2>/dev/null || true
+        [ "$silent" = false ] && print_success "Volumes entfernt"
+    fi
+    
+    # Entferne Images (optional)
+    if docker images | grep -q "ipad"; then
+        [ "$silent" = false ] && print_step "Entferne alte Images..."
+        docker rmi $(docker images -q --filter "reference=ipad*") 2>/dev/null || true
+        [ "$silent" = false ] && print_success "Images entfernt"
+    fi
+}
+
 setup_environment() {
     print_step "Erstelle Umgebungsvariablen..."
     
