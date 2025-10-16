@@ -4,6 +4,15 @@ Ein sicheres, webbasiertes System zur Verwaltung von iPad-Zuordnungen an einer B
 
 ## 🚀 Features
 
+### 🔐 RBAC (Role-Based Access Control) - NEU!
+- **Multi-User-Unterstützung**: Mehrere Benutzer mit eigenen Daten
+- **Rollensystem**: Administrator- und Benutzer-Rollen
+- **Benutzerverwaltung**: Admins können Benutzer erstellen, bearbeiten und verwalten  
+- **Datenisolation**: Benutzer sehen nur ihre eigenen Daten
+- **Admin-Übersicht**: Admins haben Zugriff auf alle Systemdaten
+- **IDOR-Schutz**: Vollständige Ownership-Validierung auf allen Endpunkten
+
+### 📱 Kernfunktionen
 - **iPad-Verwaltung**: Vollständige Verwaltung von iPad-Beständen mit Status-Tracking
 - **Schüler-Management**: Import und Verwaltung von Schülerdaten
 - **Zuordnungs-System**: Automatische und manuelle iPad-Zuordnungen an Schüler
