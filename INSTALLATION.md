@@ -337,6 +337,72 @@ Nach erfolgreicher Installation:
 3. Wählen Sie Ihre Excel-Datei (.xlsx)
 4. Der Import erfolgt automatisch
 
+## 🗑️ Alte Installation entfernen
+
+### Cleanup über Installations-Script
+
+Das Script kann auch im Cleanup-Modus ausgeführt werden:
+
+```bash
+./install.sh --cleanup
+```
+
+**Ablauf:**
+1. Fragt nach Backup-Erstellung (empfohlen!)
+2. Fordert explizite Bestätigung ("ja" eingeben)
+3. Stoppt alle Container
+4. Entfernt alle Container
+5. Löscht alle Volumes (⚠️ Datenverlust!)
+6. Entfernt alte Images
+
+**Beispiel:**
+```bash
+$ ./install.sh --cleanup
+
+═══════════════════════════════════════════════════════
+    CLEANUP-MODUS
+    Alle Container, Volumes und Daten werden gelöscht!
+═══════════════════════════════════════════════════════
+
+Möchten Sie vorher ein Backup erstellen? (j/n): j
+
+➜ Erstelle Backup...
+✓ Backend .env gesichert
+✓ Frontend .env gesichert
+✓ MongoDB-Daten gesichert
+
+Backup erstellt in: ./backup_20241016_153042
+
+Sind Sie sicher, dass Sie alles löschen möchten? (ja/nein): ja
+
+➜ Stoppe laufende Container...
+✓ Container gestoppt
+➜ Entferne Container...
+✓ Container entfernt
+➜ Entferne Volumes...
+✓ Volumes entfernt
+➜ Entferne alte Images...
+✓ Images entfernt
+✓ Cleanup abgeschlossen
+```
+
+### Cleanup über Docker Compose
+
+Alternativ direkt über Docker Compose:
+
+```bash
+cd config
+
+# Stoppen und Container entfernen
+docker-compose down
+
+# Stoppen, Container UND Volumes entfernen (⚠️ Datenverlust!)
+docker-compose down -v
+
+# Zusätzlich Images entfernen
+docker-compose down -v --rmi all
+```
+
 ## 🛠️ Nützliche Befehle
 
 ```bash
