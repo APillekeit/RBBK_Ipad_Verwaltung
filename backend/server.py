@@ -89,6 +89,7 @@ class iPad(BaseModel):
 
 class Student(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str  # Owner of this student record
     sname: Optional[str] = None
     sus_nachn: str
     sus_vorn: str
