@@ -2532,23 +2532,35 @@ const Dashboard = ({ onLogout }) => {
 // Main App Component
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState('user');
+  const [currentUsername, setCurrentUsername] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const savedRole = localStorage.getItem('userRole');
+    const savedUsername = localStorage.getItem('username');
     if (token) {
       setIsAuthenticated(true);
+      setUserRole(savedRole || 'user');
+      setCurrentUsername(savedUsername || '');
     }
     setLoading(false);
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = (role, username) => {
     setIsAuthenticated(true);
+    setUserRole(role);
+    setCurrentUsername(username);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('username');
     setIsAuthenticated(false);
+    setUserRole('user');
+    setCurrentUsername('');
   };
 
   if (loading) {
