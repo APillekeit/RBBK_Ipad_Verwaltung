@@ -1810,6 +1810,7 @@ async def import_inventory(file: UploadFile = File(...), current_user: dict = De
                         
                         # Create new student with proper NaN handling
                         new_student = Student(
+                            user_id=current_user["id"],
                             sname=safe_str(row.get('Sname', '')),
                             sus_vorn=sus_vorn,
                             sus_nachn=sus_nachn,
