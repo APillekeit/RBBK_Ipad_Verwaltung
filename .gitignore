@@ -96,4 +96,7 @@ temp/
 # Security
 *.pem
 *.key
-*.crt
+*.crt-e 
+# Environment files
+*.env
+*.env.*
