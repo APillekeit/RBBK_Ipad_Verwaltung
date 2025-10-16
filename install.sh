@@ -274,7 +274,7 @@ build_containers() {
     
     if [ -f "./config/docker-compose.yml" ]; then
         cd config
-        docker-compose build --no-cache
+        $DOCKER_COMPOSE_CMD build --no-cache
         cd ..
         print_success "Docker-Container erfolgreich gebaut"
     else
