@@ -1789,11 +1789,12 @@ async def import_inventory(file: UploadFile = File(...), current_user: dict = De
                 sus_kl = str(sus_kl_raw).strip() if pd.notna(sus_kl_raw) else ''
                 
                 if sus_vorn and sus_nachn and sus_vorn != 'nan' and sus_nachn != 'nan':  # Student data present and valid
-                    # Check if student already exists (by name + class)
+                    # Check if student already exists for this user (by name + class + user_id)
                     existing_student = await db.students.find_one({
                         "sus_vorn": sus_vorn,
                         "sus_nachn": sus_nachn,
-                        "sus_kl": sus_kl
+                        "sus_kl": sus_kl,
+                        "user_id": current_user["id"]
                     })
                     
                     if existing_student:
