@@ -49,32 +49,35 @@ class RBACTester:
     def make_request(self, method, endpoint, token=None, data=None, files=None):
         """Make HTTP request with proper headers"""
         url = f"{BASE_URL}{endpoint}"
-        headers = {"Content-Type": "application/json"}
+        headers = {}
         
         if token:
             headers["Authorization"] = f"Bearer {token}"
         
-        if files:
-            # Remove Content-Type for file uploads
-            headers.pop("Content-Type", None)
+        if not files:
+            headers["Content-Type"] = "application/json"
             
         try:
             if method == "GET":
-                response = requests.get(url, headers=headers)
+                response = requests.get(url, headers=headers, timeout=30)
             elif method == "POST":
                 if files:
-                    response = requests.post(url, headers=headers, files=files, data=data)
+                    response = requests.post(url, headers=headers, files=files, data=data, timeout=30)
                 else:
-                    response = requests.post(url, headers=headers, json=data)
+                    response = requests.post(url, headers=headers, json=data, timeout=30)
             elif method == "PUT":
-                response = requests.put(url, headers=headers, json=data)
+                response = requests.put(url, headers=headers, json=data, timeout=30)
             elif method == "DELETE":
-                response = requests.delete(url, headers=headers)
+                response = requests.delete(url, headers=headers, timeout=30)
             else:
                 raise ValueError(f"Unsupported method: {method}")
                 
             return response
+        except requests.exceptions.RequestException as e:
+            print(f"Request error for {method} {url}: {str(e)}")
+            return None
         except Exception as e:
+            print(f"Unexpected error for {method} {url}: {str(e)}")
             return None
     
     def test_admin_login(self):
