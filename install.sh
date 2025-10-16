@@ -217,18 +217,20 @@ cleanup_installation() {
     [ "$silent" = false ] && print_success "Container entfernt"
     
     # Entferne Volumes (Datenverlust!)
-    if docker volume ls | grep -q "ipad\|mongodb"; then
-        [ "$silent" = false ] && print_step "Entferne Volumes..."
-        docker volume rm $(docker volume ls -q --filter "name=ipad\|mongodb") 2>/dev/null || true
-        [ "$silent" = false ] && print_success "Volumes entfernt"
+    [ "$silent" = false ] && print_step "Entferne Volumes..."
+    local volumes=$(docker volume ls -q --filter "name=ipad" --filter "name=mongodb" --filter "name=config" 2>/dev/null)
+    if [ ! -z "$volumes" ]; then
+        docker volume rm $volumes 2>/dev/null || true
     fi
+    [ "$silent" = false ] && print_success "Volumes entfernt"
     
     # Entferne Images (optional)
-    if docker images | grep -q "ipad"; then
-        [ "$silent" = false ] && print_step "Entferne alte Images..."
-        docker rmi $(docker images -q --filter "reference=ipad*") 2>/dev/null || true
-        [ "$silent" = false ] && print_success "Images entfernt"
+    [ "$silent" = false ] && print_step "Entferne alte Images..."
+    local images=$(docker images -q --filter "reference=*ipad*" --filter "reference=config*" 2>/dev/null)
+    if [ ! -z "$images" ]; then
+        docker rmi -f $images 2>/dev/null || true
     fi
+    [ "$silent" = false ] && print_success "Images entfernt"
 }
 
 setup_environment() {
