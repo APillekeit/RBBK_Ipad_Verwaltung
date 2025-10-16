@@ -490,6 +490,167 @@ async def login(request: Request, user_data: UserLogin):
         "username": user["username"]
     }
 
+
+# Admin User Management Endpoints
+@api_router.post("/admin/users", response_model=UserResponse)
+async def create_user(user_data: UserCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new user (admin only)"""
+    require_admin(current_user)
+    
+    # Validate username
+    if len(user_data.username) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters long")
+    
+    # Check if username already exists
+    existing_user = await db.users.find_one({"username": user_data.username})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    # Validate password
+    if len(user_data.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+    
+    # Validate role
+    if user_data.role not in ["admin", "user"]:
+        raise HTTPException(status_code=400, detail="Role must be 'admin' or 'user'")
+    
+    # Create new user
+    hashed_password = get_password_hash(user_data.password)
+    new_user = User(
+        username=user_data.username,
+        password_hash=hashed_password,
+        role=user_data.role,
+        is_active=True,
+        created_by=current_user["id"]
+    )
+    
+    user_dict = prepare_for_mongo(new_user.dict())
+    await db.users.insert_one(user_dict)
+    
+    # Return user response without password_hash
+    return UserResponse(
+        id=new_user.id,
+        username=new_user.username,
+        role=new_user.role,
+        is_active=new_user.is_active,
+        created_by=new_user.created_by,
+        created_at=new_user.created_at,
+        updated_at=new_user.updated_at
+    )
+
+@api_router.get("/admin/users", response_model=List[UserResponse])
+async def list_users(current_user: dict = Depends(get_current_user)):
+    """List all users (admin only)"""
+    require_admin(current_user)
+    
+    users = await db.users.find().to_list(length=None)
+    
+    return [
+        UserResponse(
+            id=user["id"],
+            username=user["username"],
+            role=user.get("role", "user"),
+            is_active=user.get("is_active", True),
+            created_by=user.get("created_by"),
+            created_at=datetime.fromisoformat(user["created_at"]) if isinstance(user["created_at"], str) else user["created_at"],
+            updated_at=datetime.fromisoformat(user["updated_at"]) if isinstance(user.get("updated_at"), str) else user.get("updated_at", user["created_at"])
+        )
+        for user in users
+    ]
+
+@api_router.put("/admin/users/{user_id}", response_model=UserResponse)
+async def update_user(
+    user_id: str, 
+    user_data: UserUpdate, 
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a user (admin only)"""
+    require_admin(current_user)
+    
+    # Get user to update
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent self-deactivation
+    if user_id == current_user["id"] and user_data.is_active is False:
+        raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+    
+    # Build update dict
+    update_dict = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if user_data.password:
+        if len(user_data.password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+        update_dict["password_hash"] = get_password_hash(user_data.password)
+    
+    if user_data.role:
+        if user_data.role not in ["admin", "user"]:
+            raise HTTPException(status_code=400, detail="Role must be 'admin' or 'user'")
+        update_dict["role"] = user_data.role
+    
+    if user_data.is_active is not None:
+        update_dict["is_active"] = user_data.is_active
+    
+    # Update user
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": update_dict}
+    )
+    
+    # Get updated user
+    updated_user = await db.users.find_one({"id": user_id})
+    
+    return UserResponse(
+        id=updated_user["id"],
+        username=updated_user["username"],
+        role=updated_user.get("role", "user"),
+        is_active=updated_user.get("is_active", True),
+        created_by=updated_user.get("created_by"),
+        created_at=datetime.fromisoformat(updated_user["created_at"]) if isinstance(updated_user["created_at"], str) else updated_user["created_at"],
+        updated_at=datetime.fromisoformat(updated_user["updated_at"]) if isinstance(updated_user.get("updated_at"), str) else updated_user.get("updated_at", updated_user["created_at"])
+    )
+
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a user (admin only) - NOTE: This will NOT delete user's data, just deactivate the account"""
+    require_admin(current_user)
+    
+    # Get user to delete
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent self-deletion
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    # Instead of deleting, deactivate the user
+    # This preserves data integrity and allows potential reactivation
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "is_active": False,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Count user's resources
+    ipads_count = await db.ipads.count_documents({"user_id": user_id})
+    students_count = await db.students.count_documents({"user_id": user_id})
+    assignments_count = await db.assignments.count_documents({"user_id": user_id})
+    
+    return {
+        "message": f"User {target_user['username']} has been deactivated",
+        "user_id": user_id,
+        "resources_preserved": {
+            "ipads": ipads_count,
+            "students": students_count,
+            "assignments": assignments_count
+        },
+        "note": "User data has been preserved. To permanently delete data, use data management tools."
+    }
+
 # iPad management endpoints
 @api_router.post("/ipads/upload", response_model=UploadResponse)
 async def upload_ipads(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
