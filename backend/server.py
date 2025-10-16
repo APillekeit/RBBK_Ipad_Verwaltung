@@ -911,11 +911,16 @@ async def delete_student(student_id: str, current_user: dict = Depends(get_curre
 # Assignment endpoints
 @api_router.post("/assignments/auto-assign", response_model=AssignmentResponse)
 async def auto_assign_ipads(current_user: dict = Depends(get_current_user)):
-    # Get unassigned students
-    unassigned_students = await db.students.find({"current_assignment_id": None}).to_list(length=None)
+    # Apply user filter
+    user_filter = await get_user_filter(current_user)
     
-    # Get available iPads
-    available_ipads = await db.ipads.find({"status": "verfügbar"}).to_list(length=None)
+    # Get unassigned students for this user
+    student_filter = {**user_filter, "current_assignment_id": None}
+    unassigned_students = await db.students.find(student_filter).to_list(length=None)
+    
+    # Get available iPads for this user
+    ipad_filter = {**user_filter, "status": "verfügbar"}
+    available_ipads = await db.ipads.find(ipad_filter).to_list(length=None)
     
     assigned_count = 0
     details = []
@@ -928,6 +933,7 @@ async def auto_assign_ipads(current_user: dict = Depends(get_current_user)):
         
         # Create assignment
         assignment = Assignment(
+            user_id=current_user["id"],
             student_id=student["id"],
             ipad_id=ipad["id"],
             itnr=ipad["itnr"],
