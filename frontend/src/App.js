@@ -1404,7 +1404,7 @@ const AssignmentsManagement = () => {
             <Button 
               onClick={handleAutoAssign}
               disabled={assigning || availableIPads.length === 0 || unassignedStudents.length === 0}
-              className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50"
+              className="bg-gradient-to-r from-ipad-teal to-ipad-blue hover:from-ipad-blue hover:to-ipad-dark-blue disabled:opacity-50"
             >
               {assigning ? 'Zuordnung läuft...' : 'Automatische Zuordnung starten'}
             </Button>
