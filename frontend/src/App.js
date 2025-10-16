@@ -2174,7 +2174,7 @@ const Settings = () => {
                 <Button 
                   onClick={handleSaveGlobalSettings}
                   disabled={savingSettings}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 transition-all duration-200"
+                  className="bg-gradient-to-r from-ipad-teal to-ipad-blue hover:from-ipad-blue hover:to-ipad-dark-blue transition-all duration-200"
                 >
                   <SettingsIcon className="h-4 w-4 mr-2" />
                   {savingSettings ? 'Speichert...' : 'Einstellungen speichern'}
