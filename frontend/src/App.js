@@ -80,7 +80,7 @@ const Login = ({ onLogin }) => {
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-ipad-teal to-ipad-blue bg-clip-text text-transparent">
             iPad-Verwaltung
           </CardTitle>
-          <CardDescription className="text-gray-600">
+          <CardDescription className="text-ipad-dark-gray">
             Melden Sie sich an, um fortzufahren
           </CardDescription>
         </CardHeader>
