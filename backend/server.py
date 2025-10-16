@@ -163,6 +163,26 @@ class AssignmentResponse(BaseModel):
     assigned_count: int
     details: List[str]
 
+# User Management Models
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: str = "user"  # "admin" or "user"
+
+class UserUpdate(BaseModel):
+    password: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    role: str
+    is_active: bool
+    created_by: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
 # Helper Functions
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
