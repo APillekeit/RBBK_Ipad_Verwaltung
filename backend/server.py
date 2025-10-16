@@ -452,8 +452,21 @@ async def login(request: Request, user_data: UserLogin):
     if not user or not verify_password(user_data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    access_token = create_access_token(data={"sub": user_data.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    # Check if user is active
+    if not user.get("is_active", True):
+        raise HTTPException(status_code=401, detail="User account is deactivated")
+    
+    access_token = create_access_token(
+        data={"sub": user_data.username}, 
+        user_id=user["id"]
+    )
+    
+    return {
+        "access_token": access_token, 
+        "token_type": "bearer",
+        "role": user.get("role", "user"),
+        "username": user["username"]
+    }
 
 # iPad management endpoints
 @api_router.post("/ipads/upload", response_model=UploadResponse)
