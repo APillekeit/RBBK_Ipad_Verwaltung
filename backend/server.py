@@ -1220,7 +1220,15 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
                     if len(parts) == 2:
                         vorname_file, nachname_file = parts[0].strip(), parts[1].strip()
                         
-                        # Search for student with matching name in active assignments
+                        # Search for student with matching name in active assignments (user's assignments only)
+                        user_filter = await get_user_filter(current_user)
+                        match_filter = {
+                            **user_filter,
+                            "is_active": True,
+                            "student.sus_vorn": {"$regex": f"^{vorname_file}$", "$options": "i"},
+                            "student.sus_nachn": {"$regex": f"^{nachname_file}$", "$options": "i"}
+                        }
+                        
                         pipeline = [
                             {
                                 "$lookup": {
@@ -1231,11 +1239,7 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
                                 }
                             },
                             {
-                                "$match": {
-                                    "is_active": True,
-                                    "student.sus_vorn": {"$regex": f"^{vorname_file}$", "$options": "i"},
-                                    "student.sus_nachn": {"$regex": f"^{nachname_file}$", "$options": "i"}
-                                }
+                                "$match": match_filter
                             }
                         ]
                         
