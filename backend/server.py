@@ -1857,6 +1857,7 @@ async def import_inventory(file: UploadFile = File(...), current_user: dict = De
                                 pass  # Use current datetime if parsing fails
                         
                         new_assignment = Assignment(
+                            user_id=current_user["id"],
                             ipad_id=ipad_id,
                             student_id=student_id,
                             itnr=itnr,
