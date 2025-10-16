@@ -228,16 +228,48 @@ def parse_from_mongo(item):
                     pass
     return item
 
-# Security: Resource access validation
-async def validate_resource_access(resource_type: str, resource_id: str, current_user: str):
-    """Validate that current user has access to resource"""
-    # For admin users, allow all access (extend this for role-based access)
-    if current_user == "admin":
-        return True
+# Authorization Helper Functions
+def is_admin(user: dict) -> bool:
+    """Check if user has admin role"""
+    return user.get("role") == "admin"
+
+def require_admin(user: dict):
+    """Raise exception if user is not admin"""
+    if not is_admin(user):
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+async def get_user_filter(user: dict) -> dict:
+    """Get MongoDB filter for user's resources"""
+    if is_admin(user):
+        return {}  # Admin sees all resources
+    return {"user_id": user["id"]}  # Regular users see only their resources
+
+async def validate_resource_ownership(resource_type: str, resource_id: str, user: dict):
+    """Validate that user owns the resource or is admin"""
+    if is_admin(user):
+        return True  # Admin can access all resources
     
-    # Add more granular access control as needed
-    # For now, only admin has access to all resources
-    raise HTTPException(status_code=403, detail="Access denied to this resource")
+    # Map resource types to collections
+    collection_map = {
+        "ipad": db.ipads,
+        "student": db.students,
+        "assignment": db.assignments,
+        "contract": db.contracts
+    }
+    
+    collection = collection_map.get(resource_type)
+    if not collection:
+        raise HTTPException(status_code=400, detail=f"Invalid resource type: {resource_type}")
+    
+    # Check if resource exists and belongs to user
+    resource = await collection.find_one({"id": resource_id})
+    if not resource:
+        raise HTTPException(status_code=404, detail=f"{resource_type.capitalize()} not found")
+    
+    if resource.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied to this resource")
+    
+    return True
 
 # Security: Input sanitization
 def sanitize_input(value: str, max_length: int = 255, allow_html: bool = False) -> str:
