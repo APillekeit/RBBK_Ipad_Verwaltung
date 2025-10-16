@@ -714,7 +714,7 @@ async def get_ipads(current_user: dict = Depends(get_current_user)):
 
 # Student management endpoints
 @api_router.post("/students/upload", response_model=UploadResponse)
-async def upload_students(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
+async def upload_students(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     if not file.filename.endswith('.xlsx'):
         raise HTTPException(status_code=400, detail="Only .xlsx files are allowed")
     
@@ -735,10 +735,11 @@ async def upload_students(file: UploadFile = File(...), current_user: str = Depe
             if not sus_vorn or not sus_nachn or sus_vorn == 'nan' or sus_nachn == 'nan':
                 continue
             
-            # Check if student already exists (by name combination)
+            # Check if student already exists for this user (by name combination and user_id)
             existing = await db.students.find_one({
                 "sus_vorn": sus_vorn,
-                "sus_nachn": sus_nachn
+                "sus_nachn": sus_nachn,
+                "user_id": current_user["id"]
             })
             if existing:
                 skipped_count += 1
@@ -746,6 +747,7 @@ async def upload_students(file: UploadFile = File(...), current_user: str = Depe
                 continue
             
             student = Student(
+                user_id=current_user["id"],
                 sname=str(row.get('Sname', '')),
                 sus_nachn=sus_nachn,
                 sus_vorn=sus_vorn,
