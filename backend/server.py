@@ -965,7 +965,10 @@ async def auto_assign_ipads(current_user: dict = Depends(get_current_user)):
 
 @api_router.get("/assignments", response_model=List[Assignment])
 async def get_assignments(current_user: dict = Depends(get_current_user)):
-    assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
+    # Apply user filter
+    user_filter = await get_user_filter(current_user)
+    assignment_filter = {**user_filter, "is_active": True}
+    assignments = await db.assignments.find(assignment_filter).to_list(length=None)
     
     # Add contract validation warnings
     for assignment in assignments:
