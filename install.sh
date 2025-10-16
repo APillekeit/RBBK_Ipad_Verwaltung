@@ -277,6 +277,13 @@ build_containers() {
     print_step "Baue Docker-Container..."
     
     if [ -f "./config/docker-compose.yml" ]; then
+        # Prüfe auf Container-Konflikte und entferne sie automatisch
+        local conflicting_containers=$(docker ps -a -q --filter "name=ipad" --filter "name=mongodb" --filter "name=config" 2>/dev/null)
+        if [ ! -z "$conflicting_containers" ]; then
+            print_warning "Entferne existierende Container vor dem Build..."
+            docker rm -f $conflicting_containers 2>/dev/null || true
+        fi
+        
         cd config
         $DOCKER_COMPOSE_CMD build --no-cache
         cd ..
