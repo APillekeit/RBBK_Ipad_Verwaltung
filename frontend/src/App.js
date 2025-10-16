@@ -2450,8 +2450,9 @@ const SessionTimer = ({ onLogout }) => {
 };
 
 // Main Dashboard Component
-const Dashboard = ({ onLogout }) => {
+const Dashboard = ({ onLogout, userRole, currentUsername }) => {
   const [activeTab, setActiveTab] = useState('students');
+  const isAdmin = userRole === 'admin';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -2469,6 +2470,15 @@ const Dashboard = ({ onLogout }) => {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-white">
+                <User className="h-4 w-4" />
+                <span className="text-sm font-medium">{currentUsername}</span>
+                {isAdmin && (
+                  <span className="ml-2 px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold rounded-full">
+                    ADMIN
+                  </span>
+                )}
+              </div>
               <SessionTimer onLogout={onLogout} />
               <Button variant="outline" onClick={onLogout} className="flex items-center gap-2">
                 <LogOut className="h-4 w-4" />
