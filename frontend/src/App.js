@@ -1012,7 +1012,7 @@ const StudentDetailViewer = ({ studentId, onClose }) => {
                             <div><strong>Aufgelöst:</strong> {new Date(assignment.unassigned_at).toLocaleDateString('de-DE')}</div>
                           )}
                         </div>
-                        <Badge className={assignment.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                        <Badge className={assignment.is_active ? 'bg-ipad-teal/20 text-ipad-teal' : 'bg-ipad-beige/30 text-ipad-dark-gray'}>
                           {assignment.is_active ? 'Aktiv' : 'Historisch'}
                         </Badge>
                       </div>
