@@ -1176,8 +1176,10 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
             assignment_method = ""
             
             if itnr and sus_vorn and sus_nachn:
-                # Try auto-assignment by PDF form fields
+                # Try auto-assignment by PDF form fields (user's assignments only)
+                user_filter = await get_user_filter(current_user)
                 assignment = await db.assignments.find_one({
+                    **user_filter,
                     "itnr": str(itnr),
                     "is_active": True
                 })
@@ -1188,6 +1190,7 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
                     
                     # Create contract with assignment
                     contract = Contract(
+                        user_id=current_user["id"],
                         assignment_id=assignment["id"],
                         itnr=str(itnr),
                         student_name=f"{sus_vorn} {sus_nachn}",
