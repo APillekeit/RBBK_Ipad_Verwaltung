@@ -20,7 +20,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     container_name: ipad_backend
     restart: unless-stopped
@@ -29,7 +29,7 @@ services:
       - SECRET_KEY=your-super-secret-key-change-this-in-production
       - IPAD_DB_NAME=iPadDatabase
     volumes:
-      - ./backend:/app
+      - ../backend:/app
       - backend_uploads:/app/uploads
     ports:
       - "0.0.0.0:8001:8001"
