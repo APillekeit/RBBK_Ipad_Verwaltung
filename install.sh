@@ -413,6 +413,7 @@ main() {
     
     # Prüfungen
     check_dependencies
+    check_existing_installation
     
     # Setup
     setup_environment
@@ -431,6 +432,32 @@ main() {
     # Abschluss
     print_final_info
 }
+
+# Cleanup-Modus (für manuelle Nutzung)
+if [ "$1" = "cleanup" ] || [ "$1" = "--cleanup" ]; then
+    print_header
+    echo -e "${RED}═══════════════════════════════════════════════════════${NC}"
+    echo -e "${RED}    CLEANUP-MODUS${NC}"
+    echo -e "${RED}    Alle Container, Volumes und Daten werden gelöscht!${NC}"
+    echo -e "${RED}═══════════════════════════════════════════════════════${NC}"
+    echo ""
+    read -p "Möchten Sie vorher ein Backup erstellen? (j/n): " backup_choice
+    
+    if [ "$backup_choice" = "j" ] || [ "$backup_choice" = "J" ]; then
+        create_backup
+    fi
+    
+    echo ""
+    read -p "Sind Sie sicher, dass Sie alles löschen möchten? (ja/nein): " confirm
+    
+    if [ "$confirm" = "ja" ]; then
+        cleanup_installation false
+        print_success "Cleanup abgeschlossen"
+    else
+        print_warning "Cleanup abgebrochen"
+    fi
+    exit 0
+fi
 
 # Script ausführen
 main
