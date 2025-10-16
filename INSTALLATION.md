@@ -476,6 +476,59 @@ sudo lsof -i :8001  # Backend
 # Prozess beenden oder Port in docker-compose.yml ändern
 ```
 
+**Problem: "Permission denied" beim Backup**
+```bash
+# Script mit sudo ausführen
+sudo ./install.sh --cleanup
+
+# Oder Berechtigungen anpassen
+sudo chown -R $USER:$USER ./backup_*
+```
+
+**Problem: MongoDB-Backup schlägt fehl**
+```bash
+# Prüfen ob Container läuft
+docker ps | grep mongodb
+
+# Falls nicht, starten
+docker start mongodb
+
+# Warten und erneut versuchen
+sleep 5
+docker exec mongodb mongodump --out /tmp/mongodb_backup
+```
+
+**Problem: "build path does not exist" oder ähnliche Pfad-Fehler**
+```bash
+# Prüfen, ob Sie im richtigen Verzeichnis sind
+pwd  # Sollte /pfad/zu/ipad-management sein
+
+# Verzeichnisstruktur überprüfen
+ls -la  # Sollte backend/, frontend/, config/ zeigen
+
+# docker-compose.yml prüft relativ von config/ Verzeichnis
+# Alle Pfade sollten mit ../ beginnen (z.B. ../backend)
+
+# Falls nötig, docker-compose.yml korrigieren
+cd config
+cat docker-compose.yml | grep context
+# Erwartete Ausgabe:
+#   context: ../backend
+#   context: ../frontend
+```
+
+**Problem: Docker Compose Befehl nicht gefunden**
+```bash
+# Prüfen welche Version installiert ist
+docker-compose --version  # V1
+# ODER
+docker compose version    # V2
+
+# Das Installations-Script erkennt beide Versionen automatisch
+# Bei manuellen Befehlen verwenden Sie:
+# V1: docker-compose [command]
+# V2: docker compose [command]
+```
 ## 📚 Weitere Dokumentation
 
 - **Deployment**: `docs/DEPLOYMENT.md` - Produktions-Deployment
