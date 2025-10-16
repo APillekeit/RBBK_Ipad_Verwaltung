@@ -706,8 +706,10 @@ async def upload_ipads(file: UploadFile = File(...), current_user: dict = Depend
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 @api_router.get("/ipads", response_model=List[iPad])
-async def get_ipads(current_user: str = Depends(get_current_user)):
-    ipads = await db.ipads.find().to_list(length=None)
+async def get_ipads(current_user: dict = Depends(get_current_user)):
+    # Apply user filter
+    user_filter = await get_user_filter(current_user)
+    ipads = await db.ipads.find(user_filter).to_list(length=None)
     return [iPad(**parse_from_mongo(ipad)) for ipad in ipads]
 
 # Student management endpoints
