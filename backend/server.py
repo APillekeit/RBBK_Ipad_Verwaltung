@@ -784,8 +784,10 @@ async def upload_students(file: UploadFile = File(...), current_user: dict = Dep
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 @api_router.get("/students", response_model=List[Student])
-async def get_students(current_user: str = Depends(get_current_user)):
-    students = await db.students.find().to_list(length=None)
+async def get_students(current_user: dict = Depends(get_current_user)):
+    # Apply user filter
+    user_filter = await get_user_filter(current_user)
+    students = await db.students.find(user_filter).to_list(length=None)
     return [Student(**parse_from_mongo(student)) for student in students]
 
 @api_router.get("/students/{student_id}")
