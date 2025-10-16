@@ -2551,10 +2551,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-teal-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-ipad-beige via-gray-50 to-ipad-teal/10 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Lade Anwendung...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ipad-teal mx-auto"></div>
+          <p className="mt-4 text-ipad-dark-gray">Lade Anwendung...</p>
         </div>
       </div>
     );
