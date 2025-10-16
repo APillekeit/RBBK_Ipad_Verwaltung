@@ -55,7 +55,7 @@ Das Script führt automatisch folgende Schritte aus:
    - Baut Frontend-Container (React + Node 20)
    - Baut MongoDB-Container (Version 4.4)
 
-4. ✅ **Services starten**
+5. ✅ **Services starten**
    - Startet MongoDB
    - Startet Backend (Port 8001)
    - Startet Frontend (Port 3000)
