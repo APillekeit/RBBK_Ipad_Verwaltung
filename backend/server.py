@@ -1255,6 +1255,7 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
                                 
                                 # Create contract with assignment
                                 contract = Contract(
+                                    user_id=current_user["id"],
                                     assignment_id=assignment["id"],
                                     itnr=assignment["itnr"],
                                     student_name=f"{student_data['sus_vorn']} {student_data['sus_nachn']}",
