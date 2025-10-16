@@ -71,8 +71,69 @@ Das Script führt automatisch folgende Schritte aus:
    - Prüft Frontend-Status (HTTP 200)
    - Prüft MongoDB-Status (Container läuft)
 
+## 🔄 Umgang mit vorheriger Installation
+
+### Automatische Erkennung
+
+Das Installations-Script erkennt automatisch vorherige Installationen:
+
+- **Container**: Sucht nach existierenden iPad-Management Containern
+- **Volumes**: Prüft auf MongoDB- und App-Volumes
+- **Konfiguration**: Findet vorhandene .env-Dateien
+
+### Interaktive Optionen
+
+Wenn eine vorherige Installation gefunden wird, bietet das Script drei Optionen:
+
+**Option 1: Alte Installation löschen und neu installieren**
+- Löscht alle Container und Volumes
+- ⚠️ **DATENVERLUST**: Alle iPads, Schüler, Zuordnungen und Verträge werden gelöscht
+- Führt Neuinstallation durch
+
+**Option 2: Backup erstellen, dann löschen und neu installieren**
+- Erstellt Backup in `./backup_YYYYMMDD_HHMMSS/`
+- Sichert:
+  - Backend .env
+  - Frontend .env  
+  - MongoDB-Datenbank (wenn Container läuft)
+- Löscht alte Installation
+- Führt Neuinstallation durch
+
+**Option 3: Installation abbrechen**
+- Beendet Script ohne Änderungen
+- Alte Installation bleibt bestehen
+
+### Manuelles Cleanup
+
+Sie können auch manuell die alte Installation löschen:
+
+```bash
+# Mit Backup
+./install.sh --cleanup
+# Wählen Sie "j" für Backup
+
+# Oder direkt über Docker Compose
+cd config
+docker-compose down -v  # ⚠️ Löscht auch alle Daten!
+```
+
+### Backup-Wiederherstellung
+
+Falls Sie ein Backup erstellt haben, können Sie es wiederherstellen:
+
+```bash
+# .env-Dateien wiederherstellen
+cp backup_YYYYMMDD_HHMMSS/backend.env.bak backend/.env
+cp backup_YYYYMMDD_HHMMSS/frontend.env.bak frontend/.env
+
+# MongoDB-Daten wiederherstellen (nach Neuinstallation)
+docker cp backup_YYYYMMDD_HHMMSS/mongodb_backup mongodb:/tmp/
+docker exec mongodb mongorestore /tmp/mongodb_backup
+```
+
 ### Was das Script ausgibt
 
+**Bei Neuinstallation:**
 ```
 ═══════════════════════════════════════════════════════
     iPad-Verwaltungssystem - Installation
@@ -82,6 +143,9 @@ Das Script führt automatisch folgende Schritte aus:
 ➜ Überprüfe System-Voraussetzungen...
 ✓ Docker gefunden: 24.0.7
 ✓ Docker Compose gefunden: 2.23.0
+
+➜ Prüfe auf vorherige Installation...
+✓ Keine vorherige Installation gefunden
 
 ➜ Erstelle Umgebungsvariablen...
 ✓ Backend .env erstellt mit sicherem SECRET_KEY
