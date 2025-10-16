@@ -2331,7 +2331,7 @@ const Settings = () => {
                 <Button 
                   onClick={handleUsernameChange}
                   disabled={changingUsername || !usernameForm.current_password || !usernameForm.new_username}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                  className="w-full bg-gradient-to-r from-ipad-blue to-ipad-beige hover:from-ipad-dark-blue hover:to-ipad-dark-gray"
                 >
                   {changingUsername ? 'Ändert Benutzername...' : 'Benutzername ändern'}
                 </Button>
