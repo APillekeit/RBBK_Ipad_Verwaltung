@@ -1332,11 +1332,15 @@ async def get_unassigned_contracts(current_user: dict = Depends(get_current_user
 
 @api_router.get("/assignments/available-for-contracts")
 async def get_assignments_available_for_contracts(current_user: dict = Depends(get_current_user)):
-    # Get assignments without contracts
-    assignments = await db.assignments.find({
+    # Apply user filter
+    user_filter = await get_user_filter(current_user)
+    # Get assignments without contracts for this user
+    assignment_filter = {
+        **user_filter,
         "is_active": True,
         "contract_id": None
-    }).to_list(length=None)
+    }
+    assignments = await db.assignments.find(assignment_filter).to_list(length=None)
     
     return [{"assignment_id": a["id"], "itnr": a["itnr"], "student_name": a["student_name"]} for a in assignments]
 
