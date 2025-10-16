@@ -1304,7 +1304,10 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
 
 @api_router.get("/contracts/unassigned")
 async def get_unassigned_contracts(current_user: dict = Depends(get_current_user)):
-    contracts = await db.contracts.find({"is_active": False}).to_list(length=None)
+    # Apply user filter
+    user_filter = await get_user_filter(current_user)
+    contract_filter = {**user_filter, "is_active": False}
+    contracts = await db.contracts.find(contract_filter).to_list(length=None)
     
     # Return contracts without file_data to avoid encoding issues
     result = []
