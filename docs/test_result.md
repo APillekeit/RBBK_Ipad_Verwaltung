@@ -498,7 +498,9 @@ metadata:
 
 test_plan:
   current_focus: 
-    - "Session Management UI implementation"
+    - "RBAC System - Backend Models & Auth"
+    - "RBAC System - Admin User Management API"
+    - "RBAC System - Resource Isolation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
