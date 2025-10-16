@@ -44,10 +44,12 @@ const Login = ({ onLogin }) => {
     
     try {
       const response = await api.post('/auth/login', { username, password });
-      const { access_token } = response.data;
+      const { access_token, role, username: loggedInUsername } = response.data;
       localStorage.setItem('token', access_token);
-      onLogin();
-      toast.success('Successfully logged in!');
+      localStorage.setItem('userRole', role);
+      localStorage.setItem('username', loggedInUsername);
+      onLogin(role, loggedInUsername);
+      toast.success(`Erfolgreich angemeldet als ${role === 'admin' ? 'Administrator' : 'Benutzer'}!`);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Login failed');
     } finally {
