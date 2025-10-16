@@ -80,8 +80,8 @@ check_existing_installation() {
     local has_volumes=false
     local has_env_files=false
     
-    # Prüfe auf laufende/existierende Container
-    if docker ps -a | grep -q "ipad\|mongodb\|nginx"; then
+    # Prüfe auf laufende/existierende Container (auch gestoppte)
+    if docker ps -a 2>/dev/null | grep -q "ipad\|mongodb"; then
         has_containers=true
         print_warning "Existierende Container gefunden"
     fi
