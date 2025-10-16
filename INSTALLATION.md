@@ -66,7 +66,7 @@ Das Script führt automatisch folgende Schritte aus:
    - Führt RBAC-Datenmigration aus
    - Erstellt Datenbank-Indizes
 
-6. ✅ **Health-Checks durchführen**
+7. ✅ **Health-Checks durchführen**
    - Prüft Backend-Status (HTTP 200)
    - Prüft Frontend-Status (HTTP 200)
    - Prüft MongoDB-Status (Container läuft)
