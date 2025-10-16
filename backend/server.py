@@ -1026,6 +1026,9 @@ async def upload_contract_for_assignment(
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only .pdf files are allowed")
     
+    # Validate resource ownership
+    await validate_resource_ownership("assignment", assignment_id, current_user)
+    
     # Get the assignment
     assignment = await db.assignments.find_one({"id": assignment_id})
     if not assignment:
