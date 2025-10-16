@@ -45,7 +45,7 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile
       args:
         - REACT_APP_BACKEND_URL=
