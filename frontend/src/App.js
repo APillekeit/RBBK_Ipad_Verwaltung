@@ -2292,7 +2292,7 @@ const Settings = () => {
                 <Button 
                   onClick={handlePasswordChange}
                   disabled={changingPassword || !passwordForm.current_password || !passwordForm.new_password || !passwordForm.confirm_password}
-                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                  className="w-full bg-gradient-to-r from-ipad-teal to-ipad-blue hover:from-ipad-blue hover:to-ipad-dark-blue"
                 >
                   {changingPassword ? 'Ändert Passwort...' : 'Passwort ändern'}
                 </Button>
