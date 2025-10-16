@@ -166,6 +166,9 @@ docker-compose restart
 # Services stoppen
 docker-compose down
 
+# Alte Installation entfernen (mit Backup-Option)
+./install.sh --cleanup
+
 # RBAC-Migration ausführen
 docker-compose exec backend python migrate_rbac.py
 
