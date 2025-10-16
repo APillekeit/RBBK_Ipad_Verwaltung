@@ -2208,7 +2208,7 @@ const Settings = () => {
               <Button 
                 onClick={handleInventoryExport}
                 disabled={exporting}
-                className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 transition-all duration-200"
+                className="bg-gradient-to-r from-ipad-teal to-ipad-blue hover:from-ipad-blue hover:to-ipad-dark-blue transition-all duration-200"
               >
                 <Download className="h-4 w-4 mr-2" />
                 {exporting ? 'Exportiert...' : 'Bestandsliste exportieren'}
