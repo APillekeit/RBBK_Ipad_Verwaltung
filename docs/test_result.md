@@ -465,6 +465,31 @@ frontend:
 
 
 
+
+  - task: "RBAC System - Frontend User Management UI"
+    implemented: false
+    working: "NA"
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "NOT YET IMPLEMENTED - Need to add: 1) New 'Benutzerverwaltung' tab for admin users only, 2) User list view showing all users with username/role/status, 3) Create user form with username/password/role inputs, 4) Edit user modal for updating password/role/status, 5) Delete user with confirmation, 6) Role-based UI visibility (hide admin features from regular users), 7) Display current user's role in navbar, 8) Store role from login response in state"
+
+  - task: "RBAC System - Frontend Auth Updates"
+    implemented: false
+    working: "NA"
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "NOT YET IMPLEMENTED - Need to update: 1) Login response handler to store role and username from API, 2) Add role state variable to track current user's role, 3) Conditional rendering based on role for admin-only features, 4) Update API error handling for 403 Forbidden responses, 5) Show user role indicator in UI (e.g., 'Admin' badge)"
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
