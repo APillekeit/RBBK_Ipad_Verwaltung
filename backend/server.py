@@ -382,7 +382,7 @@ async def setup_admin():
 @api_router.put("/auth/change-password")
 async def change_password(
     password_data: dict,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Change user password"""
     try:
@@ -424,7 +424,7 @@ async def change_password(
 @api_router.put("/auth/change-username")
 async def change_username(
     username_data: dict,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Change username"""
     try:
@@ -910,7 +910,7 @@ async def delete_student(student_id: str, current_user: dict = Depends(get_curre
 
 # Assignment endpoints
 @api_router.post("/assignments/auto-assign", response_model=AssignmentResponse)
-async def auto_assign_ipads(current_user: str = Depends(get_current_user)):
+async def auto_assign_ipads(current_user: dict = Depends(get_current_user)):
     # Get unassigned students
     unassigned_students = await db.students.find({"current_assignment_id": None}).to_list(length=None)
     
@@ -958,7 +958,7 @@ async def auto_assign_ipads(current_user: str = Depends(get_current_user)):
     )
 
 @api_router.get("/assignments", response_model=List[Assignment])
-async def get_assignments(current_user: str = Depends(get_current_user)):
+async def get_assignments(current_user: dict = Depends(get_current_user)):
     assignments = await db.assignments.find({"is_active": True}).to_list(length=None)
     
     # Add contract validation warnings
@@ -996,7 +996,7 @@ async def get_assignments(current_user: str = Depends(get_current_user)):
     return [Assignment(**parse_from_mongo(assignment)) for assignment in assignments]
 
 @api_router.post("/assignments/{assignment_id}/dismiss-warning")
-async def dismiss_contract_warning(assignment_id: str, current_user: str = Depends(get_current_user)):
+async def dismiss_contract_warning(assignment_id: str, current_user: dict = Depends(get_current_user)):
     result = await db.assignments.update_one(
         {"id": assignment_id},
         {"$set": {"warning_dismissed": True}}
@@ -1011,7 +1011,7 @@ async def dismiss_contract_warning(assignment_id: str, current_user: str = Depen
 async def upload_contract_for_assignment(
     assignment_id: str, 
     file: UploadFile = File(...), 
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Upload a new contract for a specific assignment (replaces existing contract)"""
     if not file.filename.endswith('.pdf'):
@@ -1121,7 +1121,7 @@ async def upload_contract_for_assignment(
 
 # Contract endpoints
 @api_router.post("/contracts/upload-multiple")
-async def upload_multiple_contracts(files: List[UploadFile] = File(...), current_user: str = Depends(get_current_user)):
+async def upload_multiple_contracts(files: List[UploadFile] = File(...), current_user: dict = Depends(get_current_user)):
     results = []
     processed_count = 0
     unassigned_count = 0
@@ -1281,7 +1281,7 @@ async def upload_multiple_contracts(files: List[UploadFile] = File(...), current
     }
 
 @api_router.get("/contracts/unassigned")
-async def get_unassigned_contracts(current_user: str = Depends(get_current_user)):
+async def get_unassigned_contracts(current_user: dict = Depends(get_current_user)):
     contracts = await db.contracts.find({"is_active": False}).to_list(length=None)
     
     # Return contracts without file_data to avoid encoding issues
@@ -1306,7 +1306,7 @@ async def get_unassigned_contracts(current_user: str = Depends(get_current_user)
     return result
 
 @api_router.get("/assignments/available-for-contracts")
-async def get_assignments_available_for_contracts(current_user: str = Depends(get_current_user)):
+async def get_assignments_available_for_contracts(current_user: dict = Depends(get_current_user)):
     # Get assignments without contracts
     assignments = await db.assignments.find({
         "is_active": True,
@@ -1316,7 +1316,7 @@ async def get_assignments_available_for_contracts(current_user: str = Depends(ge
     return [{"assignment_id": a["id"], "itnr": a["itnr"], "student_name": a["student_name"]} for a in assignments]
 
 @api_router.post("/contracts/{contract_id}/assign/{assignment_id}")
-async def assign_contract_to_assignment(contract_id: str, assignment_id: str, current_user: str = Depends(get_current_user)):
+async def assign_contract_to_assignment(contract_id: str, assignment_id: str, current_user: dict = Depends(get_current_user)):
     # Get contract and assignment
     contract = await db.contracts.find_one({"id": contract_id})
     assignment = await db.assignments.find_one({"id": assignment_id})
@@ -1346,7 +1346,7 @@ async def assign_contract_to_assignment(contract_id: str, assignment_id: str, cu
 
 # iPad status management
 @api_router.put("/ipads/{ipad_id}/status")
-async def update_ipad_status(ipad_id: str, status: str, current_user: str = Depends(get_current_user)):
+async def update_ipad_status(ipad_id: str, status: str, current_user: dict = Depends(get_current_user)):
     valid_statuses = ["verfügbar", "zugewiesen", "defekt", "gestohlen"]
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
@@ -1412,7 +1412,7 @@ async def update_ipad_status(ipad_id: str, status: str, current_user: str = Depe
     return {"message": message}
 
 @api_router.post("/ipads/fix-status-consistency")
-async def fix_ipad_status_consistency(current_user: str = Depends(get_current_user)):
+async def fix_ipad_status_consistency(current_user: dict = Depends(get_current_user)):
     """Fix any inconsistent iPad status data where status is 'verfügbar' but current_assignment_id is not None"""
     try:
         # Find iPads with status 'verfügbar' but still have current_assignment_id
@@ -1444,7 +1444,7 @@ async def fix_ipad_status_consistency(current_user: str = Depends(get_current_us
 
 # iPad history and details
 @api_router.get("/ipads/{ipad_id}/history")
-async def get_ipad_history(ipad_id: str, current_user: str = Depends(get_current_user)):
+async def get_ipad_history(ipad_id: str, current_user: dict = Depends(get_current_user)):
     # Get iPad
     ipad = await db.ipads.find_one({"id": ipad_id})
     if not ipad:
@@ -1533,7 +1533,7 @@ async def get_ipad_history(ipad_id: str, current_user: str = Depends(get_current
 
 # Assignment dissolution
 @api_router.delete("/assignments/{assignment_id}")
-async def dissolve_assignment(assignment_id: str, current_user: str = Depends(get_current_user)):
+async def dissolve_assignment(assignment_id: str, current_user: dict = Depends(get_current_user)):
     assignment = await db.assignments.find_one({"id": assignment_id})
     if not assignment:
         raise HTTPException(status_code=404, detail="Assignment not found")
@@ -1578,7 +1578,7 @@ async def dissolve_assignment(assignment_id: str, current_user: str = Depends(ge
 
 # Contract viewing
 @api_router.get("/contracts/{contract_id}")
-async def get_contract(contract_id: str, current_user: str = Depends(get_current_user)):
+async def get_contract(contract_id: str, current_user: dict = Depends(get_current_user)):
     contract = await db.contracts.find_one({"id": contract_id})
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
@@ -1594,7 +1594,7 @@ async def get_contract(contract_id: str, current_user: str = Depends(get_current
     }
 
 @api_router.get("/contracts/{contract_id}/download")
-async def download_contract(contract_id: str, current_user: str = Depends(get_current_user)):
+async def download_contract(contract_id: str, current_user: dict = Depends(get_current_user)):
     contract = await db.contracts.find_one({"id": contract_id})
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
@@ -1606,7 +1606,7 @@ async def download_contract(contract_id: str, current_user: str = Depends(get_cu
     )
 
 @api_router.delete("/contracts/{contract_id}")
-async def delete_contract(contract_id: str, current_user: str = Depends(get_current_user)):
+async def delete_contract(contract_id: str, current_user: dict = Depends(get_current_user)):
     contract = await db.contracts.find_one({"id": contract_id})
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
@@ -1621,7 +1621,7 @@ async def delete_contract(contract_id: str, current_user: str = Depends(get_curr
 
 # Global Settings endpoints
 @api_router.get("/settings/global")
-async def get_global_settings(current_user: str = Depends(get_current_user)):
+async def get_global_settings(current_user: dict = Depends(get_current_user)):
     """Get global application settings"""
     try:
         settings = await db.global_settings.find_one({"type": "app_settings"})
@@ -1647,7 +1647,7 @@ async def get_global_settings(current_user: str = Depends(get_current_user)):
 @api_router.put("/settings/global")
 async def update_global_settings(
     settings: dict,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Update global application settings"""
     try:
@@ -1675,7 +1675,7 @@ async def update_global_settings(
         raise HTTPException(status_code=500, detail=f"Error updating settings: {str(e)}")
 
 @api_router.post("/imports/inventory")
-async def import_inventory(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
+async def import_inventory(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     """Import complete inventory list with iPads and student assignments from Excel file"""
     try:
         # Validate file type
@@ -1891,7 +1891,7 @@ async def import_inventory(file: UploadFile = File(...), current_user: str = Dep
         raise HTTPException(status_code=500, detail=f"Error processing inventory import: {str(e)}")
 
 @api_router.get("/exports/inventory")
-async def export_inventory(current_user: str = Depends(get_current_user)):
+async def export_inventory(current_user: dict = Depends(get_current_user)):
     """Export complete inventory list with all iPads and assigned students"""
     try:
         # Get global settings
@@ -2010,7 +2010,7 @@ async def export_inventory(current_user: str = Depends(get_current_user)):
 
 # Data protection and cleanup endpoints
 @api_router.post("/data-protection/cleanup-old-data")
-async def cleanup_old_data(current_user: str = Depends(get_current_user)):
+async def cleanup_old_data(current_user: dict = Depends(get_current_user)):
     """Delete students and contracts older than 5 years"""
     try:
         five_years_ago = datetime.now(timezone.utc) - timedelta(days=5*365)
@@ -2080,7 +2080,7 @@ async def export_assignments(
     sus_nachn: Optional[str] = None, 
     sus_kl: Optional[str] = None,
     itnr: Optional[str] = None,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Export assignments to Excel (all or filtered)"""
     # Build filter query for students
@@ -2211,7 +2211,7 @@ async def get_filtered_assignments(
     sus_nachn: Optional[str] = None, 
     sus_kl: Optional[str] = None,
     itnr: Optional[str] = None,
-    current_user: str = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     try:
         # Build filter query for students
