@@ -179,10 +179,12 @@ python scripts/security_tests.py
 ## 🤝 Support
 
 Bei Problemen oder Fragen:
-1. Prüfen Sie die Logs: `docker-compose logs -f`
-2. Überprüfen Sie die Service-Status: `docker-compose ps`
-3. Starten Sie die Services neu: `docker-compose restart`
-4. Konsultieren Sie die Dokumentation: `docs/DEPLOYMENT.md` oder `docs/DEVELOPMENT.md`
+1. **Container-Konflikt-Fehler?** → Siehe `FEHLER_CONTAINER_KONFLIKT.md`
+2. **Schnelles Cleanup:** `./quick-cleanup.sh`
+3. Prüfen Sie die Logs: `docker-compose logs -f`
+4. Überprüfen Sie die Service-Status: `docker-compose ps`
+5. Starten Sie die Services neu: `docker-compose restart`
+6. Konsultieren Sie die Dokumentation: `docs/DEPLOYMENT.md` oder `docs/DEVELOPMENT.md`
 
 ## 📜 Lizenz
 
