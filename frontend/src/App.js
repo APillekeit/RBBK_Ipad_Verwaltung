@@ -199,8 +199,8 @@ const IPadDetailViewer = ({ ipadId, onClose }) => {
                 <div><strong>Pencil:</strong> {ipad.pencil || 'N/A'}</div>
                 <div><strong>Status:</strong> 
                   <Badge className={`ml-2 ${
-                    ipad.status === 'verfügbar' ? 'bg-green-100 text-green-800' :
-                    ipad.status === 'zugewiesen' ? 'bg-blue-100 text-blue-800' :
+                    ipad.status === 'verfügbar' ? 'bg-ipad-teal/20 text-ipad-teal' :
+                    ipad.status === 'zugewiesen' ? 'bg-ipad-blue/20 text-ipad-blue' :
                     'bg-red-100 text-red-800'
                   }`}>
                     {ipad.status}
