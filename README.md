@@ -151,12 +151,35 @@ tail -f /var/log/supervisor/backend.*.log
 tail -f /var/log/supervisor/frontend.*.log
 ```
 
+## 🔧 Nützliche Befehle
+
+```bash
+# Services-Status anzeigen
+docker-compose ps
+
+# Logs anzeigen
+docker-compose logs -f
+
+# Services neu starten
+docker-compose restart
+
+# Services stoppen
+docker-compose down
+
+# RBAC-Migration ausführen
+docker-compose exec backend python migrate_rbac.py
+
+# Sicherheitstests ausführen
+python scripts/security_tests.py
+```
+
 ## 🤝 Support
 
 Bei Problemen oder Fragen:
-1. Prüfen Sie die Logs
-2. Überprüfen Sie die Service-Status
-3. Starten Sie die Services neu: `sudo supervisorctl restart all`
+1. Prüfen Sie die Logs: `docker-compose logs -f`
+2. Überprüfen Sie die Service-Status: `docker-compose ps`
+3. Starten Sie die Services neu: `docker-compose restart`
+4. Konsultieren Sie die Dokumentation: `docs/DEPLOYMENT.md` oder `docs/DEVELOPMENT.md`
 
 ## 📜 Lizenz
 
