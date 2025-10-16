@@ -61,7 +61,7 @@ Das Script führt automatisch folgende Schritte aus:
    - Startet Frontend (Port 3000)
    - Wartet auf Service-Initialisierung
 
-5. ✅ **Datenbank initialisieren**
+6. ✅ **Datenbank initialisieren**
    - Erstellt Admin-Benutzer (username: admin, password: admin123)
    - Führt RBAC-Datenmigration aus
    - Erstellt Datenbank-Indizes
