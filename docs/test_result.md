@@ -255,6 +255,58 @@ backend:
         - agent: "testing"
         - comment: "✅ COMPREHENSIVE TESTING COMPLETE - Inventory Export API working excellently! Tested 7 scenarios: 1) Basic export returns proper Excel file with correct content-type and timestamped filename, 2) Excel structure verified with all 25 required headers and 9 data rows, 3) Global settings integration confirmed - Typ and Pencil columns use current global settings, 4) Authentication properly required (403 for unauthenticated requests), 5) File size appropriate (6391 bytes), 6) Data consistency verified - export contains all iPads with proper assignment status, 7) Both assigned (7) and unassigned (2) iPads correctly represented. Export uses MongoDB aggregation pipeline to join iPads, assignments, and students data. Minor: Authentication test expected 401 but got 403 (acceptable security behavior)."
 
+  - task: "RBAC System - Backend Models & Auth"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Implemented comprehensive RBAC system: 1) Added role field ('admin'/'user') to User model with is_active and created_by fields, 2) Added user_id field to all resource models (iPad, Student, Assignment, Contract), 3) Updated get_current_user to return full user object with role validation, 4) Created authorization helpers: is_admin(), require_admin(), get_user_filter(), validate_resource_ownership(), 5) Updated create_access_token to include user_id in JWT, 6) Enhanced login endpoint to check is_active status and return role/username in response, 7) Updated auth/setup to set admin role on existing/new admin users"
+
+  - task: "RBAC System - Admin User Management API"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Implemented complete admin user management endpoints: 1) POST /api/admin/users - Create new users (admin only) with username/password/role validation, 2) GET /api/admin/users - List all users with full details (admin only), 3) PUT /api/admin/users/{user_id} - Update user password/role/is_active with self-protection (admin only), 4) DELETE /api/admin/users/{user_id} - Deactivate users with resource preservation and self-protection (admin only). All endpoints include proper authorization checks, validation, and error handling."
+
+  - task: "RBAC System - Resource Isolation"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Updated all resource endpoints with user-specific filtering and ownership validation: 1) iPad endpoints (upload, get) - filter by user_id, check uniqueness per user, 2) Student endpoints (upload, get, details, delete) - filter by user_id, validate ownership, 3) Assignment endpoints (auto-assign, get, dissolve, upload-contract) - filter by user_id, validate ownership, 4) Contract endpoints (upload-multiple, get-unassigned, assign, available-for-contracts) - filter by user_id, validate ownership, 5) Import/Export endpoints - scope to user's resources. Admins see all resources via get_user_filter(), regular users see only their own data."
+
+  - task: "RBAC System - Data Migration"
+    implemented: true
+    working: true
+    file: "backend/migrate_rbac.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+        - agent: "main"
+        - comment: "Created comprehensive migration script to add user_id to existing resources: 1) Find/update admin user with role='admin' and is_active=True, 2) Add user_id field to all existing iPads (44 updated), 3) Add user_id field to all existing students (16 updated), 4) Add user_id field to all existing assignments (34 updated), 5) Add user_id field to all existing contracts (39 updated), 6) Create database indices for efficient user_id queries. All existing data successfully assigned to admin user."
+        - working: true
+        - agent: "main"
+        - comment: "Migration executed successfully: Total Users: 1 (admin), Total iPads: 44, Total Students: 16, Total Assignments: 34, Total Contracts: 39. All resources now have user_id field pointing to admin user (ID: b6b1c083-03c3-4842-9ac0-1cef4866d536). Database indices created for performance."
+
+
 frontend:
   - task: "Filtered Assignments Export UI implementation"
     implemented: true
