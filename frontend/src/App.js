@@ -2449,6 +2449,360 @@ const SessionTimer = ({ onLogout }) => {
   );
 };
 
+
+// User Management Component (Admin Only)
+const UserManagement = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  
+  // Create user form state
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState('user');
+  const [creating, setCreating] = useState(false);
+  
+  // Edit user form state
+  const [editPassword, setEditPassword] = useState('');
+  const [editRole, setEditRole] = useState('user');
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [updating, setUpdating] = useState(false);
+
+  const loadUsers = async () => {
+    try {
+      const response = await api.get('/admin/users');
+      setUsers(response.data);
+    } catch (error) {
+      toast.error('Fehler beim Laden der Benutzer');
+      console.error('Users loading error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    
+    try {
+      await api.post('/admin/users', {
+        username: newUsername,
+        password: newPassword,
+        role: newRole
+      });
+      toast.success(`Benutzer ${newUsername} erfolgreich erstellt!`);
+      setShowCreateDialog(false);
+      setNewUsername('');
+      setNewPassword('');
+      setNewRole('user');
+      await loadUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Fehler beim Erstellen des Benutzers');
+      console.error('User creation error:', error);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    
+    setUpdating(true);
+    
+    try {
+      const updateData = {
+        role: editRole,
+        is_active: editIsActive
+      };
+      
+      if (editPassword) {
+        updateData.password = editPassword;
+      }
+      
+      await api.put(`/admin/users/${selectedUser.id}`, updateData);
+      toast.success(`Benutzer ${selectedUser.username} erfolgreich aktualisiert!`);
+      setShowEditDialog(false);
+      setSelectedUser(null);
+      setEditPassword('');
+      await loadUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Fehler beim Aktualisieren des Benutzers');
+      console.error('User update error:', error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    if (window.confirm(`Möchten Sie den Benutzer "${user.username}" wirklich deaktivieren?`)) {
+      try {
+        const response = await api.delete(`/admin/users/${user.id}`);
+        toast.success(response.data.message);
+        await loadUsers();
+      } catch (error) {
+        toast.error(error.response?.data?.detail || 'Fehler beim Deaktivieren des Benutzers');
+        console.error('User deletion error:', error);
+      }
+    }
+  };
+
+  const openEditDialog = (user) => {
+    setSelectedUser(user);
+    setEditRole(user.role);
+    setEditIsActive(user.is_active);
+    setEditPassword('');
+    setShowEditDialog(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="shadow-lg border-l-4 border-yellow-500">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-yellow-600" />
+                Benutzerverwaltung
+                <span className="ml-2 px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold rounded-full">
+                  ADMIN
+                </span>
+              </CardTitle>
+              <CardDescription>
+                Benutzerkonten erstellen, bearbeiten und verwalten
+              </CardDescription>
+            </div>
+            <Button 
+              onClick={() => setShowCreateDialog(true)}
+              className="bg-gradient-to-r from-ipad-teal to-ipad-blue hover:from-ipad-blue hover:to-ipad-dark-blue"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Neuer Benutzer
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">Lade Benutzer...</div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Keine Benutzer vorhanden.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Benutzername</TableHead>
+                    <TableHead>Rolle</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Erstellt von</TableHead>
+                    <TableHead>Erstellt am</TableHead>
+                    <TableHead>Aktionen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.username}</TableCell>
+                      <TableCell>
+                        <Badge className={user.role === 'admin' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}>
+                          {user.role === 'admin' ? 'Administrator' : 'Benutzer'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={user.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          {user.is_active ? 'Aktiv' : 'Deaktiviert'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{user.created_by ? 'Admin' : 'System'}</TableCell>
+                      <TableCell>{new Date(user.created_at).toLocaleDateString('de-DE')}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => openEditDialog(user)}
+                            title="Benutzer bearbeiten"
+                            className="hover:bg-blue-50"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDeleteUser(user)}
+                            title="Benutzer deaktivieren"
+                            className="hover:bg-red-50 hover:text-red-600"
+                            disabled={!user.is_active}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create User Dialog */}
+      {showCreateDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Neuen Benutzer erstellen</CardTitle>
+              <CardDescription>
+                Erstellen Sie ein neues Benutzerkonto mit Benutzername, Passwort und Rolle
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateUser} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-username">Benutzername</Label>
+                  <Input
+                    id="new-username"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value)}
+                    placeholder="mindestens 3 Zeichen"
+                    required
+                    minLength={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">Passwort</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="mindestens 6 Zeichen"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-role">Rolle</Label>
+                  <select
+                    id="new-role"
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="user">Benutzer</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowCreateDialog(false);
+                      setNewUsername('');
+                      setNewPassword('');
+                      setNewRole('user');
+                    }}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={creating}
+                    className="bg-gradient-to-r from-ipad-teal to-ipad-blue"
+                  >
+                    {creating ? 'Erstelle...' : 'Erstellen'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Edit User Dialog */}
+      {showEditDialog && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Benutzer bearbeiten: {selectedUser.username}</CardTitle>
+              <CardDescription>
+                Passwort, Rolle oder Status ändern
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdateUser} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-password">Neues Passwort (optional)</Label>
+                  <Input
+                    id="edit-password"
+                    type="password"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="Leer lassen, um nicht zu ändern"
+                    minLength={6}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Rolle</Label>
+                  <select
+                    id="edit-role"
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="user">Benutzer</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-active"
+                    checked={editIsActive}
+                    onChange={(e) => setEditIsActive(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <Label htmlFor="edit-active">Konto aktiviert</Label>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowEditDialog(false);
+                      setSelectedUser(null);
+                      setEditPassword('');
+                    }}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={updating}
+                    className="bg-gradient-to-r from-ipad-teal to-ipad-blue"
+                  >
+                    {updating ? 'Aktualisiere...' : 'Aktualisieren'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Main Dashboard Component
 const Dashboard = ({ onLogout, userRole, currentUsername }) => {
   const [activeTab, setActiveTab] = useState('students');
