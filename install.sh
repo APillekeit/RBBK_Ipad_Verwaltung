@@ -289,7 +289,7 @@ start_services() {
     print_step "Starte Services..."
     
     cd config
-    docker-compose up -d
+    $DOCKER_COMPOSE_CMD up -d
     cd ..
     
     print_success "Services gestartet"
