@@ -332,10 +332,12 @@ run_migration() {
     print_step "Führe RBAC-Datenmigration aus..."
     
     if [ -f "./backend/migrate_rbac.py" ]; then
-        docker-compose exec backend python migrate_rbac.py || {
+        cd config
+        $DOCKER_COMPOSE_CMD exec -T backend python migrate_rbac.py || {
             print_warning "Migration konnte nicht automatisch ausgeführt werden"
-            echo "Führen Sie manuell aus: docker-compose exec backend python migrate_rbac.py"
+            echo "Führen Sie manuell aus: cd config && $DOCKER_COMPOSE_CMD exec backend python migrate_rbac.py"
         }
+        cd ..
         print_success "Datenmigration abgeschlossen"
     else
         print_warning "Migrations-Script nicht gefunden, übersprungen"
