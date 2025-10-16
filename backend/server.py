@@ -182,9 +182,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=["HS256"])
         username: str = payload.get("sub")
+        user_id: str = payload.get("user_id")
         exp: int = payload.get("exp")
         
-        if username is None:
+        if username is None or user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         
         # Check token expiration
@@ -194,7 +195,15 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if datetime.now(timezone.utc).timestamp() > exp:
             raise HTTPException(status_code=401, detail="Token has expired")
         
-        return username
+        # Get user from database to check if still active
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        if not user.get("is_active", True):
+            raise HTTPException(status_code=401, detail="User account is deactivated")
+        
+        return user
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError:
