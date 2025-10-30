@@ -466,6 +466,7 @@ main() {
     
     # Prüfungen
     check_dependencies
+    check_project_structure
     check_existing_installation
     
     # Setup
