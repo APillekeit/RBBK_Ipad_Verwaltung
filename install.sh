@@ -2,10 +2,14 @@
 
 ###############################################################################
 # iPad-Verwaltungssystem - Installations- und Setup-Script
-# Version: 2.0 (mit RBAC-Unterstützung)
+# Version: 2.1 (mit RBAC-Unterstützung und verbesserter Fehlerbehandlung)
 ###############################################################################
 
 set -e  # Bei Fehler abbrechen
+
+# Stelle sicher, dass wir im Skript-Verzeichnis sind
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
 
 # Farben für Ausgabe
 RED='\033[0;31m'
