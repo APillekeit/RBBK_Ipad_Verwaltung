@@ -41,13 +41,23 @@ Ein sicheres, webbasiertes System zur Verwaltung von iPad-Zuordnungen an einer B
 - Minimum 2GB RAM
 - 10GB freier Speicherplatz
 
-### Schnellstart mit Installations-Script
+## 🚀 Schnellstart
+
+📖 **Neu hier?** Siehe [`SCHNELLSTART.md`](SCHNELLSTART.md) für eine ausführliche Schritt-für-Schritt-Anleitung!
+
+### Installation und Start
+
 ```bash
-# 1. Repository klonen
+# Projekt herunterladen und entpacken
+unzip RBBK_Ipad_Verwaltung-main.zip
+cd RBBK_Ipad_Verwaltung-main
+
+# ODER via Git
 git clone <repository-url>
 cd ipad-management
 
-# 2. Installations-Script ausführen (empfohlen)
+# Installations-Script ausführen
+chmod +x install.sh
 ./install.sh
 ```
 
