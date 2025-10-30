@@ -233,12 +233,42 @@ cleanup_installation() {
     [ "$silent" = false ] && print_success "Images entfernt"
 }
 
+check_project_structure() {
+    print_step "Überprüfe Projektstruktur..."
+    
+    # Prüfe ob wichtige Verzeichnisse existieren
+    local missing_dirs=()
+    
+    [ ! -d "./backend" ] && missing_dirs+=("backend")
+    [ ! -d "./frontend" ] && missing_dirs+=("frontend")
+    [ ! -d "./config" ] && missing_dirs+=("config")
+    
+    if [ ${#missing_dirs[@]} -gt 0 ]; then
+        print_error "Fehlende Verzeichnisse: ${missing_dirs[*]}"
+        echo ""
+        echo "Sie befinden sich wahrscheinlich im falschen Verzeichnis!"
+        echo "Aktuelles Verzeichnis: $(pwd)"
+        echo ""
+        echo "Bitte wechseln Sie in das Hauptverzeichnis des Projekts:"
+        echo "  cd /pfad/zum/projekt"
+        echo "  ./install.sh"
+        exit 1
+    fi
+    
+    print_success "Projektstruktur OK"
+    echo ""
+}
+
 setup_environment() {
     print_step "Erstelle Umgebungsvariablen..."
     
     # Backend .env
     if [ ! -f "./backend/.env" ]; then
         print_warning "Backend .env nicht gefunden, erstelle neue..."
+        
+        # Stelle sicher, dass das Verzeichnis existiert
+        mkdir -p ./backend
+        
         SECRET_KEY=$(openssl rand -hex 32)
         cat > ./backend/.env <<EOF
 # MongoDB Configuration
@@ -261,6 +291,10 @@ EOF
     # Frontend .env
     if [ ! -f "./frontend/.env" ]; then
         print_warning "Frontend .env nicht gefunden, erstelle neue..."
+        
+        # Stelle sicher, dass das Verzeichnis existiert
+        mkdir -p ./frontend
+        
         cat > ./frontend/.env <<EOF
 # Backend API URL
 REACT_APP_BACKEND_URL=http://localhost:8001
