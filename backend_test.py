@@ -261,7 +261,26 @@ class RBACTester:
         """Test login with the created test user"""
         print("\n=== Testing Test User Login ===")
         
-        test_credentials = {"username": "testuser", "password": "test123"}
+        # Use existing active test user
+        response = self.make_request("GET", "/admin/users", token=self.admin_token)
+        if response and response.status_code == 200:
+            users = response.json()
+            test_user = None
+            for user in users:
+                if user["username"].startswith("testuser") and user["is_active"]:
+                    test_user = user
+                    break
+            
+            if not test_user:
+                self.log_test("Test User Login", False, "No active test user found")
+                return False
+            
+            # Try login with common test password
+            test_credentials = {"username": test_user["username"], "password": "test123"}
+        else:
+            # Fallback to default
+            test_credentials = {"username": "testuser", "password": "test123"}
+        
         response = self.make_request("POST", "/auth/login", data=test_credentials)
         
         if not response or response.status_code != 200:
