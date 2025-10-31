@@ -158,30 +158,56 @@ else
 fi
 
 echo ""
-print_step "Setze Admin-Passwort..."
-python3 << 'EOF'
+print_step "Konfiguriere Admin-Benutzer..."
+cd config
+$DOCKER_COMPOSE_CMD exec -T backend python << 'PYEOF' 2>/dev/null || echo "Admin-Setup über Container..."
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
+from datetime import datetime, timezone
+import uuid
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def setup():
-    client = AsyncIOMotorClient("mongodb://localhost:27017/")
+    client = AsyncIOMotorClient("mongodb://mongodb:27017/")
     db = client["iPadDatabase"]
-    await db.users.update_one(
-        {"username": "admin"},
-        {"$set": {
-            "password_hash": pwd_context.hash("geheim"),
+    
+    # Prüfe ob Admin existiert
+    admin = await db.users.find_one({"username": "admin"})
+    
+    if admin:
+        # Update
+        await db.users.update_one(
+            {"username": "admin"},
+            {"$set": {
+                "password_hash": pwd_context.hash("admin123"),
+                "role": "admin",
+                "is_active": True,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    else:
+        # Erstelle neu
+        admin = {
+            "id": str(uuid.uuid4()),
+            "username": "admin",
+            "password_hash": pwd_context.hash("admin123"),
             "role": "admin",
-            "is_active": True
-        }}
-    )
-    print("✓ Admin-Passwort: geheim")
+            "is_active": True,
+            "created_by": None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(admin)
+    
+    print("✓ Admin-Passwort: admin123")
     client.close()
 
 asyncio.run(setup())
-EOF
+PYEOF
+cd ..
+print_success "Admin konfiguriert"
 
 echo ""
 print_step "Führe RBAC-Migration aus..."
