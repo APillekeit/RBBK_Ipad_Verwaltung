@@ -323,7 +323,10 @@ build_containers() {
         fi
         
         cd config
-        $DOCKER_COMPOSE_CMD build --no-cache
+        # Build MIT Cache (spart RAM und Zeit)
+        # --no-cache nur bei Problemen nötig
+        print_step "Hinweis: Verwende Build-Cache für bessere Performance..."
+        $DOCKER_COMPOSE_CMD build
         cd ..
         print_success "Docker-Container erfolgreich gebaut"
     else
