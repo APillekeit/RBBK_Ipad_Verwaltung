@@ -169,11 +169,13 @@ class RBACTester:
     
     def test_admin_user_creation(self):
         """Test creating new users via admin endpoints"""
-        print("\n=== Testing Admin User Creation ===")
+        print("\n=== Testing RBAC User Management Endpoints ===")
         
-        # Test creating a regular user
+        # Test creating a regular user with unique username
+        import time
+        unique_username = f"testuser_{int(time.time())}"
         user_data = {
-            "username": "testuser",
+            "username": unique_username,
             "password": "test123",
             "role": "user"
         }
@@ -182,6 +184,26 @@ class RBACTester:
         print(f"DEBUG: User creation response status: {response.status_code if response else 'No response'}")
         if response:
             print(f"DEBUG: User creation response: {response.text}")
+        
+        if not response:
+            # If no response, try to continue with existing user for other tests
+            self.log_test("Create Test User", False, "User creation failed - no response (possible timeout)")
+            # Try to find existing test user
+            response = self.make_request("GET", "/admin/users", token=self.admin_token)
+            if response and response.status_code == 200:
+                users = response.json()
+                for user in users:
+                    if user["username"].startswith("testuser") and user["is_active"]:
+                        self.test_user_id = user["id"]
+                        self.log_test("Use Existing Test User", True, f"Found existing test user: {user['username']}")
+                        break
+            return self.test_user_id is not None
+        
+        if response.status_code == 400 and "already exists" in response.text:
+            # User already exists, try with different username
+            unique_username = f"testuser_{int(time.time())}_new"
+            user_data["username"] = unique_username
+            response = self.make_request("POST", "/admin/users", token=self.admin_token, data=user_data)
         
         if not response or response.status_code != 200:
             self.log_test("Create Test User", False, f"User creation failed with status {response.status_code if response else 'No response'}")
