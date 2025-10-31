@@ -31,7 +31,8 @@ import uuid
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def fix_password():
-    client = AsyncIOMotorClient("mongodb://mongodb:27017/")
+    # MongoDB mit Authentifizierung
+    client = AsyncIOMotorClient("mongodb://admin:ipad_admin_2024@mongodb:27017/iPadDatabase?authSource=admin")
     db = client["iPadDatabase"]
     
     # Lösche alten Admin
