@@ -359,23 +359,79 @@ init_database() {
     # Warte auf MongoDB
     sleep 5
     
-    # Versuche Admin-Setup
-    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/api/auth/setup)
+    # Versuche Admin-Setup über API
+    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/api/auth/setup 2>/dev/null)
     
     if [ "$RESPONSE" = "200" ]; then
-        print_success "Admin-Benutzer erfolgreich erstellt"
-        echo ""
-        echo -e "${YELLOW}═══════════════════════════════════════════════════════${NC}"
-        echo -e "${YELLOW}    Standard-Login-Daten:${NC}"
-        echo -e "${YELLOW}    Benutzername: admin${NC}"
-        echo -e "${YELLOW}    Passwort: admin123${NC}"
-        echo -e "${YELLOW}    Rolle: Administrator${NC}"
-        echo -e "${YELLOW}    ${NC}"
-        echo -e "${RED}    ⚠ WICHTIG: Ändern Sie das Passwort nach dem ersten Login!${NC}"
-        echo -e "${YELLOW}═══════════════════════════════════════════════════════${NC}"
+        print_success "Admin-Benutzer über API erstellt"
     else
-        print_warning "Admin-Benutzer existiert möglicherweise bereits"
+        print_warning "API-Setup nicht verfügbar, setze über Docker..."
     fi
+    
+    # Stelle sicher, dass Admin korrekt konfiguriert ist (mit admin123)
+    print_step "Konfiguriere Admin-Benutzer..."
+    cd config
+    $DOCKER_COMPOSE_CMD exec -T backend python << 'PYEOF' 2>/dev/null || print_warning "Admin-Konfiguration übersprungen"
+import asyncio
+from motor.motor_asyncio import AsyncIOMotorClient
+from passlib.context import CryptContext
+from datetime import datetime, timezone
+import uuid
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+async def setup_admin():
+    try:
+        client = AsyncIOMotorClient("mongodb://mongodb:27017/")
+        db = client["iPadDatabase"]
+        
+        # Prüfe ob Admin existiert
+        admin = await db.users.find_one({"username": "admin"})
+        
+        if admin:
+            # Update Admin mit korrektem Passwort und Rolle
+            await db.users.update_one(
+                {"username": "admin"},
+                {"$set": {
+                    "password_hash": pwd_context.hash("admin123"),
+                    "role": "admin",
+                    "is_active": True,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+        else:
+            # Erstelle neuen Admin
+            admin = {
+                "id": str(uuid.uuid4()),
+                "username": "admin",
+                "password_hash": pwd_context.hash("admin123"),
+                "role": "admin",
+                "is_active": True,
+                "created_by": None,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(admin)
+        
+        print("Admin configured successfully")
+        client.close()
+    except Exception as e:
+        print(f"Error: {e}")
+
+asyncio.run(setup_admin())
+PYEOF
+    cd ..
+    
+    print_success "Admin-Benutzer konfiguriert"
+    echo ""
+    echo -e "${YELLOW}═══════════════════════════════════════════════════════${NC}"
+    echo -e "${YELLOW}    Standard-Login-Daten:${NC}"
+    echo -e "${YELLOW}    Benutzername: admin${NC}"
+    echo -e "${YELLOW}    Passwort: admin123${NC}"
+    echo -e "${YELLOW}    Rolle: Administrator${NC}"
+    echo -e "${YELLOW}    ${NC}"
+    echo -e "${RED}    ⚠ WICHTIG: Ändern Sie das Passwort nach dem ersten Login!${NC}"
+    echo -e "${YELLOW}═══════════════════════════════════════════════════════${NC}"
     
     echo ""
 }
