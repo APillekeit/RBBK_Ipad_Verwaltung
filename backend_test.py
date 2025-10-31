@@ -711,16 +711,21 @@ class RBACTester:
             return False
     
     def run_all_tests(self):
-        """Run all RBAC tests"""
-        print("🔐 RBAC (Role-Based Access Control) Backend Testing Suite")
-        print("=" * 60)
+        """Run comprehensive backend tests for libmagic fix and RBAC functionality"""
+        print("🔐 Comprehensive Backend Testing Suite - Libmagic Fix & RBAC iPad Management")
+        print("=" * 80)
         
-        # Step 1: Admin login
+        # Step 1: Backend service health and libmagic fix verification
+        if not self.test_backend_health():
+            print("❌ Backend service health check failed")
+            return False
+        
+        # Step 2: Admin authentication and JWT token generation
         if not self.test_admin_login():
             print("❌ Cannot proceed without admin login")
             return False
         
-        # Step 2: Admin user management endpoints
+        # Step 3: RBAC user management endpoints
         if not self.test_admin_user_creation():
             print("❌ User creation failed")
             return False
@@ -741,17 +746,27 @@ class RBACTester:
             print("❌ User delete failed")
             return False
         
-        # Step 3: Create new test user for resource isolation
+        # Step 4: Core resource endpoints
+        if not self.test_core_resource_endpoints():
+            print("❌ Core resource endpoints failed")
+            return False
+        
+        # Step 5: Create new test user for resource isolation
         if not self.create_test_user_for_isolation():
             print("❌ Cannot create test user for isolation")
             return False
         
-        # Step 4: Resource isolation testing
+        # Step 6: User resource isolation testing
         if not self.test_resource_isolation():
             print("❌ Resource isolation failed")
             return False
         
-        # Step 5: Auto-assignment isolation
+        # Step 7: File upload security with libmagic
+        if not self.test_file_upload_security():
+            print("❌ File upload security tests failed")
+            return False
+        
+        # Step 8: Auto-assignment isolation
         if not self.test_auto_assignment_isolation():
             print("❌ Auto-assignment isolation failed")
             return False
