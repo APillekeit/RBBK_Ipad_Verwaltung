@@ -775,9 +775,9 @@ class RBACTester:
     
     def print_summary(self):
         """Print test summary"""
-        print("\n" + "=" * 60)
-        print("🔐 RBAC TESTING SUMMARY")
-        print("=" * 60)
+        print("\n" + "=" * 80)
+        print("🔐 COMPREHENSIVE BACKEND TESTING SUMMARY")
+        print("=" * 80)
         
         total_tests = len(self.test_results)
         passed_tests = len([r for r in self.test_results if "✅ PASS" in r["status"]])
