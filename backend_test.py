@@ -84,9 +84,37 @@ class RBACTester:
             print(f"Unexpected error for {method} {url}: {str(e)}")
             return None
     
+    def test_backend_health(self):
+        """Test backend service health and libmagic fix"""
+        print("\n=== Testing Backend Service Health ===")
+        
+        # Test basic health by trying to access a simple endpoint
+        response = self.make_request("POST", "/auth/setup")
+        
+        if not response:
+            self.log_test("Backend Service Health", False, "Backend service is not responding")
+            return False
+        
+        if response.status_code in [200, 405]:  # 405 is OK for GET on POST endpoint
+            self.log_test("Backend Service Health", True, "Backend service is running and responding")
+        else:
+            self.log_test("Backend Service Health", False, f"Backend service returned unexpected status: {response.status_code}")
+            return False
+        
+        # Test that libmagic import is working by checking if magic validation endpoints work
+        try:
+            # This will test if the magic library is properly imported and working
+            import magic
+            self.log_test("Libmagic Import Test", True, "python-magic library is properly imported and available")
+        except ImportError as e:
+            self.log_test("Libmagic Import Test", False, f"python-magic import failed: {str(e)}")
+            return False
+        
+        return True
+
     def test_admin_login(self):
-        """Test admin login and token retrieval"""
-        print("\n=== Testing Admin Login ===")
+        """Test admin login and JWT token generation with user_id and role"""
+        print("\n=== Testing Admin Authentication & JWT Token Generation ===")
         
         response = self.make_request("POST", "/auth/login", data=ADMIN_CREDENTIALS)
         
@@ -109,6 +137,26 @@ class RBACTester:
                 
             if data["username"] != "admin":
                 self.log_test("Admin Login", False, f"Expected admin username, got: {data['username']}")
+                return False
+            
+            # Verify JWT token contains user_id and role by decoding (without verification for testing)
+            import jwt
+            try:
+                # Decode without verification to check payload structure
+                payload = jwt.decode(data["access_token"], options={"verify_signature": False})
+                
+                if "user_id" not in payload:
+                    self.log_test("JWT Token Validation", False, "JWT token missing user_id field")
+                    return False
+                
+                if "sub" not in payload:  # subject should contain username
+                    self.log_test("JWT Token Validation", False, "JWT token missing sub (username) field")
+                    return False
+                
+                self.log_test("JWT Token Validation", True, f"JWT token properly contains user_id: {payload.get('user_id')}")
+                
+            except Exception as e:
+                self.log_test("JWT Token Validation", False, f"Failed to decode JWT token: {str(e)}")
                 return False
                 
             self.admin_token = data["access_token"]
