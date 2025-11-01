@@ -170,14 +170,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Backend Service Health Check"
-    - "Admin Authentication & JWT Token Generation"
-    - "RBAC User Management Endpoints"
-    - "Student Resource Endpoints"
-    - "iPad Resource Endpoints"
-    - "Assignment Management Endpoints"
-    - "User Resource Isolation"
-    - "File Upload Security with libmagic"
+    - "Password Reset Functionality"
+    - "RBAC Verification"
+    - "Complete Workflow Testing"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
