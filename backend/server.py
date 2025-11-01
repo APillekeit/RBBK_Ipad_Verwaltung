@@ -595,6 +595,7 @@ async def list_users(current_user: dict = Depends(get_current_user)):
             username=user["username"],
             role=user.get("role", "user"),
             is_active=user.get("is_active", True),
+            force_password_change=user.get("force_password_change", False),
             created_by=user.get("created_by"),
             created_at=datetime.fromisoformat(user["created_at"]) if isinstance(user["created_at"], str) else user["created_at"],
             updated_at=datetime.fromisoformat(user["updated_at"]) if isinstance(user.get("updated_at"), str) else user.get("updated_at", user["created_at"])
