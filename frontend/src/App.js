@@ -2746,9 +2746,16 @@ const UserManagement = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={user.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                          {user.is_active ? 'Aktiv' : 'Deaktiviert'}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge className={user.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {user.is_active ? 'Aktiv' : 'Deaktiviert'}
+                          </Badge>
+                          {user.force_password_change && (
+                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                              ⚠️ PW ändern
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{user.created_by ? 'Admin' : 'System'}</TableCell>
                       <TableCell>{new Date(user.created_at).toLocaleDateString('de-DE')}</TableCell>
