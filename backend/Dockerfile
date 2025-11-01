@@ -1,24 +1,37 @@
-# Backend Dockerfile für FastAPI (optimiert)
-FROM python:3.11-slim-bullseye
+# Backend Dockerfile für FastAPI (optimiert mit Multi-Stage Build)
+# Build-Stage: Hier werden Python-Pakete kompiliert
+FROM python:3.11-slim-bullseye as builder
 
-# Arbeitsverzeichnis setzen
 WORKDIR /app
 
-# System-Abhängigkeiten installieren (für PDF/Excel-Verarbeitung)
-RUN apt-get update && apt-get install -y \
-    curl \
+# Nur Build-Abhängigkeiten installieren
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     python3-dev \
     libffi-dev \
     libssl-dev \
-    libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Python-Abhängigkeiten kopieren und installieren
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Runtime-Stage: Kleineres finales Image ohne Build-Tools
+FROM python:3.11-slim-bullseye
+
+WORKDIR /app
+
+# Nur Runtime-Abhängigkeiten installieren (ohne gcc!)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python-Pakete von Builder-Stage kopieren
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Anwendung kopieren
 COPY . .
