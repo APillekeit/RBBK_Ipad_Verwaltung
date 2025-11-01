@@ -152,6 +152,7 @@ class LoginResponse(BaseModel):
     token_type: str
     role: str
     username: str
+    force_password_change: bool = False  # Indicates if user must change password
 
 class UploadResponse(BaseModel):
     message: str
