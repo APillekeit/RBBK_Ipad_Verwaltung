@@ -2766,6 +2766,16 @@ const UserManagement = () => {
                           <Button 
                             variant="outline" 
                             size="sm"
+                            onClick={() => handleResetPassword(user)}
+                            title="Passwort zurücksetzen"
+                            className="hover:bg-yellow-50 hover:text-yellow-600"
+                            disabled={!user.is_active}
+                          >
+                            <Shield className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
                             onClick={() => handleDeleteUser(user)}
                             title="Benutzer deaktivieren"
                             className="hover:bg-red-50 hover:text-red-600"
