@@ -651,6 +651,7 @@ async def update_user(
         username=updated_user["username"],
         role=updated_user.get("role", "user"),
         is_active=updated_user.get("is_active", True),
+        force_password_change=updated_user.get("force_password_change", False),
         created_by=updated_user.get("created_by"),
         created_at=datetime.fromisoformat(updated_user["created_at"]) if isinstance(updated_user["created_at"], str) else updated_user["created_at"],
         updated_at=datetime.fromisoformat(updated_user["updated_at"]) if isinstance(updated_user.get("updated_at"), str) else updated_user.get("updated_at", updated_user["created_at"])
