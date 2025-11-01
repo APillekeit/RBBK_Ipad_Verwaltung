@@ -181,6 +181,7 @@ class UserResponse(BaseModel):
     username: str
     role: str
     is_active: bool
+    force_password_change: bool = False
     created_by: Optional[str]
     created_at: datetime
     updated_at: datetime
