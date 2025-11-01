@@ -44,6 +44,21 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: All admin user management endpoints working - GET /api/admin/users (6 users listed), POST /api/admin/users (new user created successfully), user login with correct role assignment"
 
+  - task: "Password Reset Functionality"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test new password reset functionality: admin reset endpoint, temporary password login, forced password change, complete workflow"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Password reset functionality working perfectly. Admin can reset user passwords (POST /api/admin/users/{id}/reset-password) generating 8-digit numeric temporary passwords. Users can login with temp password (force_password_change=true), change password via PUT /api/auth/change-password-forced, then login normally (force_password_change=false). Complete workflow tested successfully. Edge cases working: admin self-reset blocked, password validation, non-existent user handling."
+
   - task: "Student Resource Endpoints"
     implemented: true
     working: true
