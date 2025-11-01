@@ -490,7 +490,8 @@ async def login(request: Request, user_data: UserLogin):
         "access_token": access_token, 
         "token_type": "bearer",
         "role": user.get("role", "user"),
-        "username": user["username"]
+        "username": user["username"],
+        "force_password_change": user.get("force_password_change", False)
     }
 
 
