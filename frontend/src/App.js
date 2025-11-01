@@ -37,6 +37,10 @@ const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForcePasswordChange, setShowForcePasswordChange] = useState(false);
+  const [tempToken, setTempToken] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -44,7 +48,17 @@ const Login = ({ onLogin }) => {
     
     try {
       const response = await api.post('/auth/login', { username, password });
-      const { access_token, role, username: loggedInUsername } = response.data;
+      const { access_token, role, username: loggedInUsername, force_password_change } = response.data;
+      
+      if (force_password_change) {
+        // User must change password before proceeding
+        setTempToken(access_token);
+        setShowForcePasswordChange(true);
+        toast.info('Sie müssen Ihr Passwort ändern, bevor Sie fortfahren können');
+        setLoading(false);
+        return;
+      }
+      
       localStorage.setItem('token', access_token);
       localStorage.setItem('userRole', role);
       localStorage.setItem('username', loggedInUsername);
@@ -52,6 +66,42 @@ const Login = ({ onLogin }) => {
       toast.success(`Erfolgreich angemeldet als ${role === 'admin' ? 'Administrator' : 'Benutzer'}!`);
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForcePasswordChange = async (e) => {
+    e.preventDefault();
+    
+    if (newPassword.length < 6) {
+      toast.error('Das Passwort muss mindestens 6 Zeichen lang sein');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error('Die Passwörter stimmen nicht überein');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Use temporary token for this request
+      await axios.put(
+        `${API_BASE_URL}/auth/change-password-forced`,
+        { new_password: newPassword },
+        { headers: { Authorization: `Bearer ${tempToken}` } }
+      );
+      
+      toast.success('Passwort erfolgreich geändert! Bitte melden Sie sich mit Ihrem neuen Passwort an.');
+      setShowForcePasswordChange(false);
+      setTempToken(null);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPassword(''); // Clear old password field
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Fehler beim Ändern des Passworts');
     } finally {
       setLoading(false);
     }
@@ -71,6 +121,65 @@ const Login = ({ onLogin }) => {
   useEffect(() => {
     checkSetup();
   }, []);
+
+  // Force Password Change Dialog
+  if (showForcePasswordChange) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-ipad-beige via-gray-50 to-ipad-teal/20 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl border-yellow-500/50">
+          <CardHeader className="text-center">
+            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-8 w-8 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-yellow-600">
+              Passwort ändern erforderlich
+            </CardTitle>
+            <CardDescription className="text-ipad-dark-gray">
+              Ihr Administrator hat Ihr Passwort zurückgesetzt. Bitte wählen Sie ein neues Passwort.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleForcePasswordChange} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Neues Passwort</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="Neues Passwort eingeben (min. 6 Zeichen)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  className="transition-all duration-200 focus:ring-2 focus:ring-yellow-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Passwort bestätigen</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="Passwort wiederholen"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  className="transition-all duration-200 focus:ring-2 focus:ring-yellow-500"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white transition-all duration-200"
+                disabled={loading}
+              >
+                {loading ? 'Wird geändert...' : 'Passwort ändern'}
+              </Button>
+            </form>
+            <div className="mt-4 text-xs text-gray-500 text-center">
+              Nach der Passwortänderung müssen Sie sich erneut anmelden.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ipad-beige via-gray-50 to-ipad-teal/20 flex items-center justify-center p-4">
