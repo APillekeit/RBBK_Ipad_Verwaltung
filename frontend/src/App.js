@@ -2662,6 +2662,26 @@ const UserManagement = () => {
     }
   };
 
+  const handleResetPassword = async (user) => {
+    if (window.confirm(`Möchten Sie das Passwort für Benutzer "${user.username}" wirklich zurücksetzen?\n\nEin temporäres 8-stelliges Passwort wird generiert.`)) {
+      try {
+        const response = await api.post(`/admin/users/${user.id}/reset-password`);
+        
+        // Show temporary password in dialog
+        const tempPassword = response.data.temporary_password;
+        const message = `Passwort erfolgreich zurückgesetzt!\n\nBenutzername: ${response.data.username}\nTemporäres Passwort: ${tempPassword}\n\n⚠️ WICHTIG: Dieser Code wird nur einmal angezeigt!\nDer Benutzer muss das Passwort beim nächsten Login ändern.`;
+        
+        alert(message);
+        toast.success('Passwort wurde zurückgesetzt');
+        await loadUsers();
+      } catch (error) {
+        toast.error(error.response?.data?.detail || 'Fehler beim Zurücksetzen des Passworts');
+        console.error('Password reset error:', error);
+      }
+    }
+  };
+
+
   const openEditDialog = (user) => {
     setSelectedUser(user);
     setEditRole(user.role);
