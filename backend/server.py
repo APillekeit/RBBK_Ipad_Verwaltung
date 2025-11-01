@@ -694,6 +694,45 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
         "note": "User data has been preserved. To permanently delete data, use data management tools."
     }
 
+@api_router.post("/admin/users/{user_id}/reset-password")
+async def reset_user_password(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Reset user password to a temporary 8-digit code (admin only)"""
+    require_admin(current_user)
+    
+    # Get user to reset
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent self-reset (admins should use regular password change)
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot reset your own password. Use the regular password change function.")
+    
+    # Generate 8-digit temporary password (only numbers)
+    import random
+    temp_password = ''.join([str(random.randint(0, 9)) for _ in range(8)])
+    
+    # Hash the temporary password
+    hashed_temp_password = get_password_hash(temp_password)
+    
+    # Update user with temporary password and set force_password_change flag
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "password_hash": hashed_temp_password,
+            "force_password_change": True,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "message": f"Password for user '{target_user['username']}' has been reset",
+        "username": target_user["username"],
+        "temporary_password": temp_password,
+        "note": "The user must change this password on next login. This temporary password will only be displayed once."
+    }
+
+
 # iPad management endpoints
 @api_router.post("/ipads/upload", response_model=UploadResponse)
 async def upload_ipads(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
