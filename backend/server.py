@@ -470,6 +470,45 @@ async def change_username(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error changing username: {str(e)}")
 
+@api_router.put("/auth/change-password-forced")
+async def change_password_forced(
+    password_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Change password after forced reset (no current password required)"""
+    try:
+        new_password = password_data.get("new_password")
+        
+        if not new_password:
+            raise HTTPException(status_code=400, detail="New password is required")
+        
+        if len(new_password) < 6:
+            raise HTTPException(status_code=400, detail="New password must be at least 6 characters long")
+        
+        # Get current user from database
+        user = await db.users.find_one({"id": current_user["id"]})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Update password and clear force_password_change flag
+        hashed_new_password = get_password_hash(new_password)
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$set": {
+                "password_hash": hashed_new_password,
+                "force_password_change": False,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {"message": "Password changed successfully. You can now use your new password to login."}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error changing password: {str(e)}")
+
+
 @api_router.post("/auth/login", response_model=LoginResponse)
 @limiter.limit("5/minute")  # Max 5 login attempts per minute
 async def login(request: Request, user_data: UserLogin):
