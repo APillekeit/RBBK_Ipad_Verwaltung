@@ -576,6 +576,7 @@ async def create_user(user_data: UserCreate, current_user: dict = Depends(get_cu
         username=new_user.username,
         role=new_user.role,
         is_active=new_user.is_active,
+        force_password_change=new_user.force_password_change,
         created_by=new_user.created_by,
         created_at=new_user.created_at,
         updated_at=new_user.updated_at
