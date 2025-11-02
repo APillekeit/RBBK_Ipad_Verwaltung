@@ -2980,6 +2980,75 @@ const UserManagement = () => {
           </Card>
         </div>
       )}
+
+      {/* Reset Password Result Dialog */}
+      {showResetPasswordDialog && tempPasswordData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-green-600">✅ Passwort erfolgreich zurückgesetzt!</CardTitle>
+              <CardDescription>
+                Das temporäre Passwort wurde generiert
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert className="bg-yellow-50 border-yellow-200">
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription className="text-yellow-800 font-medium">
+                  ⚠️ WICHTIG: Dieser Code wird nur einmal angezeigt!<br/>
+                  Der Benutzer muss das Passwort beim nächsten Login ändern.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="space-y-2">
+                <Label>Benutzername</Label>
+                <div className="p-3 bg-gray-100 rounded-md font-mono">
+                  {tempPasswordData.username}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Temporäres Passwort (8-stellig)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={tempPasswordData.password}
+                    readOnly
+                    className="font-mono text-lg font-bold"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(tempPasswordData.password);
+                      toast.success('Passwort in Zwischenablage kopiert!');
+                    }}
+                    title="In Zwischenablage kopieren"
+                  >
+                    📋 Kopieren
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Sie können das Passwort markieren und kopieren (Strg+C)
+                </p>
+              </div>
+              
+              <div className="flex gap-2 justify-end pt-4">
+                <Button 
+                  onClick={() => {
+                    setShowResetPasswordDialog(false);
+                    setTempPasswordData(null);
+                  }}
+                  className="bg-gradient-to-r from-ipad-teal to-ipad-blue"
+                >
+                  Verstanden
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
     </div>
   );
 };
