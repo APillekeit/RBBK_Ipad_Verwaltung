@@ -3099,7 +3099,7 @@ function App() {
   return (
     <Router>
       <div className="App">
-        <Toaster richColors position="top-right" />
+        <Toaster richColors position="bottom-right" />
         <Routes>
           <Route 
             path="/" 
