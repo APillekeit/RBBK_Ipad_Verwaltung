@@ -2703,6 +2703,7 @@ const UserManagement = () => {
     setEditRole(user.role);
     setEditIsActive(user.is_active);
     setEditPassword('');
+    setEditPasswordConfirm('');
     setShowEditDialog(true);
   };
 
