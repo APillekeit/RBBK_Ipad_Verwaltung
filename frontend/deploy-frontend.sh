@@ -1,17 +1,31 @@
 #!/bin/bash
 
-# Basis-Pfad anpassen
-BASE_PATH="/RBBK_Ipad_Verwaltung-main"
+# Automatische Pfad-Erkennung
+# Skript wird aus /RBBK_Ipad_Verwaltung-main/frontend/ ausgeführt
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_PATH="$(dirname "$SCRIPT_DIR")"
 
 echo "═══════════════════════════════════════"
 echo "  Frontend Deployment"
 echo "═══════════════════════════════════════"
 echo ""
+echo "📍 Erkannter Basis-Pfad: $BASE_PATH"
+echo ""
 
-# Prüfen ob Pfad existiert
-if [ ! -d "$BASE_PATH" ]; then
-    echo "❌ Fehler: $BASE_PATH existiert nicht!"
-    echo "   Bitte passen Sie BASE_PATH im Skript an."
+# Prüfen ob wichtige Verzeichnisse existieren
+if [ ! -d "$BASE_PATH/config" ]; then
+    echo "❌ Fehler: $BASE_PATH/config existiert nicht!"
+    echo "   Aktuelles Verzeichnis: $(pwd)"
+    echo "   Skript-Verzeichnis: $SCRIPT_DIR"
+    echo ""
+    echo "Bitte führen Sie das Skript aus dem frontend-Verzeichnis aus:"
+    echo "   cd /pfad/zu/RBBK_Ipad_Verwaltung-main/frontend"
+    echo "   ./deploy-frontend.sh"
+    exit 1
+fi
+
+if [ ! -d "$BASE_PATH/frontend" ]; then
+    echo "❌ Fehler: $BASE_PATH/frontend existiert nicht!"
     exit 1
 fi
 
@@ -27,7 +41,10 @@ fi
 echo ""
 
 # Wechsle ins config-Verzeichnis
+echo "📂 Wechsle ins config-Verzeichnis..."
 cd "$BASE_PATH/config" || exit 1
+echo "   Aktueller Pfad: $(pwd)"
+echo ""
 
 # Frontend neu bauen
 echo "🔨 Baue Frontend-Container neu..."
@@ -47,6 +64,7 @@ echo "📦 Kopiere Build-Artefakte ins Volume..."
 docker-compose up -d frontend
 
 # Warten bis Container fertig ist (er stoppt automatisch)
+echo "   Warte 5 Sekunden..."
 sleep 5
 
 echo "✅ Build-Artefakte kopiert"
@@ -81,7 +99,7 @@ echo "   ✓ Kopierbarer Reset-Password-Dialog"
 echo ""
 echo "🔄 Bei Problemen Backup zurückspielen:"
 echo "   cp -r $BACKUP_DIR $BASE_PATH/frontend/src"
-echo "   $BASE_PATH/frontend/deploy-frontend.sh"
+echo "   cd $BASE_PATH/frontend && ./deploy-frontend.sh"
 echo ""
 echo "📋 Container-Status:"
 docker ps --filter "name=ipad" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
