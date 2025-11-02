@@ -1,32 +1,58 @@
 #!/bin/bash
 
+# Basis-Pfad anpassen
+BASE_PATH="/RBBK_Ipad_Verwaltung-main"
+
 echo "═══════════════════════════════════════"
 echo "  Frontend Deployment"
 echo "═══════════════════════════════════════"
 echo ""
 
-# Backup erstellen
-echo "📦 Erstelle Backup..."
-BACKUP_DIR="/app/frontend/src.backup.$(date +%Y%m%d_%H%M%S)"
-cp -r /app/frontend/src "$BACKUP_DIR"
-echo "✅ Backup erstellt: $BACKUP_DIR"
-echo ""
-
-# Build erstellen
-echo "🔨 Erstelle Production Build..."
-echo "   (Das kann 5-10 Minuten beim ersten Mal dauern...)"
-docker run --rm -v /app/frontend:/app -w /app node:16 sh -c "npm install && npm run build"
-
-if [ $? -eq 0 ]; then
-    echo "✅ Build erfolgreich erstellt"
-else
-    echo "❌ Build fehlgeschlagen!"
+# Prüfen ob Pfad existiert
+if [ ! -d "$BASE_PATH" ]; then
+    echo "❌ Fehler: $BASE_PATH existiert nicht!"
+    echo "   Bitte passen Sie BASE_PATH im Skript an."
     exit 1
 fi
 
+# Backup erstellen
+echo "📦 Erstelle Backup..."
+BACKUP_DIR="$BASE_PATH/frontend/src.backup.$(date +%Y%m%d_%H%M%S)"
+if [ -d "$BASE_PATH/frontend/src" ]; then
+    cp -r "$BASE_PATH/frontend/src" "$BACKUP_DIR"
+    echo "✅ Backup erstellt: $BACKUP_DIR"
+else
+    echo "⚠️ Kein src-Verzeichnis gefunden, überspringe Backup"
+fi
 echo ""
 
-# Nginx neu starten
+# Wechsle ins config-Verzeichnis
+cd "$BASE_PATH/config" || exit 1
+
+# Frontend neu bauen
+echo "🔨 Baue Frontend-Container neu..."
+echo "   (Das kann 5-10 Minuten beim ersten Mal dauern...)"
+docker-compose build --no-cache frontend
+
+if [ $? -ne 0 ]; then
+    echo "❌ Frontend-Build fehlgeschlagen!"
+    exit 1
+fi
+
+echo "✅ Frontend-Build erfolgreich"
+echo ""
+
+# Frontend-Container starten um Build-Artefakte zu kopieren
+echo "📦 Kopiere Build-Artefakte ins Volume..."
+docker-compose up -d frontend
+
+# Warten bis Container fertig ist (er stoppt automatisch)
+sleep 5
+
+echo "✅ Build-Artefakte kopiert"
+echo ""
+
+# Nginx neu starten um neue Dateien zu laden
 echo "🔄 Starte Nginx neu..."
 docker restart ipad_nginx
 
@@ -54,6 +80,9 @@ echo "   ✓ Passwort-Bestätigung im Edit-Dialog"
 echo "   ✓ Kopierbarer Reset-Password-Dialog"
 echo ""
 echo "🔄 Bei Problemen Backup zurückspielen:"
-echo "   cp -r $BACKUP_DIR /app/frontend/src"
-echo "   ./deploy-frontend.sh"
+echo "   cp -r $BACKUP_DIR $BASE_PATH/frontend/src"
+echo "   $BASE_PATH/frontend/deploy-frontend.sh"
+echo ""
+echo "📋 Container-Status:"
+docker ps --filter "name=ipad" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 echo "════════════════════════════════════════════════════════"
