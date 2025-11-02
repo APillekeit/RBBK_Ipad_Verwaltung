@@ -2626,6 +2626,17 @@ const UserManagement = () => {
     e.preventDefault();
     if (!selectedUser) return;
     
+    // Passwort-Validierung wenn Passwort geändert wird
+    if (editPassword && editPassword !== editPasswordConfirm) {
+      toast.error('Die Passwörter stimmen nicht überein');
+      return;
+    }
+    
+    if (editPassword && editPassword.length < 6) {
+      toast.error('Das Passwort muss mindestens 6 Zeichen lang sein');
+      return;
+    }
+    
     setUpdating(true);
     
     try {
@@ -2643,6 +2654,7 @@ const UserManagement = () => {
       setShowEditDialog(false);
       setSelectedUser(null);
       setEditPassword('');
+      setEditPasswordConfirm('');
       await loadUsers();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Fehler beim Aktualisieren des Benutzers');
