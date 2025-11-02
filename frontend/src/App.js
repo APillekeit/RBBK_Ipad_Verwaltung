@@ -2915,6 +2915,23 @@ const UserManagement = () => {
                     minLength={6}
                   />
                 </div>
+                {editPassword && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-password-confirm">Passwort bestätigen</Label>
+                    <Input
+                      id="edit-password-confirm"
+                      type="password"
+                      value={editPasswordConfirm}
+                      onChange={(e) => setEditPasswordConfirm(e.target.value)}
+                      placeholder="Passwort wiederholen"
+                      minLength={6}
+                      required={editPassword.length > 0}
+                    />
+                    {editPassword !== editPasswordConfirm && editPasswordConfirm && (
+                      <p className="text-sm text-red-600">⚠️ Passwörter stimmen nicht überein</p>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="edit-role">Rolle</Label>
                   <select
@@ -2945,6 +2962,7 @@ const UserManagement = () => {
                       setShowEditDialog(false);
                       setSelectedUser(null);
                       setEditPassword('');
+                      setEditPasswordConfirm('');
                     }}
                   >
                     Abbrechen
