@@ -2565,7 +2565,9 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [tempPasswordData, setTempPasswordData] = useState(null);
   
   // Create user form state
   const [newUsername, setNewUsername] = useState('');
@@ -2575,6 +2577,7 @@ const UserManagement = () => {
   
   // Edit user form state
   const [editPassword, setEditPassword] = useState('');
+  const [editPasswordConfirm, setEditPasswordConfirm] = useState('');
   const [editRole, setEditRole] = useState('user');
   const [editIsActive, setEditIsActive] = useState(true);
   const [updating, setUpdating] = useState(false);
