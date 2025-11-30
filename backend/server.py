@@ -2244,8 +2244,11 @@ async def export_assignments(
     current_user: dict = Depends(get_current_user)
 ):
     """Export assignments to Excel (all or filtered)"""
-    # Build filter query for students
-    student_filter = {}
+    # Apply user filter - CRITICAL for RBAC!
+    user_filter = await get_user_filter(current_user)
+    
+    # Build filter query for students (with user filter!)
+    student_filter = user_filter.copy()
     if sus_vorn:
         student_filter["sus_vorn"] = {"$regex": sus_vorn, "$options": "i"}
     if sus_nachn:
@@ -2253,20 +2256,21 @@ async def export_assignments(
     if sus_kl:
         student_filter["sus_kl"] = {"$regex": sus_kl, "$options": "i"}
     
-    # Build filter query for assignments (IT-Nummer)
-    assignment_filter = {"is_active": True}
+    # Build filter query for assignments (IT-Nummer) with user filter!
+    assignment_filter = user_filter.copy()
+    assignment_filter["is_active"] = True
     if itnr:
         assignment_filter["itnr"] = {"$regex": itnr, "$options": "i"}
     
-    if student_filter:
-        # Get matching students
+    if sus_vorn or sus_nachn or sus_kl:
+        # Get matching students (filtered by user_id!)
         students = await db.students.find(student_filter).to_list(length=None)
         student_ids = [s["id"] for s in students]
         
         # Add student filter to assignment filter
         assignment_filter["student_id"] = {"$in": student_ids}
     
-    # Get assignments matching all filters
+    # Get assignments matching all filters (filtered by user_id!)
     assignments = await db.assignments.find(assignment_filter).to_list(length=None)
     
     export_data = []
