@@ -76,8 +76,8 @@ class UserLogin(BaseModel):
 class iPad(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str  # Owner of this iPad
-    itnr: str  # Unique identifier
-    snr: Optional[str] = None
+    itnr: str  # IT-Number (required)
+    snr: str  # Serial Number (required)
     karton: Optional[str] = None
     pencil: Optional[str] = None
     typ: Optional[str] = None
