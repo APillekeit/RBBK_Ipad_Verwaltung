@@ -1633,19 +1633,6 @@ const AssignmentsManagement = () => {
               </>
             )}
           </div>
-                <Trash2 className="h-4 w-4 mr-2" />
-                {dissolving ? 'Löse auf...' : `Gefilterte Zuordnungen auflösen (${filteredAssignments.length})`}
-              </Button>
-            )}
-            
-            {/* Debug info for troubleshooting */}
-            {(vornameFilter || nachnameFilter || klasseFilter || itnrFilter) && (
-              <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                Debug: Filter aktiv - Gefiltert: {filteredAssignments.length}, Gesamt: {assignments.length}
-                {filteredAssignments.length > 0 && filteredAssignments.length < assignments.length ? ' → Batch-Button verfügbar' : ' → Kein Batch-Button'}
-              </div>
-            )}
-          </div>
 
           {loading ? (
             <div className="text-center py-8">Lade Zuordnungen...</div>
