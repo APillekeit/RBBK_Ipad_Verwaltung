@@ -2355,35 +2355,46 @@ async def export_assignments(
         ipad = await db.ipads.find_one({"id": assignment["ipad_id"]})
         
         if student and ipad:
-            # Format Geburtstag to TT.MM.JJJJ
+            # Format Geburtstag to DD.MM.YYYY (with leading zeros!)
             geburtstag_formatted = ""
             if student.get("sus_geb"):
                 try:
-                    # Try parsing different date formats
-                    geb_str = str(student["sus_geb"])
-                    if "." in geb_str:
-                        # Parse DD.MM.YYYY format and reformat to ensure leading zeros
-                        try:
-                            date_obj = datetime.strptime(geb_str, "%d.%m.%Y")
-                            geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
-                        except:
-                            # Try parsing without leading zeros
-                            parts = geb_str.split(".")
-                            if len(parts) == 3:
+                    geb_str = str(student["sus_geb"]).strip()
+                    
+                    # Skip if empty or 'nan'
+                    if not geb_str or geb_str.lower() == 'nan':
+                        geburtstag_formatted = ""
+                    # Already in DD.MM.YYYY format - ensure leading zeros
+                    elif "." in geb_str:
+                        parts = geb_str.split(".")
+                        if len(parts) == 3:
+                            try:
                                 day, month, year = parts
+                                # Parse and reformat with leading zeros
                                 date_obj = datetime(int(year), int(month), int(day))
                                 geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
-                            else:
+                            except:
                                 geburtstag_formatted = geb_str
+                    # ISO format: YYYY-MM-DD
                     elif "-" in geb_str:
-                        # Parse YYYY-MM-DD format
                         date_obj = datetime.strptime(geb_str, "%Y-%m-%d")
                         geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
+                    # Compact format: YYYYMMDD
                     elif len(geb_str) == 8 and geb_str.isdigit():
-                        # Parse YYYYMMDD format
                         date_obj = datetime.strptime(geb_str, "%Y%m%d")
                         geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
-                except:
+                    # Try parsing as DD/MM/YYYY
+                    elif "/" in geb_str:
+                        parts = geb_str.split("/")
+                        if len(parts) == 3:
+                            day, month, year = parts
+                            date_obj = datetime(int(year), int(month), int(day))
+                            geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
+                    else:
+                        # Unknown format, keep as is
+                        geburtstag_formatted = geb_str
+                except Exception as e:
+                    # If all parsing fails, keep original or empty
                     geburtstag_formatted = student.get("sus_geb", "")
             
             # Format AusleiheDatum from assignment assigned_at
