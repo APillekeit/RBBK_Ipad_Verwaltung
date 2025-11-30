@@ -3120,6 +3120,143 @@ const UserManagement = () => {
         </div>
       )}
 
+      {/* Complete Delete Confirmation Dialog - Two Steps */}
+      {showDeleteConfirmDialog && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg border-4 border-red-500">
+            <CardHeader className="bg-red-50">
+              <CardTitle className="text-red-700 flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6" />
+                {deleteStep === 1 ? '⚠️ WARNUNG: Benutzer vollständig löschen?' : '🚨 LETZTE WARNUNG'}
+              </CardTitle>
+              <CardDescription className="text-red-600 font-medium">
+                {deleteStep === 1 
+                  ? 'Diese Aktion ist UNWIDERRUFLICH und löscht ALLE Daten!'
+                  : 'Sind Sie ABSOLUT SICHER? Es gibt KEIN Zurück!'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              
+              {deleteStep === 1 ? (
+                // STEP 1: First Warning
+                <>
+                  <Alert className="bg-red-50 border-red-300">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <AlertDescription className="text-red-800">
+                      <div className="font-bold text-lg mb-2">
+                        Sie sind dabei, Benutzer "{selectedUser.username}" VOLLSTÄNDIG zu löschen!
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <p>• Der Benutzer wird PERMANENT gelöscht</p>
+                        <p>• ALLE iPads des Benutzers werden gelöscht</p>
+                        <p>• ALLE Schüler des Benutzers werden gelöscht</p>
+                        <p>• ALLE Zuordnungen werden gelöscht</p>
+                        <p>• ALLE Verträge werden gelöscht</p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="bg-yellow-50 border border-yellow-300 rounded p-4">
+                    <p className="text-sm text-yellow-800 font-medium mb-2">
+                      💡 Alternative: Benutzer nur deaktivieren
+                    </p>
+                    <p className="text-xs text-yellow-700">
+                      Wenn Sie den Benutzer nur vorübergehend sperren möchten, verwenden Sie stattdessen 
+                      den "Deaktivieren"-Button (🗑️). Dies bewahrt alle Daten.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 justify-end pt-4">
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setShowDeleteConfirmDialog(false);
+                        setSelectedUser(null);
+                        setDeleteStep(1);
+                      }}
+                    >
+                      Abbrechen
+                    </Button>
+                    <Button 
+                      onClick={handleDeleteStep1Confirm}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      Weiter zur Bestätigung →
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                // STEP 2: Final Confirmation with username typing
+                <>
+                  <Alert className="bg-red-100 border-red-400">
+                    <AlertTriangle className="h-5 w-5 text-red-700" />
+                    <AlertDescription className="text-red-900">
+                      <div className="font-bold text-lg mb-3">
+                        🚨 LETZTE BESTÄTIGUNG ERFORDERLICH
+                      </div>
+                      {selectedUser.resourceCounts && (
+                        <div className="bg-white rounded p-3 mb-3">
+                          <p className="font-semibold mb-2">Folgende Daten werden PERMANENT gelöscht:</p>
+                          <ul className="space-y-1 text-sm">
+                            <li>• <strong>{selectedUser.resourceCounts.ipads}</strong> iPads</li>
+                            <li>• <strong>{selectedUser.resourceCounts.students}</strong> Schüler</li>
+                            <li>• <strong>{selectedUser.resourceCounts.assignments}</strong> Zuordnungen</li>
+                            <li>• Benutzer-Account: <strong>{selectedUser.username}</strong></li>
+                          </ul>
+                        </div>
+                      )}
+                      <p className="text-sm font-medium">
+                        Geben Sie zur Bestätigung den Benutzernamen ein:
+                      </p>
+                      <p className="text-lg font-mono font-bold text-red-700 mt-1">
+                        {selectedUser.username}
+                      </p>
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="delete-confirm" className="text-red-700 font-medium">
+                      Benutzername zur Bestätigung eingeben:
+                    </Label>
+                    <Input
+                      id="delete-confirm"
+                      type="text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder={`Geben Sie "${selectedUser.username}" ein`}
+                      className="border-red-300 focus:ring-red-500"
+                      autoFocus
+                    />
+                    {deleteConfirmText && deleteConfirmText !== selectedUser.username && (
+                      <p className="text-sm text-red-600">
+                        ⚠️ Benutzername stimmt nicht überein
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 justify-end pt-4">
+                    <Button 
+                      variant="outline"
+                      onClick={() => setDeleteStep(1)}
+                    >
+                      ← Zurück
+                    </Button>
+                    <Button 
+                      onClick={handleDeleteStep2Confirm}
+                      disabled={deleteConfirmText !== selectedUser.username}
+                      className="bg-red-700 hover:bg-red-800 text-white disabled:bg-gray-400"
+                    >
+                      🗑️ ENDGÜLTIG LÖSCHEN
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+
     </div>
   );
 };
