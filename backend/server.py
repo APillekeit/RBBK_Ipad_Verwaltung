@@ -284,7 +284,7 @@ async def validate_resource_ownership(resource_type: str, resource_id: str, user
     }
     
     collection = collection_map.get(resource_type)
-    if not collection:
+    if collection is None:
         raise HTTPException(status_code=400, detail=f"Invalid resource type: {resource_type}")
     
     # Check if resource exists and belongs to user
