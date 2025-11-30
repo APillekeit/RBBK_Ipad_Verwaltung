@@ -1794,6 +1794,135 @@ async def dissolve_assignment(assignment_id: str, current_user: dict = Depends(g
     
     return {"message": "Assignment dissolved successfully"}
 
+
+@api_router.post("/assignments/batch-dissolve")
+async def batch_dissolve_assignments(
+    filter_params: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Dissolve multiple assignments at once (filtered or all)
+    
+    filter_params can include:
+    - "all": true (dissolves all user's assignments)
+    - "sus_vorn": string (filter by student first name)
+    - "sus_nachn": string (filter by student last name)
+    - "sus_kl": string (filter by class)
+    - "itnr": string (filter by iPad IT number)
+    """
+    try:
+        # Apply user filter - CRITICAL for RBAC!
+        user_filter = await get_user_filter(current_user)
+        
+        # Build assignment filter
+        assignment_filter = user_filter.copy()
+        assignment_filter["is_active"] = True
+        
+        # If not "all", apply specific filters
+        if not filter_params.get("all", False):
+            # Build student filter if student-related params exist
+            student_filter = user_filter.copy()
+            has_student_filter = False
+            
+            if filter_params.get("sus_vorn"):
+                student_filter["sus_vorn"] = {"$regex": filter_params["sus_vorn"], "$options": "i"}
+                has_student_filter = True
+            if filter_params.get("sus_nachn"):
+                student_filter["sus_nachn"] = {"$regex": filter_params["sus_nachn"], "$options": "i"}
+                has_student_filter = True
+            if filter_params.get("sus_kl"):
+                student_filter["sus_kl"] = {"$regex": filter_params["sus_kl"], "$options": "i"}
+                has_student_filter = True
+            
+            # Apply iPad filter if provided
+            if filter_params.get("itnr"):
+                assignment_filter["itnr"] = {"$regex": filter_params["itnr"], "$options": "i"}
+            
+            # If student filters exist, get matching student IDs
+            if has_student_filter:
+                students = await db.students.find(student_filter).to_list(length=None)
+                student_ids = [s["id"] for s in students]
+                
+                if not student_ids:
+                    return {
+                        "message": "No assignments match the filter criteria",
+                        "dissolved_count": 0,
+                        "details": []
+                    }
+                
+                assignment_filter["student_id"] = {"$in": student_ids}
+        
+        # Get all matching assignments
+        assignments = await db.assignments.find(assignment_filter).to_list(length=None)
+        
+        if not assignments:
+            return {
+                "message": "No active assignments found to dissolve",
+                "dissolved_count": 0,
+                "details": []
+            }
+        
+        dissolved_count = 0
+        details = []
+        
+        # Dissolve each assignment
+        for assignment in assignments:
+            try:
+                # Move contract to history if exists
+                if assignment.get("contract_id"):
+                    await db.contracts.update_one(
+                        {"id": assignment["contract_id"]},
+                        {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                    )
+                
+                # Mark assignment as inactive
+                await db.assignments.update_one(
+                    {"id": assignment["id"]},
+                    {"$set": {
+                        "is_active": False,
+                        "unassigned_at": datetime.now(timezone.utc).isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                
+                # Update iPad status to available
+                await db.ipads.update_one(
+                    {"id": assignment["ipad_id"]},
+                    {"$set": {
+                        "status": "verfügbar",
+                        "current_assignment_id": None,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                
+                # Update student
+                await db.students.update_one(
+                    {"id": assignment["student_id"]},
+                    {"$set": {
+                        "current_assignment_id": None,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                
+                dissolved_count += 1
+                details.append(f"Assignment {assignment.get('itnr', 'Unknown')} dissolved")
+                
+            except Exception as e:
+                details.append(f"Error dissolving assignment {assignment.get('itnr', 'Unknown')}: {str(e)}")
+        
+        return {
+            "message": f"Successfully dissolved {dissolved_count} assignment(s)",
+            "dissolved_count": dissolved_count,
+            "total_found": len(assignments),
+            "details": details
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during batch dissolve: {str(e)}")
+
+
 # Contract viewing
 @api_router.get("/contracts/{contract_id}")
 async def get_contract(contract_id: str, current_user: dict = Depends(get_current_user)):
