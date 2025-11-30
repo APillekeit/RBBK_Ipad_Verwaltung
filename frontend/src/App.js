@@ -2566,8 +2566,11 @@ const UserManagement = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [deleteStep, setDeleteStep] = useState(1); // 1 = first confirm, 2 = second confirm
   const [selectedUser, setSelectedUser] = useState(null);
   const [tempPasswordData, setTempPasswordData] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   
   // Create user form state
   const [newUsername, setNewUsername] = useState('');
