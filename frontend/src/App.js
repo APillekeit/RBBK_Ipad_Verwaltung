@@ -2862,10 +2862,21 @@ const UserManagement = () => {
                             size="sm"
                             onClick={() => handleDeleteUser(user)}
                             title="Benutzer deaktivieren"
-                            className="hover:bg-red-50 hover:text-red-600"
+                            className="hover:bg-orange-50 hover:text-orange-600"
                             disabled={!user.is_active}
                           >
                             <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleCompleteDeleteUser(user)}
+                            title="⚠️ VOLLSTÄNDIG LÖSCHEN (inkl. aller Daten!)"
+                            className="hover:bg-red-100 hover:text-red-700 border-red-200"
+                            disabled={!user.is_active}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                            <span className="ml-1 text-xs font-bold">×</span>
                           </Button>
                         </div>
                       </TableCell>
