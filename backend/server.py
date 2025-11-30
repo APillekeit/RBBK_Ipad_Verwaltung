@@ -2055,24 +2055,32 @@ async def import_inventory(file: UploadFile = File(...), current_user: dict = De
 async def export_inventory(current_user: dict = Depends(get_current_user)):
     """Export complete inventory list with all iPads and assigned students"""
     try:
+        # Apply user filter - CRITICAL for RBAC!
+        user_filter = await get_user_filter(current_user)
+        
         # Get global settings
         settings = await db.global_settings.find_one({"type": "app_settings"})
         ipad_typ = settings.get("ipad_typ", "Apple iPad") if settings else "Apple iPad"
         pencil = settings.get("pencil", "ohne Apple Pencil") if settings else "ohne Apple Pencil"
         
-        # Get all iPads with their assignments and student data
+        # Get all iPads with their assignments and student data (filtered by user!)
         pipeline = [
+            # CRITICAL: Add user filter as first stage!
+            {
+                "$match": user_filter
+            },
             {
                 "$lookup": {
                     "from": "assignments",
-                    "let": {"ipad_id": "$id"},
+                    "let": {"ipad_id": "$id", "ipad_user_id": "$user_id"},
                     "pipeline": [
                         {
                             "$match": {
                                 "$expr": {
                                     "$and": [
                                         {"$eq": ["$ipad_id", "$$ipad_id"]},
-                                        {"$eq": ["$is_active", True]}
+                                        {"$eq": ["$is_active", True]},
+                                        {"$eq": ["$user_id", "$$ipad_user_id"]}  # Ensure assignment belongs to same user
                                     ]
                                 }
                             }
@@ -2084,11 +2092,16 @@ async def export_inventory(current_user: dict = Depends(get_current_user)):
             {
                 "$lookup": {
                     "from": "students",
-                    "let": {"student_id": {"$arrayElemAt": ["$current_assignment.student_id", 0]}},
+                    "let": {"student_id": {"$arrayElemAt": ["$current_assignment.student_id", 0]}, "ipad_user_id": "$user_id"},
                     "pipeline": [
                         {
                             "$match": {
-                                "$expr": {"$eq": ["$id", "$$student_id"]}
+                                "$expr": {
+                                    "$and": [
+                                        {"$eq": ["$id", "$$student_id"]},
+                                        {"$eq": ["$user_id", "$$ipad_user_id"]}  # Ensure student belongs to same user
+                                    ]
+                                }
                             }
                         }
                     ],
