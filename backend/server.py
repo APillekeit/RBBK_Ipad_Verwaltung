@@ -697,6 +697,67 @@ async def delete_user(user_id: str, current_user: dict = Depends(get_current_use
         "note": "User data has been preserved. To permanently delete data, use data management tools."
     }
 
+
+@api_router.delete("/admin/users/{user_id}/complete")
+async def delete_user_complete(user_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    PERMANENTLY delete a user and ALL their data (admin only)
+    WARNING: This action is IRREVERSIBLE!
+    Deletes: User account, iPads, Students, Assignments, Contracts
+    """
+    require_admin(current_user)
+    
+    # Get user to delete
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent self-deletion
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    # Count resources before deletion
+    ipads_count = await db.ipads.count_documents({"user_id": user_id})
+    students_count = await db.students.count_documents({"user_id": user_id})
+    assignments_count = await db.assignments.count_documents({"user_id": user_id})
+    contracts_count = await db.contracts.count_documents({"user_id": user_id})
+    
+    # Cascading delete: Delete all user's data
+    try:
+        # Delete assignments first (references iPads and Students)
+        await db.assignments.delete_many({"user_id": user_id})
+        
+        # Delete contracts
+        await db.contracts.delete_many({"user_id": user_id})
+        
+        # Delete iPads
+        await db.ipads.delete_many({"user_id": user_id})
+        
+        # Delete students
+        await db.students.delete_many({"user_id": user_id})
+        
+        # Finally, delete the user account
+        await db.users.delete_one({"id": user_id})
+        
+        return {
+            "message": f"User '{target_user['username']}' and all associated data have been permanently deleted",
+            "deleted_user_id": user_id,
+            "deleted_username": target_user["username"],
+            "deleted_resources": {
+                "ipads": ipads_count,
+                "students": students_count,
+                "assignments": assignments_count,
+                "contracts": contracts_count
+            },
+            "warning": "This action was IRREVERSIBLE. All data has been permanently removed."
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error during deletion process: {str(e)}. Some data may have been partially deleted."
+        )
+
 @api_router.post("/admin/users/{user_id}/reset-password")
 async def reset_user_password(user_id: str, current_user: dict = Depends(get_current_user)):
     """Reset user password to a temporary 8-digit code (admin only)"""
