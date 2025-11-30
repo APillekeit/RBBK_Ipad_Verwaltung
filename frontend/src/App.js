@@ -1331,47 +1331,52 @@ const AssignmentsManagement = () => {
     }
   };
 
-  const handleBatchDissolve = async () => {
-    console.log('🔥 BATCH DISSOLUTION FUNCTION CALLED!');
+  const handleBatchDissolve = async (dissolveAll = false) => {
+    const count = dissolveAll ? assignments.length : filteredAssignments.length;
+    const type = dissolveAll ? "ALLE" : "gefilterte";
     
-    // Double-click protection for batch operations
-    const now = Date.now();
-    if (!window._lastBatchClick || (now - window._lastBatchClick) > 3000) {
-      window._lastBatchClick = now;
-      toast.info(`${filteredAssignments.length} gefilterte Zuordnungen auflösen? Klicken Sie nochmal in 2 Sekunden um zu bestätigen.`);
+    // Build confirmation message
+    const message = `⚠️ WARNUNG: Sie sind dabei ${count} ${type} Zuordnung(en) aufzulösen!\n\nDies kann NICHT rückgängig gemacht werden.\n\nMöchten Sie fortfahren?`;
+    
+    if (!window.confirm(message)) {
+      return;
+    }
+    
+    // Second confirmation
+    const secondConfirm = window.confirm(`🚨 LETZTE BESTÄTIGUNG\n\n${count} Zuordnung(en) werden aufgelöst:\n- iPads werden auf "verfügbar" gesetzt\n- Schüler werden freigegeben\n- Verträge werden inaktiv\n\nWirklich fortfahren?`);
+    
+    if (!secondConfirm) {
       return;
     }
     
     try {
       setDissolving(true);
-      toast.info('Löse alle gefilterten Zuordnungen auf...');
+      toast.info(`Löse ${count} Zuordnung(en) auf...`);
       
-      let successCount = 0;
+      // Build filter parameters
+      const filterParams = {};
       
-      for (const assignment of filteredAssignments) {
-        try {
-          const response = await fetch(`${API_BASE_URL}/assignments/${assignment.id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            successCount++;
-          }
-        } catch (error) {
-          console.error('❌ Error:', error);
-        }
+      if (dissolveAll) {
+        filterParams.all = true;
+      } else {
+        // Apply current filters
+        if (vornameFilter) filterParams.sus_vorn = vornameFilter;
+        if (nachnameFilter) filterParams.sus_nachn = nachnameFilter;
+        if (klasseFilter) filterParams.sus_kl = klasseFilter;
+        if (itnrFilter) filterParams.itnr = itnrFilter;
       }
       
-      toast.success(`${successCount} Zuordnungen erfolgreich aufgelöst!`);
+      // Call batch dissolve endpoint
+      const response = await api.post('/assignments/batch-dissolve', filterParams);
+      
+      toast.success(`✅ ${response.data.dissolved_count} Zuordnung(en) erfolgreich aufgelöst!`);
+      
+      // Reload data
       await loadAllData();
       
     } catch (error) {
-      console.error('Batch error:', error);
-      toast.error('Batch-Fehler');
+      console.error('Batch dissolve error:', error);
+      toast.error(error.response?.data?.detail || 'Fehler beim Auflösen der Zuordnungen');
     } finally {
       setDissolving(false);
     }
