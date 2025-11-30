@@ -828,15 +828,30 @@ async def upload_students(file: UploadFile = File(...), current_user: dict = Dep
         validate_uploaded_file(contents, file.filename, max_size_mb=5, allowed_types=['.xlsx'])
         df = pd.read_excel(io.BytesIO(contents))
         
+        # Normalize column names to lowercase for case-insensitive matching
+        df.columns = df.columns.str.lower()
+        
+        # Check if required columns exist
+        required_columns = ['susvorn', 'susnachn']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Missing required columns: {', '.join(missing_columns)}. Required: SuSVorn, SuSNachn (case-insensitive)"
+            )
+        
         processed_count = 0
         skipped_count = 0
         details = []
         
-        for _, row in df.iterrows():
-            sus_vorn = str(row.get('SuSVorn', ''))
-            sus_nachn = str(row.get('SuSNachn', ''))
+        for idx, row in df.iterrows():
+            sus_vorn = str(row.get('susvorn', ''))
+            sus_nachn = str(row.get('susnachn', ''))
             
+            # Validate required fields
             if not sus_vorn or not sus_nachn or sus_vorn == 'nan' or sus_nachn == 'nan':
+                skipped_count += 1
+                details.append(f"Row {idx+2}: Missing SuSVorn or SuSNachn - skipped")
                 continue
             
             # Check if student already exists for this user (by name combination and user_id)
@@ -852,24 +867,24 @@ async def upload_students(file: UploadFile = File(...), current_user: dict = Dep
             
             student = Student(
                 user_id=current_user["id"],
-                sname=str(row.get('Sname', '')),
+                sname=str(row.get('sname', '')),
                 sus_nachn=sus_nachn,
                 sus_vorn=sus_vorn,
-                sus_kl=str(row.get('SuSKl', '')),
-                sus_str_hnr=str(row.get('SuSStrHNr', '')),
-                sus_plz=str(row.get('SuSPLZ', '')),
-                sus_ort=str(row.get('SuSOrt', '')),
-                sus_geb=str(row.get('SuSGeb', '')),
-                erz1_nachn=str(row.get('Erz1Nachn', '')),
-                erz1_vorn=str(row.get('Erz1Vorn', '')),
-                erz1_str_hnr=str(row.get('Erz1StrHNr', '')),
-                erz1_plz=str(row.get('Erz1PLZ', '')),
-                erz1_ort=str(row.get('Erz1Ort', '')),
-                erz2_nachn=str(row.get('Erz2Nachn', '')),
-                erz2_vorn=str(row.get('Erz2Vorn', '')),
-                erz2_str_hnr=str(row.get('Erz2StrHNr', '')),
-                erz2_plz=str(row.get('Erz2PLZ', '')),
-                erz2_ort=str(row.get('Erz2Ort', ''))
+                sus_kl=str(row.get('suskl', '')),
+                sus_str_hnr=str(row.get('susstrhnr', '')),
+                sus_plz=str(row.get('susplz', '')),
+                sus_ort=str(row.get('susort', '')),
+                sus_geb=str(row.get('susgeb', '')),
+                erz1_nachn=str(row.get('erz1nachn', '')),
+                erz1_vorn=str(row.get('erz1vorn', '')),
+                erz1_str_hnr=str(row.get('erz1strhnr', '')),
+                erz1_plz=str(row.get('erz1plz', '')),
+                erz1_ort=str(row.get('erz1ort', '')),
+                erz2_nachn=str(row.get('erz2nachn', '')),
+                erz2_vorn=str(row.get('erz2vorn', '')),
+                erz2_str_hnr=str(row.get('erz2strhnr', '')),
+                erz2_plz=str(row.get('erz2plz', '')),
+                erz2_ort=str(row.get('erz2ort', ''))
             )
             
             student_dict = prepare_for_mongo(student.dict())
@@ -884,6 +899,8 @@ async def upload_students(file: UploadFile = File(...), current_user: dict = Dep
             details=details
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
