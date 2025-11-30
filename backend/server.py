@@ -748,13 +748,30 @@ async def upload_ipads(file: UploadFile = File(...), current_user: dict = Depend
         validate_uploaded_file(contents, file.filename, max_size_mb=5, allowed_types=['.xlsx'])
         df = pd.read_excel(io.BytesIO(contents))
         
+        # Normalize column names to lowercase for case-insensitive matching
+        df.columns = df.columns.str.lower()
+        
+        # Check if required columns exist
+        required_columns = ['itnr', 'snr']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Missing required columns: {', '.join(missing_columns)}. Required: ITNr, SNr (case-insensitive)"
+            )
+        
         processed_count = 0
         skipped_count = 0
         details = []
         
-        for _, row in df.iterrows():
-            itnr = str(row.get('ITNr', ''))
-            if not itnr or itnr == 'nan':
+        for idx, row in df.iterrows():
+            itnr = str(row.get('itnr', ''))
+            snr = str(row.get('snr', ''))
+            
+            # Validate required fields
+            if not itnr or itnr == 'nan' or not snr or snr == 'nan':
+                skipped_count += 1
+                details.append(f"Row {idx+2}: Missing ITNr or SNr - skipped")
                 continue
                 
             # Check if iPad already exists for this user (users can have same ITNr)
@@ -767,18 +784,18 @@ async def upload_ipads(file: UploadFile = File(...), current_user: dict = Depend
             ipad = iPad(
                 user_id=current_user["id"],
                 itnr=itnr,
-                snr=str(row.get('SNr', '')),
-                karton=str(row.get('Karton', '')),
-                pencil=str(row.get('Pencil', '')),
-                typ=str(row.get('Typ', '')),
-                ansch_jahr=str(row.get('AnschJahr', '')),
-                ausleihe_datum=str(row.get('AusleiheDatum', ''))
+                snr=snr,
+                karton=str(row.get('karton', '')),
+                pencil=str(row.get('pencil', '')),
+                typ=str(row.get('typ', '')),
+                ansch_jahr=str(row.get('anschjahr', '')),
+                ausleihe_datum=str(row.get('ausleihedatum', ''))
             )
             
             ipad_dict = prepare_for_mongo(ipad.dict())
             await db.ipads.insert_one(ipad_dict)
             processed_count += 1
-            details.append(f"iPad {itnr} added successfully")
+            details.append(f"iPad {itnr} (SNr: {snr}) added successfully")
         
         return UploadResponse(
             message=f"Processed {processed_count} iPads, skipped {skipped_count}",
@@ -787,6 +804,8 @@ async def upload_ipads(file: UploadFile = File(...), current_user: dict = Depend
             details=details
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
