@@ -2680,6 +2680,63 @@ const UserManagement = () => {
     }
   };
 
+  const handleCompleteDeleteUser = (user) => {
+    // Open first confirmation dialog
+    setSelectedUser(user);
+    setDeleteStep(1);
+    setDeleteConfirmText('');
+    setShowDeleteConfirmDialog(true);
+  };
+
+  const handleDeleteStep1Confirm = async () => {
+    // Count user's resources
+    try {
+      const [ipadsRes, studentsRes, assignmentsRes] = await Promise.all([
+        api.get('/ipads'),
+        api.get('/students'),
+        api.get('/assignments')
+      ]);
+      
+      // Filter by selected user
+      const userIpads = ipadsRes.data.filter(i => i.user_id === selectedUser.id);
+      const userStudents = studentsRes.data.filter(s => s.user_id === selectedUser.id);
+      const userAssignments = assignmentsRes.data.filter(a => a.user_id === selectedUser.id);
+      
+      // Store counts for second confirmation
+      selectedUser.resourceCounts = {
+        ipads: userIpads.length,
+        students: userStudents.length,
+        assignments: userAssignments.length
+      };
+      
+      // Move to step 2
+      setDeleteStep(2);
+    } catch (error) {
+      toast.error('Fehler beim Laden der Ressourcen-Anzahl');
+    }
+  };
+
+  const handleDeleteStep2Confirm = async () => {
+    // Check if user typed the confirmation text correctly
+    if (deleteConfirmText !== selectedUser.username) {
+      toast.error(`Bitte geben Sie "${selectedUser.username}" ein, um zu bestätigen`);
+      return;
+    }
+    
+    try {
+      const response = await api.delete(`/admin/users/${selectedUser.id}/complete`);
+      toast.success(response.data.message);
+      setShowDeleteConfirmDialog(false);
+      setSelectedUser(null);
+      setDeleteConfirmText('');
+      await loadUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Fehler beim Löschen des Benutzers');
+      console.error('Complete user deletion error:', error);
+    }
+  };
+
+
   const handleResetPassword = async (user) => {
     if (window.confirm(`Möchten Sie das Passwort für Benutzer "${user.username}" wirklich zurücksetzen?\n\nEin temporäres 8-stelliges Passwort wird generiert.`)) {
       try {
