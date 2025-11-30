@@ -1602,27 +1602,37 @@ const AssignmentsManagement = () => {
               {exporting ? 'Exportiere...' : 'Alle Zuordnungen exportieren'}
             </Button>
             
-            {(vornameFilter || nachnameFilter || klasseFilter || itnrFilter) && filteredAssignments.length > 0 && (
-              <Button 
-                onClick={() => handleExport(true)}
-                disabled={exporting}
-                className="bg-gradient-to-r from-ipad-blue to-ipad-dark-blue hover:from-ipad-dark-blue hover:to-ipad-dark-gray"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {exporting ? 'Exportiere...' : `Gefilterte Zuordnungen exportieren (${filteredAssignments.length})`}
-              </Button>
-            )}
+            <Button 
+              onClick={() => handleBatchDissolve(true)}
+              disabled={dissolving || assignments.length === 0}
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {dissolving ? 'Löse auf...' : `Alle Zuordnungen lösen (${assignments.length})`}
+            </Button>
             
-            {filteredAssignments.length > 0 && filteredAssignments.length < assignments.length && (
-              <Button 
-                onClick={() => {
-                  console.log('🔥 BATCH BUTTON CLICKED!');
-                  handleBatchDissolve();
-                }}
-                disabled={dissolving}
-                variant="destructive"
-                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 disabled:opacity-50"
-              >
+            {(vornameFilter || nachnameFilter || klasseFilter || itnrFilter) && filteredAssignments.length > 0 && (
+              <>
+                <Button 
+                  onClick={() => handleExport(true)}
+                  disabled={exporting}
+                  className="bg-gradient-to-r from-ipad-blue to-ipad-dark-blue hover:from-ipad-dark-blue hover:to-ipad-dark-gray"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {exporting ? 'Exportiere...' : `Gefilterte Zuordnungen exportieren (${filteredAssignments.length})`}
+                </Button>
+                
+                <Button 
+                  onClick={() => handleBatchDissolve(false)}
+                  disabled={dissolving}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {dissolving ? 'Löse auf...' : `Gefilterte Zuordnungen lösen (${filteredAssignments.length})`}
+                </Button>
+              </>
+            )}
+          </div>
                 <Trash2 className="h-4 w-4 mr-2" />
                 {dissolving ? 'Löse auf...' : `Gefilterte Zuordnungen auflösen (${filteredAssignments.length})`}
               </Button>
