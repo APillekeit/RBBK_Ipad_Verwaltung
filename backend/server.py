@@ -2237,7 +2237,7 @@ async def export_inventory(current_user: dict = Depends(get_current_user)):
                 "SuSStrHNr": student.get("sus_str_hnr", "") if student else "",
                 "SuSPLZ": student.get("sus_plz", "") if student else "",
                 "SuSOrt": student.get("sus_ort", "") if student else "",
-                "SuSGeb": student.get("sus_geb", "") if student else "",
+                "SuSGeb": geburtstag_formatted,  # Formatted to DD.MM.YYYY
                 "Erz1Nachn": student.get("erz1_nachn", "") if student else "",
                 "Erz1Vorn": student.get("erz1_vorn", "") if student else "",
                 "Erz1StrHNr": student.get("erz1_str_hnr", "") if student else "",
