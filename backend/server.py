@@ -2208,8 +2208,11 @@ async def export_inventory(current_user: dict = Depends(get_current_user)):
                                 geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
                             except:
                                 geburtstag_formatted = geb_str
-                    # ISO format: YYYY-MM-DD
+                    # ISO format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
                     elif "-" in geb_str:
+                        # Remove time part if present
+                        if " " in geb_str:
+                            geb_str = geb_str.split(" ")[0]
                         date_obj = datetime.strptime(geb_str, "%Y-%m-%d")
                         geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
                     # Compact format: YYYYMMDD
@@ -2414,8 +2417,11 @@ async def export_assignments(
                                 geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
                             except:
                                 geburtstag_formatted = geb_str
-                    # ISO format: YYYY-MM-DD
+                    # ISO format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
                     elif "-" in geb_str:
+                        # Remove time part if present
+                        if " " in geb_str:
+                            geb_str = geb_str.split(" ")[0]
                         date_obj = datetime.strptime(geb_str, "%Y-%m-%d")
                         geburtstag_formatted = date_obj.strftime("%d.%m.%Y")
                     # Compact format: YYYYMMDD
