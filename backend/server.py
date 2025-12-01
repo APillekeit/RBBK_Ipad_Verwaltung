@@ -1376,8 +1376,6 @@ async def get_available_ipads(current_user: dict = Depends(get_current_user)):
         "status": i.get("status", "ok")
     } for i in ipads]
 
-        raise HTTPException(status_code=500, detail=f"Fehler bei manueller Zuordnung: {str(e)}")
-
 @api_router.get("/assignments", response_model=List[Assignment])
 async def get_assignments(current_user: dict = Depends(get_current_user)):
     # Apply user filter
