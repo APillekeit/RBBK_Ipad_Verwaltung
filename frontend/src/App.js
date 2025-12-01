@@ -797,6 +797,57 @@ const StudentsManagement = () => {
   };
 
   return (
+
+  const handleBatchDeleteStudents = async (deleteAll = false) => {
+    const count = deleteAll ? students.length : filteredStudents.length;
+    const type = deleteAll ? "ALLE" : "gefilterte";
+    
+    // Build confirmation message
+    const message = `⚠️ WARNUNG: Sie sind dabei ${count} ${type} Schüler zu löschen!\n\nFür jeden Schüler wird gelöscht:\n- Alle Zuordnungen\n- Alle Verträge\n- Komplette Historie\n- iPads werden freigegeben\n\nDies kann NICHT rückgängig gemacht werden!\n\nMöchten Sie fortfahren?`;
+    
+    if (!window.confirm(message)) {
+      return;
+    }
+    
+    // Second confirmation
+    const secondConfirm = window.confirm(`🚨 LETZTE BESTÄTIGUNG\n\n${count} Schüler werden PERMANENT gelöscht!\n\nWirklich fortfahren?`);
+    
+    if (!secondConfirm) {
+      return;
+    }
+    
+    try {
+      setDeleting(true);
+      toast.info(`Lösche ${count} Schüler...`);
+      
+      // Build filter parameters
+      const filterParams = {};
+      
+      if (deleteAll) {
+        filterParams.all = true;
+      } else {
+        // Apply current filters
+        if (studentVornameFilter) filterParams.sus_vorn = studentVornameFilter;
+        if (studentNachnameFilter) filterParams.sus_nachn = studentNachnameFilter;
+        if (studentKlasseFilter) filterParams.sus_kl = studentKlasseFilter;
+      }
+      
+      // Call batch delete endpoint
+      const response = await api.post('/students/batch-delete', filterParams);
+      
+      toast.success(`✅ ${response.data.deleted_count} Schüler gelöscht, ${response.data.freed_ipads} iPads freigegeben!`);
+      
+      // Reload data
+      await loadStudents();
+      
+    } catch (error) {
+      console.error('Batch delete students error:', error);
+      toast.error(error.response?.data?.detail || 'Fehler beim Löschen der Schüler');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
     <div className="space-y-6">
       <Card className="shadow-lg">
         <CardHeader>
