@@ -1904,8 +1904,43 @@ class iPadManagementTester:
         available_ipads = ipads_response.json()
         
         if not available_students:
-            self.log_test("Manual Assignment", False, "No available students for assignment")
-            return False
+            # Create a test student for manual assignment
+            print("No available students found, creating test student for manual assignment")
+            
+            import pandas as pd
+            import io
+            
+            df = pd.DataFrame([{
+                'SuSVorn': 'TestManual',
+                'SuSNachn': 'Assignment',
+                'SuSKl': '99m',
+                'SuSStrHNr': 'Test Street 1',
+                'SuSPLZ': '12345',
+                'SuSOrt': 'Test City'
+            }])
+            
+            excel_buffer = io.BytesIO()
+            df.to_excel(excel_buffer, index=False)
+            excel_buffer.seek(0)
+            
+            files = {"file": ("manual_test_student.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+            response = self.make_request("POST", "/students/upload", token=self.admin_token, files=files)
+            
+            if response and response.status_code == 200:
+                # Get the newly created student
+                students_response = self.make_request("GET", "/students/available-for-assignment", token=self.admin_token)
+                if students_response and students_response.status_code == 200:
+                    available_students = students_response.json()
+                    test_student = next((s for s in available_students if s["name"] == "TestManual Assignment"), None)
+                    if not test_student:
+                        self.log_test("Manual Assignment", False, "Failed to create test student for manual assignment")
+                        return False
+                else:
+                    self.log_test("Manual Assignment", False, "Failed to get created test student")
+                    return False
+            else:
+                self.log_test("Manual Assignment", False, "Failed to create test student")
+                return False
         
         if not available_ipads:
             self.log_test("Manual Assignment", False, "No available iPads for assignment")
