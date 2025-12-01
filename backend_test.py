@@ -1601,6 +1601,546 @@ class BatchDeleteTester:
             if result['details']:
                 print(f"   Details: {result['details']}")
 
+class iPadManagementTester:
+    """Comprehensive testing for iPad management features as requested in German"""
+    
+    def __init__(self):
+        self.admin_token = None
+        self.test_results = []
+        self.test_ipads = []
+        self.test_students = []
+        self.test_assignments = []
+        
+    def log_test(self, test_name, success, message, details=None):
+        """Log test results"""
+        status = "✅ PASS" if success else "❌ FAIL"
+        result = {
+            "test": test_name,
+            "status": status,
+            "message": message,
+            "details": details or {},
+            "timestamp": datetime.now().isoformat()
+        }
+        self.test_results.append(result)
+        print(f"{status}: {test_name} - {message}")
+        if details and not success:
+            print(f"   Details: {details}")
+    
+    def make_request(self, method, endpoint, token=None, data=None, files=None, params=None):
+        """Make HTTP request with proper headers"""
+        url = f"{BASE_URL}{endpoint}"
+        headers = {}
+        
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        
+        if not files:
+            headers["Content-Type"] = "application/json"
+            
+        try:
+            if method == "GET":
+                response = requests.get(url, headers=headers, params=params, timeout=30)
+            elif method == "POST":
+                if files:
+                    response = requests.post(url, headers=headers, files=files, data=data, timeout=30)
+                else:
+                    response = requests.post(url, headers=headers, json=data, timeout=30)
+            elif method == "PUT":
+                response = requests.put(url, headers=headers, json=data, params=params, timeout=30)
+            elif method == "DELETE":
+                response = requests.delete(url, headers=headers, timeout=30)
+            else:
+                raise ValueError(f"Unsupported method: {method}")
+                
+            return response
+        except requests.exceptions.RequestException as e:
+            print(f"Request error for {method} {url}: {str(e)}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error for {method} {url}: {str(e)}")
+            return None
+    
+    def setup_authentication(self):
+        """Setup admin authentication"""
+        print("\n=== Setting up Authentication for iPad Management Tests ===")
+        
+        # Admin login
+        response = self.make_request("POST", "/auth/login", data=ADMIN_CREDENTIALS)
+        if not response or response.status_code != 200:
+            self.log_test("Admin Login Setup", False, f"Admin login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        self.admin_token = response.json()["access_token"]
+        self.log_test("Admin Login Setup", True, "Admin authentication successful")
+        return True
+    
+    def test_get_all_ipads(self):
+        """Test: Hole Liste aller iPads: GET /api/ipads"""
+        print("\n=== Test 1: GET /api/ipads - Hole Liste aller iPads ===")
+        
+        response = self.make_request("GET", "/ipads", token=self.admin_token)
+        
+        if not response or response.status_code != 200:
+            self.log_test("GET /api/ipads", False, f"Failed to get iPads: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            ipads = response.json()
+            
+            if not isinstance(ipads, list):
+                self.log_test("GET /api/ipads", False, "Response is not a list")
+                return False
+            
+            # Store iPads for later tests
+            self.test_ipads = ipads
+            
+            # Check if iPads have required fields (ITNr and SNr)
+            if ipads:
+                first_ipad = ipads[0]
+                required_fields = ["id", "itnr", "snr", "status", "current_assignment_id"]
+                missing_fields = [field for field in required_fields if field not in first_ipad]
+                
+                if missing_fields:
+                    self.log_test("GET /api/ipads", False, f"Missing required fields in iPad response: {missing_fields}")
+                    return False
+                
+                # Verify ITNr and SNr are present in response
+                if not first_ipad.get("itnr") or not first_ipad.get("snr"):
+                    self.log_test("GET /api/ipads", False, "ITNr or SNr missing in iPad response")
+                    return False
+            
+            self.log_test("GET /api/ipads", True, f"Successfully retrieved {len(ipads)} iPads with ITNr and SNr fields")
+            return True
+            
+        except Exception as e:
+            self.log_test("GET /api/ipads", False, f"Error parsing iPads response: {str(e)}")
+            return False
+    
+    def test_ipad_status_updates(self):
+        """Test: Status-Updates (defekt, gestohlen, ok)"""
+        print("\n=== Test 2-4: iPad Status Updates ===")
+        
+        if not self.test_ipads:
+            self.log_test("iPad Status Updates", False, "No iPads available for testing")
+            return False
+        
+        # Use first iPad for testing
+        test_ipad = self.test_ipads[0]
+        ipad_id = test_ipad["id"]
+        original_status = test_ipad.get("status", "ok")
+        original_assignment_id = test_ipad.get("current_assignment_id")
+        
+        print(f"Testing with iPad ID: {ipad_id}, ITNr: {test_ipad.get('itnr')}")
+        
+        # Test 2: Status-Update auf "defekt"
+        print("\n--- Test 2a: Status-Update auf 'defekt' ---")
+        response = self.make_request("PUT", f"/ipads/{ipad_id}/status", 
+                                   token=self.admin_token, 
+                                   params={"status": "defekt"})
+        
+        if not response or response.status_code != 200:
+            self.log_test("Status Update to 'defekt'", False, f"Failed to update status: {response.status_code if response else 'No response'}")
+            return False
+        
+        # Verify status was changed but current_assignment_id remains unchanged
+        response = self.make_request("GET", "/ipads", token=self.admin_token)
+        if response and response.status_code == 200:
+            updated_ipads = response.json()
+            updated_ipad = next((ipad for ipad in updated_ipads if ipad["id"] == ipad_id), None)
+            
+            if updated_ipad:
+                if updated_ipad["status"] == "defekt":
+                    if updated_ipad.get("current_assignment_id") == original_assignment_id:
+                        self.log_test("Status Update to 'defekt'", True, "Status changed to 'defekt', current_assignment_id unchanged")
+                    else:
+                        self.log_test("Status Update to 'defekt'", False, f"current_assignment_id changed unexpectedly: {original_assignment_id} -> {updated_ipad.get('current_assignment_id')}")
+                else:
+                    self.log_test("Status Update to 'defekt'", False, f"Status not updated correctly: expected 'defekt', got '{updated_ipad['status']}'")
+            else:
+                self.log_test("Status Update to 'defekt'", False, "iPad not found after update")
+        else:
+            self.log_test("Status Update to 'defekt'", False, "Failed to verify status update")
+        
+        # Test 3: Status-Update auf "gestohlen"
+        print("\n--- Test 2b: Status-Update auf 'gestohlen' ---")
+        response = self.make_request("PUT", f"/ipads/{ipad_id}/status", 
+                                   token=self.admin_token, 
+                                   params={"status": "gestohlen"})
+        
+        if not response or response.status_code != 200:
+            self.log_test("Status Update to 'gestohlen'", False, f"Failed to update status: {response.status_code if response else 'No response'}")
+        else:
+            # Verify status was changed
+            response = self.make_request("GET", "/ipads", token=self.admin_token)
+            if response and response.status_code == 200:
+                updated_ipads = response.json()
+                updated_ipad = next((ipad for ipad in updated_ipads if ipad["id"] == ipad_id), None)
+                
+                if updated_ipad and updated_ipad["status"] == "gestohlen":
+                    self.log_test("Status Update to 'gestohlen'", True, "Status successfully changed to 'gestohlen'")
+                else:
+                    self.log_test("Status Update to 'gestohlen'", False, f"Status not updated correctly: expected 'gestohlen', got '{updated_ipad['status'] if updated_ipad else 'iPad not found'}'")
+            else:
+                self.log_test("Status Update to 'gestohlen'", False, "Failed to verify status update")
+        
+        # Test 4: Status-Update auf "ok"
+        print("\n--- Test 2c: Status-Update auf 'ok' ---")
+        response = self.make_request("PUT", f"/ipads/{ipad_id}/status", 
+                                   token=self.admin_token, 
+                                   params={"status": "ok"})
+        
+        if not response or response.status_code != 200:
+            self.log_test("Status Update to 'ok'", False, f"Failed to update status: {response.status_code if response else 'No response'}")
+        else:
+            # Verify status was changed back to ok
+            response = self.make_request("GET", "/ipads", token=self.admin_token)
+            if response and response.status_code == 200:
+                updated_ipads = response.json()
+                updated_ipad = next((ipad for ipad in updated_ipads if ipad["id"] == ipad_id), None)
+                
+                if updated_ipad and updated_ipad["status"] == "ok":
+                    self.log_test("Status Update to 'ok'", True, "Status successfully changed back to 'ok'")
+                else:
+                    self.log_test("Status Update to 'ok'", False, f"Status not updated correctly: expected 'ok', got '{updated_ipad['status'] if updated_ipad else 'iPad not found'}'")
+            else:
+                self.log_test("Status Update to 'ok'", False, "Failed to verify status update")
+        
+        # Restore original status
+        if original_status != "ok":
+            self.make_request("PUT", f"/ipads/{ipad_id}/status", 
+                            token=self.admin_token, 
+                            params={"status": original_status})
+        
+        return True
+    
+    def test_available_students(self):
+        """Test 5: Verfügbare Schüler holen - GET /api/students/available-for-assignment"""
+        print("\n=== Test 3: GET /api/students/available-for-assignment ===")
+        
+        response = self.make_request("GET", "/students/available-for-assignment", token=self.admin_token)
+        
+        if not response or response.status_code != 200:
+            self.log_test("GET Available Students", False, f"Failed to get available students: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            students = response.json()
+            
+            if not isinstance(students, list):
+                self.log_test("GET Available Students", False, "Response is not a list")
+                return False
+            
+            # Store students for later tests
+            self.test_students = students
+            
+            # Verify response format
+            if students:
+                first_student = students[0]
+                required_fields = ["id", "name"]
+                missing_fields = [field for field in required_fields if field not in first_student]
+                
+                if missing_fields:
+                    self.log_test("GET Available Students", False, f"Missing required fields in student response: {missing_fields}")
+                    return False
+            
+            self.log_test("GET Available Students", True, f"Successfully retrieved {len(students)} available students (ohne iPad-Zuordnung)")
+            return True
+            
+        except Exception as e:
+            self.log_test("GET Available Students", False, f"Error parsing available students response: {str(e)}")
+            return False
+    
+    def test_available_ipads(self):
+        """Test 6: Verfügbare iPads holen - GET /api/ipads/available-for-assignment"""
+        print("\n=== Test 4: GET /api/ipads/available-for-assignment ===")
+        
+        response = self.make_request("GET", "/ipads/available-for-assignment", token=self.admin_token)
+        
+        if not response or response.status_code != 200:
+            self.log_test("GET Available iPads", False, f"Failed to get available iPads: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            ipads = response.json()
+            
+            if not isinstance(ipads, list):
+                self.log_test("GET Available iPads", False, "Response is not a list")
+                return False
+            
+            # Verify response format
+            if ipads:
+                first_ipad = ipads[0]
+                required_fields = ["id", "itnr", "snr", "status"]
+                missing_fields = [field for field in required_fields if field not in first_ipad]
+                
+                if missing_fields:
+                    self.log_test("GET Available iPads", False, f"Missing required fields in iPad response: {missing_fields}")
+                    return False
+            
+            self.log_test("GET Available iPads", True, f"Successfully retrieved {len(ipads)} available iPads (ohne Zuordnung)")
+            return True
+            
+        except Exception as e:
+            self.log_test("GET Available iPads", False, f"Error parsing available iPads response: {str(e)}")
+            return False
+    
+    def test_manual_assignment(self):
+        """Test 7: Manuelle Zuordnung (iPad → Schüler)"""
+        print("\n=== Test 5: POST /api/assignments/manual - Manuelle Zuordnung ===")
+        
+        # Get fresh available students and iPads
+        students_response = self.make_request("GET", "/students/available-for-assignment", token=self.admin_token)
+        ipads_response = self.make_request("GET", "/ipads/available-for-assignment", token=self.admin_token)
+        
+        if not students_response or students_response.status_code != 200:
+            self.log_test("Manual Assignment - Get Students", False, "Failed to get available students")
+            return False
+        
+        if not ipads_response or ipads_response.status_code != 200:
+            self.log_test("Manual Assignment - Get iPads", False, "Failed to get available iPads")
+            return False
+        
+        available_students = students_response.json()
+        available_ipads = ipads_response.json()
+        
+        if not available_students:
+            self.log_test("Manual Assignment", False, "No available students for assignment")
+            return False
+        
+        if not available_ipads:
+            self.log_test("Manual Assignment", False, "No available iPads for assignment")
+            return False
+        
+        # Use first available student and iPad
+        test_student = available_students[0]
+        test_ipad = available_ipads[0]
+        
+        student_id = test_student["id"]
+        ipad_id = test_ipad["id"]
+        
+        print(f"Assigning iPad {test_ipad['itnr']} to student {test_student['name']}")
+        
+        # Create manual assignment
+        assignment_data = {
+            "student_id": student_id,
+            "ipad_id": ipad_id
+        }
+        
+        response = self.make_request("POST", "/assignments/manual", token=self.admin_token, data=assignment_data)
+        
+        if not response or response.status_code != 200:
+            self.log_test("Manual Assignment Creation", False, f"Failed to create manual assignment: {response.status_code if response else 'No response'}")
+            if response:
+                print(f"Response text: {response.text}")
+            return False
+        
+        try:
+            result = response.json()
+            assignment_id = result.get("assignment_id")
+            
+            if not assignment_id:
+                self.log_test("Manual Assignment Creation", False, "No assignment_id in response")
+                return False
+            
+            self.log_test("Manual Assignment Creation", True, f"Successfully created manual assignment: {result.get('message', 'Assignment created')}")
+            
+            # Verify assignment was created (no contract expected)
+            # Check that iPad has current_assignment_id
+            ipads_response = self.make_request("GET", "/ipads", token=self.admin_token)
+            if ipads_response and ipads_response.status_code == 200:
+                ipads = ipads_response.json()
+                assigned_ipad = next((ipad for ipad in ipads if ipad["id"] == ipad_id), None)
+                
+                if assigned_ipad and assigned_ipad.get("current_assignment_id") == assignment_id:
+                    self.log_test("iPad Assignment Verification", True, "iPad correctly has current_assignment_id")
+                else:
+                    self.log_test("iPad Assignment Verification", False, f"iPad assignment not updated correctly: {assigned_ipad.get('current_assignment_id') if assigned_ipad else 'iPad not found'}")
+            
+            # Check that student has current_assignment_id
+            students_response = self.make_request("GET", "/students", token=self.admin_token)
+            if students_response and students_response.status_code == 200:
+                students = students_response.json()
+                assigned_student = next((student for student in students if student["id"] == student_id), None)
+                
+                if assigned_student and assigned_student.get("current_assignment_id") == assignment_id:
+                    self.log_test("Student Assignment Verification", True, "Student correctly has current_assignment_id")
+                else:
+                    self.log_test("Student Assignment Verification", False, f"Student assignment not updated correctly: {assigned_student.get('current_assignment_id') if assigned_student else 'Student not found'}")
+            
+            # Store assignment for duplicate test
+            self.test_assignments.append({
+                "id": assignment_id,
+                "student_id": student_id,
+                "ipad_id": ipad_id,
+                "itnr": test_ipad["itnr"],
+                "student_name": test_student["name"]
+            })
+            
+            return True
+            
+        except Exception as e:
+            self.log_test("Manual Assignment Creation", False, f"Error parsing assignment response: {str(e)}")
+            return False
+    
+    def test_duplicate_assignment_prevention(self):
+        """Test 8: Doppelte Zuordnung verhindern"""
+        print("\n=== Test 6: Duplicate Assignment Prevention ===")
+        
+        if not self.test_assignments:
+            self.log_test("Duplicate Assignment Prevention", False, "No existing assignments to test with")
+            return False
+        
+        # Try to assign the same iPad again
+        existing_assignment = self.test_assignments[0]
+        
+        # Get an available student for the duplicate test
+        students_response = self.make_request("GET", "/students/available-for-assignment", token=self.admin_token)
+        if not students_response or students_response.status_code != 200:
+            self.log_test("Duplicate Assignment Prevention", False, "Failed to get available students for duplicate test")
+            return False
+        
+        available_students = students_response.json()
+        if not available_students:
+            # Create a test student for this test
+            print("No available students found, creating test student for duplicate assignment test")
+            
+            # Create test student via Excel upload
+            import pandas as pd
+            import io
+            
+            df = pd.DataFrame([{
+                'SuSVorn': 'TestDuplicate',
+                'SuSNachn': 'Student',
+                'SuSKl': '99z',
+                'SuSStrHNr': 'Test Street 1',
+                'SuSPLZ': '12345',
+                'SuSOrt': 'Test City'
+            }])
+            
+            excel_buffer = io.BytesIO()
+            df.to_excel(excel_buffer, index=False)
+            excel_buffer.seek(0)
+            
+            files = {"file": ("duplicate_test_student.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+            response = self.make_request("POST", "/students/upload", token=self.admin_token, files=files)
+            
+            if response and response.status_code == 200:
+                # Get the newly created student
+                students_response = self.make_request("GET", "/students/available-for-assignment", token=self.admin_token)
+                if students_response and students_response.status_code == 200:
+                    available_students = students_response.json()
+                    test_student = next((s for s in available_students if s["name"] == "TestDuplicate Student"), None)
+                    if not test_student:
+                        self.log_test("Duplicate Assignment Prevention", False, "Failed to create test student for duplicate test")
+                        return False
+                else:
+                    self.log_test("Duplicate Assignment Prevention", False, "Failed to get created test student")
+                    return False
+            else:
+                self.log_test("Duplicate Assignment Prevention", False, "Failed to create test student")
+                return False
+        else:
+            test_student = available_students[0]
+        
+        # Try to assign the already assigned iPad to another student
+        duplicate_assignment_data = {
+            "student_id": test_student["id"],
+            "ipad_id": existing_assignment["ipad_id"]
+        }
+        
+        response = self.make_request("POST", "/assignments/manual", token=self.admin_token, data=duplicate_assignment_data)
+        
+        # Should get 400 error with message "iPad ist bereits zugewiesen"
+        if response and response.status_code == 400:
+            try:
+                error_response = response.json()
+                error_message = error_response.get("detail", "")
+                
+                if "bereits zugewiesen" in error_message or "already assigned" in error_message:
+                    self.log_test("Duplicate Assignment Prevention", True, f"Correctly prevented duplicate assignment: {error_message}")
+                    return True
+                else:
+                    self.log_test("Duplicate Assignment Prevention", False, f"Wrong error message for duplicate assignment: {error_message}")
+                    return False
+            except:
+                self.log_test("Duplicate Assignment Prevention", False, f"Got 400 status but couldn't parse error message: {response.text}")
+                return False
+        else:
+            self.log_test("Duplicate Assignment Prevention", False, f"Expected 400 error for duplicate assignment, got: {response.status_code if response else 'No response'}")
+            if response:
+                print(f"Response: {response.text}")
+            return False
+    
+    def run_all_tests(self):
+        """Run all iPad management tests"""
+        print("📱 iPad Management Features Testing Suite")
+        print("Testing new iPad management features as requested in German")
+        print("=" * 80)
+        
+        # Setup authentication
+        if not self.setup_authentication():
+            print("❌ Authentication setup failed")
+            return False
+        
+        # Test 1: Get all iPads
+        if not self.test_get_all_ipads():
+            print("❌ Get iPads test failed")
+            return False
+        
+        # Test 2-4: iPad status updates
+        if not self.test_ipad_status_updates():
+            print("❌ iPad status update tests failed")
+            return False
+        
+        # Test 5: Available students
+        if not self.test_available_students():
+            print("❌ Available students test failed")
+            return False
+        
+        # Test 6: Available iPads
+        if not self.test_available_ipads():
+            print("❌ Available iPads test failed")
+            return False
+        
+        # Test 7: Manual assignment
+        if not self.test_manual_assignment():
+            print("❌ Manual assignment test failed")
+            return False
+        
+        # Test 8: Duplicate assignment prevention
+        if not self.test_duplicate_assignment_prevention():
+            print("❌ Duplicate assignment prevention test failed")
+            return False
+        
+        return True
+    
+    def print_summary(self):
+        """Print test summary"""
+        print("\n" + "=" * 80)
+        print("📱 IPAD MANAGEMENT TESTING SUMMARY")
+        print("=" * 80)
+        
+        total_tests = len(self.test_results)
+        passed_tests = len([r for r in self.test_results if "✅ PASS" in r["status"]])
+        failed_tests = total_tests - passed_tests
+        
+        print(f"Total Tests: {total_tests}")
+        print(f"Passed: {passed_tests} ✅")
+        print(f"Failed: {failed_tests} ❌")
+        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+        
+        if failed_tests > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.test_results:
+                if "❌ FAIL" in result["status"]:
+                    print(f"  - {result['test']}: {result['message']}")
+        
+        print("\n📋 DETAILED RESULTS:")
+        for result in self.test_results:
+            print(f"{result['status']}: {result['test']}")
+            if result['details']:
+                print(f"   Details: {result['details']}")
+
 def main():
     """Main test execution"""
     print("🔐 iPad Management System - Backend Testing Suite")
@@ -1608,9 +2148,10 @@ def main():
     print("Choose testing mode:")
     print("1. Full RBAC Testing (existing comprehensive tests)")
     print("2. Batch Delete Feature Testing (new feature)")
-    print("3. Both (recommended)")
+    print("3. iPad Management Features Testing (German test scenarios)")
+    print("4. All tests (recommended)")
     
-    choice = input("Enter choice (1/2/3): ").strip()
+    choice = input("Enter choice (1/2/3/4): ").strip()
     
     if choice == "1":
         tester = RBACTester()
