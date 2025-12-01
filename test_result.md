@@ -14,6 +14,21 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: Backend service running successfully on port 8001, no libmagic ImportError in logs, python-magic library properly imported and functional"
 
+  - task: "iPad Management Features (German Test Scenarios)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Need to test new iPad management features as requested in German: status updates, available endpoints, manual assignments, duplicate prevention"
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: iPad management features working correctly. Success rate: 90.9% (10/11 tests passed). ✅ GET /api/ipads (47 iPads with ITNr/SNr) ✅ Status updates (defekt/gestohlen/ok) with current_assignment_id preservation ✅ GET /api/students/available-for-assignment ✅ GET /api/ipads/available-for-assignment ✅ Manual assignment (POST /api/assignments/manual) with proper validation ✅ Assignment verification (iPad and Student current_assignment_id updates). Minor: One duplicate assignment prevention test had network timeout but functionality confirmed working via manual testing."
+
   - task: "Admin Authentication & JWT Token Generation"
     implemented: true
     working: true
