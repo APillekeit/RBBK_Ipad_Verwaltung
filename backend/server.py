@@ -1226,8 +1226,8 @@ async def auto_assign_ipads(current_user: dict = Depends(get_current_user)):
     student_filter = {**user_filter, "current_assignment_id": None}
     unassigned_students = await db.students.find(student_filter).to_list(length=None)
     
-    # Get available iPads for this user
-    ipad_filter = {**user_filter, "status": "verfügbar"}
+    # Get available iPads for this user (not currently assigned)
+    ipad_filter = {**user_filter, "current_assignment_id": None}
     available_ipads = await db.ipads.find(ipad_filter).to_list(length=None)
     
     assigned_count = 0
