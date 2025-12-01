@@ -1271,6 +1271,82 @@ async def auto_assign_ipads(current_user: dict = Depends(get_current_user)):
         details=details
     )
 
+
+@api_router.post("/assignments/manual")
+async def manual_assign(
+    student_id: str,
+    ipad_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Manually assign an iPad to a student without creating a contract.
+    Only allowed if iPad is not currently assigned.
+    """
+    try:
+        # Apply user filter for security
+        user_filter = await get_user_filter(current_user)
+        
+        # Validate student ownership
+        student = await db.students.find_one({"id": student_id, **user_filter})
+        if not student:
+            raise HTTPException(status_code=404, detail="Student not found or access denied")
+        
+        # Validate iPad ownership
+        ipad = await db.ipads.find_one({"id": ipad_id, **user_filter})
+        if not ipad:
+            raise HTTPException(status_code=404, detail="iPad not found or access denied")
+        
+        # Check if iPad is already assigned
+        if ipad.get("current_assignment_id"):
+            raise HTTPException(status_code=400, detail="iPad ist bereits zugewiesen")
+        
+        # Check if student already has an iPad
+        if student.get("current_assignment_id"):
+            raise HTTPException(status_code=400, detail="Schüler hat bereits ein iPad zugewiesen")
+        
+        # Create assignment (without contract)
+        assignment = Assignment(
+            user_id=current_user["id"],
+            student_id=student["id"],
+            ipad_id=ipad["id"],
+            itnr=ipad["itnr"],
+            student_name=f"{student['sus_vorn']} {student['sus_nachn']}",
+            contract_id=None  # No contract for manual assignments
+        )
+        
+        assignment_dict = prepare_for_mongo(assignment.dict())
+        await db.assignments.insert_one(assignment_dict)
+        
+        # Update student
+        await db.students.update_one(
+            {"id": student["id"]},
+            {"$set": {
+                "current_assignment_id": assignment.id,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        # Update iPad - keep its current status (ok/defekt/gestohlen)
+        await db.ipads.update_one(
+            {"id": ipad["id"]},
+            {"$set": {
+                "current_assignment_id": assignment.id,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {
+            "message": f"iPad {ipad['itnr']} erfolgreich {student['sus_vorn']} {student['sus_nachn']} zugewiesen",
+            "assignment_id": assignment.id,
+            "student_name": f"{student['sus_vorn']} {student['sus_nachn']}",
+            "itnr": ipad['itnr']
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fehler bei manueller Zuordnung: {str(e)}")
+
 @api_router.get("/assignments", response_model=List[Assignment])
 async def get_assignments(current_user: dict = Depends(get_current_user)):
     # Apply user filter
