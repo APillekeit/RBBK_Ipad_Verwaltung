@@ -1055,11 +1055,10 @@ async def delete_student(student_id: str, current_user: dict = Depends(get_curre
             }}
         )
         
-        # Update iPad status to available
+        # Free iPad (remove assignment)
         await db.ipads.update_one(
             {"id": active_assignment["ipad_id"]},
             {"$set": {
-                "status": "verfügbar",
                 "current_assignment_id": None,
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }}
