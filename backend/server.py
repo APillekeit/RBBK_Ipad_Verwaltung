@@ -2397,7 +2397,6 @@ async def import_inventory(file: UploadFile = File(...), current_user: dict = De
                         await db.ipads.update_one(
                             {"id": ipad_id},
                             {"$set": {
-                                "status": "verfügbar",
                                 "current_assignment_id": None,
                                 "updated_at": datetime.now(timezone.utc).isoformat()
                             }}
