@@ -635,14 +635,10 @@ const IPadsManagement = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
             <div className="bg-green-50 p-3 rounded-lg">
-              <div className="font-medium text-green-800">Verfügbar</div>
-              <div className="text-2xl font-bold text-green-600">{statusCounts.verfügbar || 0}</div>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <div className="font-medium text-blue-800">Zugewiesen</div>
-              <div className="text-2xl font-bold text-blue-600">{statusCounts.zugewiesen || 0}</div>
+              <div className="font-medium text-green-800">OK</div>
+              <div className="text-2xl font-bold text-green-600">{statusCounts.ok || 0}</div>
             </div>
             <div className="bg-red-50 p-3 rounded-lg">
               <div className="font-medium text-red-800">Defekt</div>
