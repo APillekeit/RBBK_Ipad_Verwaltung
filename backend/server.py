@@ -2081,7 +2081,6 @@ async def batch_dissolve_assignments(
                 await db.ipads.update_one(
                     {"id": assignment["ipad_id"]},
                     {"$set": {
-                        "status": "verfügbar",
                         "current_assignment_id": None,
                         "updated_at": datetime.now(timezone.utc).isoformat()
                     }}
