@@ -660,6 +660,42 @@ const IPadsManagement = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Filter Section */}
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="ipad-itnr-filter">ITNr filtern</Label>
+                <Input
+                  id="ipad-itnr-filter"
+                  placeholder="z.B. IT-001"
+                  value={itnrFilter}
+                  onChange={(e) => setItnrFilter(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="ipad-snr-filter">SNr filtern</Label>
+                <Input
+                  id="ipad-snr-filter"
+                  placeholder="z.B. ABC123"
+                  value={snrFilter}
+                  onChange={(e) => setSnrFilter(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            {(itnrFilter || snrFilter) && (
+              <Button 
+                onClick={() => {
+                  setItnrFilter('');
+                  setSnrFilter('');
+                }}
+                variant="outline"
+              >
+                Filter zurücksetzen
+              </Button>
+            )}
+          </div>
+          
           {loading ? (
             <div className="text-center py-8">Lade iPads...</div>
           ) : ipads.length === 0 ? (
@@ -680,15 +716,25 @@ const IPadsManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ipads.map((ipad) => (
-                    <TableRow key={ipad.id} className="hover:bg-gray-50">
+                  {filteredIPads.map((ipad) => (
+                    <TableRow key={ipad.id} className={getRowClassName(ipad.status)}>
                       <TableCell className="font-medium">{ipad.itnr}</TableCell>
                       <TableCell>{ipad.snr || 'N/A'}</TableCell>
                       <TableCell>{ipad.typ || 'N/A'}</TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(ipad.status)}>
-                          {ipad.status}
-                        </Badge>
+                        <Select
+                          value={ipad.status}
+                          onValueChange={(newStatus) => handleStatusChange(ipad.id, newStatus)}
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ok">OK</SelectItem>
+                            <SelectItem value="defekt">Defekt</SelectItem>
+                            <SelectItem value="gestohlen">Gestohlen</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         {ipad.current_assignment_id ? (
@@ -707,20 +753,26 @@ const IPadsManagement = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Select
-                            value={ipad.status}
-                            onValueChange={(newStatus) => handleStatusChange(ipad.id, newStatus)}
-                          >
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="verfügbar">Verfügbar</SelectItem>
-                              <SelectItem value="zugewiesen">Zugewiesen</SelectItem>
-                              <SelectItem value="defekt">Defekt</SelectItem>
-                              <SelectItem value="gestohlen">Gestohlen</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          {!ipad.current_assignment_id && (
+                            <Select
+                              onValueChange={(studentId) => handleManualAssignment(ipad.id, studentId)}
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue placeholder="Schüler zuordnen" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableStudents.length === 0 ? (
+                                  <SelectItem value="none" disabled>Keine Schüler verfügbar</SelectItem>
+                                ) : (
+                                  availableStudents.map((student) => (
+                                    <SelectItem key={student.id} value={student.id}>
+                                      {student.name} ({student.klasse})
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
