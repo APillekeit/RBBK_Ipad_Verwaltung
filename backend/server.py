@@ -1878,7 +1878,7 @@ async def get_ipad_history(ipad_id: str, current_user: dict = Depends(get_curren
             "typ": ipad.get("typ", ""),
             "ansch_jahr": ipad.get("ansch_jahr", ""),
             "ausleihe_datum": ipad.get("ausleihe_datum", ""),
-            "status": ipad.get("status", "verfügbar"),
+            "status": ipad.get("status", "ok"),
             "current_assignment_id": ipad.get("current_assignment_id"),
             "created_at": ipad.get("created_at"),
             "updated_at": ipad.get("updated_at")
