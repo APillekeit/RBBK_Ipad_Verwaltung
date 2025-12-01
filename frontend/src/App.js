@@ -802,6 +802,7 @@ const StudentsManagement = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [availableIPads, setAvailableIPads] = useState([]);
   
   // Filter states
   const [studentVornameFilter, setStudentVornameFilter] = useState('');
@@ -824,7 +825,7 @@ const StudentsManagement = () => {
     setLoading(true);
     try {
       const response = await api.get('/students');
-      console.log('Students API response:', response.data); // Debug log
+      console.log('Students API response:', response.data);
       setStudents(response.data || []);
     } catch (error) {
       console.error('Failed to load students:', error);
@@ -834,9 +835,19 @@ const StudentsManagement = () => {
       setLoading(false);
     }
   };
+  
+  const loadAvailableIPads = async () => {
+    try {
+      const response = await api.get('/ipads/available-for-assignment');
+      setAvailableIPads(response.data || []);
+    } catch (error) {
+      console.error('Failed to load available iPads:', error);
+    }
+  };
 
   useEffect(() => {
     loadStudents();
+    loadAvailableIPads();
   }, []);
 
   const handleUpload = async (file) => {
