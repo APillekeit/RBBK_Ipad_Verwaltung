@@ -2272,7 +2272,7 @@ async def import_inventory(file: UploadFile = File(...), current_user: dict = De
                         typ=str(row.get('Typ', '')).strip(),
                         pencil=str(row.get('Pencil', '')).strip(),
                         ansch_jahr=str(row.get('AnschJahr', '')).strip(),
-                        status="verfügbar"  # Default status for imported iPads
+                        status="ok"  # Default status for imported iPads
                     )
                     
                     ipad_dict = prepare_for_mongo(new_ipad.dict())
