@@ -83,7 +83,7 @@ class iPad(BaseModel):
     typ: Optional[str] = None
     ansch_jahr: Optional[str] = None
     ausleihe_datum: Optional[str] = None
-    status: str = "verfügbar"  # verfügbar, zugewiesen, defekt, gestohlen
+    status: str = "ok"  # ok, defekt, gestohlen
     current_assignment_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
