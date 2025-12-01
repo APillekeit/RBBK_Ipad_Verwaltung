@@ -973,7 +973,7 @@ const StudentsManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {students.map((student) => (
+                  {filteredStudents.map((student) => (
                     <TableRow key={student.id} className="hover:bg-gray-50">
                       <TableCell className="font-medium">
                         {student.sus_vorn} {student.sus_nachn}
