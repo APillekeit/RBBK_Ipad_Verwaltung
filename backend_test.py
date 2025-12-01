@@ -2174,6 +2174,16 @@ def main():
             return 1
     
     elif choice == "3":
+        tester = iPadManagementTester()
+        try:
+            success = tester.run_all_tests()
+            tester.print_summary()
+            return 0 if success else 1
+        except Exception as e:
+            print(f"\n💥 iPad management testing error: {str(e)}")
+            return 1
+    
+    elif choice == "4":
         print("\n🔄 Running Full Test Suite...")
         
         # Run RBAC tests first
@@ -2200,14 +2210,27 @@ def main():
             print(f"\n💥 Batch delete testing error: {str(e)}")
             batch_success = False
         
+        # Run iPad Management tests
+        print("\n" + "="*50)
+        print("PHASE 3: IPAD MANAGEMENT TESTING")
+        print("="*50)
+        ipad_tester = iPadManagementTester()
+        try:
+            ipad_success = ipad_tester.run_all_tests()
+            ipad_tester.print_summary()
+        except Exception as e:
+            print(f"\n💥 iPad management testing error: {str(e)}")
+            ipad_success = False
+        
         # Overall summary
         print("\n" + "="*80)
         print("🎯 OVERALL TESTING SUMMARY")
         print("="*80)
         print(f"RBAC Tests: {'✅ PASSED' if rbac_success else '❌ FAILED'}")
         print(f"Batch Delete Tests: {'✅ PASSED' if batch_success else '❌ FAILED'}")
+        print(f"iPad Management Tests: {'✅ PASSED' if ipad_success else '❌ FAILED'}")
         
-        if rbac_success and batch_success:
+        if rbac_success and batch_success and ipad_success:
             print("\n🎉 All tests completed successfully!")
             return 0
         else:
