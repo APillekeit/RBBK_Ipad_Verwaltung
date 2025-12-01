@@ -1819,6 +1819,33 @@ async def update_ipad_status(ipad_id: str, status: str, current_user: dict = Dep
     
     return {"message": f"iPad status updated to {status}"}
 
+
+@api_router.post("/ipads/migrate-status")
+async def migrate_ipad_status(current_user: dict = Depends(get_current_user)):
+    """
+    Migration endpoint to update old status values to new ones:
+    - 'verfügbar' -> 'ok'
+    - 'zugewiesen' -> 'ok'
+    """
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can run migrations")
+    
+    try:
+        # Update verfügbar and zugewiesen to ok
+        result1 = await db.ipads.update_many(
+            {"status": {"$in": ["verfügbar", "zugewiesen"]}},
+            {"$set": {"status": "ok"}}
+        )
+        
+        return {
+            "message": "iPad status migration completed",
+            "updated_count": result1.modified_count
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Migration error: {str(e)}")
+
+
 # iPad history and details
 @api_router.get("/ipads/{ipad_id}/history")
 async def get_ipad_history(ipad_id: str, current_user: dict = Depends(get_current_user)):
