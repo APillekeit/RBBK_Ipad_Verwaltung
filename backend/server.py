@@ -1796,7 +1796,12 @@ async def assign_contract_to_assignment(contract_id: str, assignment_id: str, cu
 # iPad status management
 @api_router.put("/ipads/{ipad_id}/status")
 async def update_ipad_status(ipad_id: str, status: str, current_user: dict = Depends(get_current_user)):
-    valid_statuses = ["verfügbar", "zugewiesen", "defekt", "gestohlen"]
+    """
+    Update iPad physical status (ok, defekt, gestohlen).
+    Status indicates the physical condition, not assignment state.
+    Assignment state is managed separately via current_assignment_id.
+    """
+    valid_statuses = ["ok", "defekt", "gestohlen"]
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
     
@@ -1805,60 +1810,16 @@ async def update_ipad_status(ipad_id: str, status: str, current_user: dict = Dep
     if not ipad:
         raise HTTPException(status_code=404, detail="iPad not found")
     
-    # If setting to defekt, gestohlen, or verfügbar, dissolve any active assignment
-    if status in ["defekt", "gestohlen", "verfügbar"]:
-        active_assignment = await db.assignments.find_one({
-            "ipad_id": ipad_id,
-            "is_active": True
-        })
-        
-        if active_assignment:
-            # Move contract to history if exists
-            if active_assignment.get("contract_id"):
-                await db.contracts.update_one(
-                    {"id": active_assignment["contract_id"]},
-                    {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
-                )
-            
-            # Mark assignment as inactive
-            await db.assignments.update_one(
-                {"id": active_assignment["id"]},
-                {"$set": {
-                    "is_active": False,
-                    "unassigned_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }}
-            )
-            
-            # Update student
-            await db.students.update_one(
-                {"id": active_assignment["student_id"]},
-                {"$set": {
-                    "current_assignment_id": None,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }}
-            )
-    
-    # Update iPad status
+    # Update iPad status (does not affect assignment)
     result = await db.ipads.update_one(
         {"id": ipad_id},
         {"$set": {
-            "status": status, 
-            "current_assignment_id": None if status in ["defekt", "gestohlen", "verfügbar"] else ipad.get("current_assignment_id"),
+            "status": status,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
     
-    message = f"iPad status updated to {status}"
-    if status in ["defekt", "gestohlen", "verfügbar"]:
-        active_assignment = await db.assignments.find_one({
-            "ipad_id": ipad_id,
-            "is_active": True
-        })
-        if active_assignment:
-            message += " and assignment dissolved"
-    
-    return {"message": message}
+    return {"message": f"iPad status updated to {status}"}
 
 @api_router.post("/ipads/fix-status-consistency")
 async def fix_ipad_status_consistency(current_user: dict = Depends(get_current_user)):
