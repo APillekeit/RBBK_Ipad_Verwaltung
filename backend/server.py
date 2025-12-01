@@ -972,6 +972,21 @@ async def get_students(current_user: dict = Depends(get_current_user)):
     students = await db.students.find(user_filter).to_list(length=None)
     return [Student(**parse_from_mongo(student)) for student in students]
 
+@api_router.get("/students/available-for-assignment")
+async def get_available_students(current_user: dict = Depends(get_current_user)):
+    """Get students without current iPad assignment"""
+    user_filter = await get_user_filter(current_user)
+    students = await db.students.find({
+        **user_filter,
+        "current_assignment_id": None
+    }, {"_id": 0}).to_list(length=None)
+    
+    return [{
+        "id": s["id"],
+        "name": f"{s['sus_vorn']} {s['sus_nachn']}",
+        "klasse": s.get("sus_kl", "N/A")
+    } for s in students]
+
 @api_router.get("/students/{student_id}")
 async def get_student_details(student_id: str, current_user: dict = Depends(get_current_user)):
     """Get detailed information about a specific student"""
