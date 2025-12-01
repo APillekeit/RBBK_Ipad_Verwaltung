@@ -483,12 +483,24 @@ const IPadsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedIPadId, setSelectedIPadId] = useState(null);
+  const [availableStudents, setAvailableStudents] = useState([]);
+  
+  // Filter states
+  const [itnrFilter, setItnrFilter] = useState('');
+  const [snrFilter, setSnrFilter] = useState('');
+  
+  // Filtered iPads
+  const filteredIPads = ipads.filter(ipad => {
+    const itnrMatch = !itnrFilter || ipad.itnr?.toLowerCase().includes(itnrFilter.toLowerCase());
+    const snrMatch = !snrFilter || ipad.snr?.toLowerCase().includes(snrFilter.toLowerCase());
+    return itnrMatch && snrMatch;
+  });
 
   const loadIPads = async () => {
     setLoading(true);
     try {
       const response = await api.get('/ipads');
-      console.log('iPads API response:', response.data); // Debug log
+      console.log('iPads API response:', response.data);
       setIPads(response.data || []);
     } catch (error) {
       console.error('Failed to load iPads:', error);
@@ -498,9 +510,19 @@ const IPadsManagement = () => {
       setLoading(false);
     }
   };
+  
+  const loadAvailableStudents = async () => {
+    try {
+      const response = await api.get('/students/available-for-assignment');
+      setAvailableStudents(response.data || []);
+    } catch (error) {
+      console.error('Failed to load available students:', error);
+    }
+  };
 
   useEffect(() => {
     loadIPads();
+    loadAvailableStudents();
   }, []);
 
   const handleUpload = async (file) => {
@@ -533,13 +555,27 @@ const IPadsManagement = () => {
       toast.error(error.response?.data?.detail || 'Status update failed');
     }
   };
+  
+  const handleManualAssignment = async (ipadId, studentId) => {
+    if (!studentId) return;
+    
+    try {
+      const response = await api.post('/assignments/manual', {
+        ipad_id: ipadId,
+        student_id: studentId
+      });
+      toast.success(response.data.message);
+      await loadIPads();
+      await loadAvailableStudents();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Zuordnung fehlgeschlagen');
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'verfügbar':
+      case 'ok':
         return 'bg-green-100 text-green-800';
-      case 'zugewiesen':
-        return 'bg-blue-100 text-blue-800';
       case 'defekt':
         return 'bg-red-100 text-red-800';
       case 'gestohlen':
@@ -547,6 +583,13 @@ const IPadsManagement = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+  
+  const getRowClassName = (status) => {
+    if (status === 'defekt' || status === 'gestohlen') {
+      return 'bg-red-50 hover:bg-red-100';
+    }
+    return 'hover:bg-gray-50';
   };
 
   const statusCounts = ipads.reduce((acc, ipad) => {
