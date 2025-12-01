@@ -1343,6 +1343,7 @@ async def manual_assign(
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fehler bei manueller Zuordnung: {str(e)}")
 
 @api_router.get("/students/available-for-assignment")
 async def get_available_students(current_user: dict = Depends(get_current_user)):
