@@ -885,6 +885,75 @@ const StudentsManagement = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Filter Section */}
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="student-vorname-filter">Vorname filtern</Label>
+                <Input
+                  id="student-vorname-filter"
+                  placeholder="z.B. Max"
+                  value={studentVornameFilter}
+                  onChange={(e) => setStudentVornameFilter(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="student-nachname-filter">Nachname filtern</Label>
+                <Input
+                  id="student-nachname-filter"
+                  placeholder="z.B. Müller"
+                  value={studentNachnameFilter}
+                  onChange={(e) => setStudentNachnameFilter(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="student-klasse-filter">Klasse filtern</Label>
+                <Input
+                  id="student-klasse-filter"
+                  placeholder="z.B. 10a"
+                  value={studentKlasseFilter}
+                  onChange={(e) => setStudentKlasseFilter(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                onClick={() => handleBatchDeleteStudents(true)}
+                disabled={deleting || students.length === 0}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleting ? 'Lösche...' : `Alle Schüler löschen (${students.length})`}
+              </Button>
+              
+              {(studentVornameFilter || studentNachnameFilter || studentKlasseFilter) && filteredStudents.length > 0 && (
+                <Button 
+                  onClick={() => handleBatchDeleteStudents(false)}
+                  disabled={deleting}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleting ? 'Lösche...' : `Gefilterte Schüler löschen (${filteredStudents.length})`}
+                </Button>
+              )}
+              
+              {(studentVornameFilter || studentNachnameFilter || studentKlasseFilter) && (
+                <Button 
+                  onClick={() => {
+                    setStudentVornameFilter('');
+                    setStudentNachnameFilter('');
+                    setStudentKlasseFilter('');
+                  }}
+                  variant="outline"
+                >
+                  Filter zurücksetzen
+                </Button>
+              )}
+            </div>
+          </div>
+          
           {loading ? (
             <div className="text-center py-8">Lade Schüler...</div>
           ) : students.length === 0 ? (
