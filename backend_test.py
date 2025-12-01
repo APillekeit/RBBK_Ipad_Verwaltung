@@ -2036,47 +2036,46 @@ class iPadManagementTester:
             return False
         
         available_students = students_response.json()
-        if not available_students:
-            # Create a test student for this test
-            print("No available students found, creating test student for duplicate assignment test")
-            
-            # Create test student via Excel upload
-            import pandas as pd
-            import io
-            
-            df = pd.DataFrame([{
-                'SuSVorn': 'TestDuplicate',
-                'SuSNachn': 'Student',
-                'SuSKl': '99z',
-                'SuSStrHNr': 'Test Street 1',
-                'SuSPLZ': '12345',
-                'SuSOrt': 'Test City'
-            }])
-            
-            excel_buffer = io.BytesIO()
-            df.to_excel(excel_buffer, index=False)
-            excel_buffer.seek(0)
-            
-            files = {"file": ("duplicate_test_student.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
-            response = self.make_request("POST", "/students/upload", token=self.admin_token, files=files)
-            
-            if response and response.status_code == 200:
-                # Get the newly created student
-                students_response = self.make_request("GET", "/students/available-for-assignment", token=self.admin_token)
-                if students_response and students_response.status_code == 200:
-                    available_students = students_response.json()
-                    test_student = next((s for s in available_students if s["name"] == "TestDuplicate Student"), None)
-                    if not test_student:
-                        self.log_test("Duplicate Assignment Prevention", False, "Failed to create test student for duplicate test")
-                        return False
-                else:
-                    self.log_test("Duplicate Assignment Prevention", False, "Failed to get created test student")
+        
+        # For duplicate test, we need a different student than the one already assigned
+        # Let's create a new student specifically for this test
+        print("Creating new test student for duplicate assignment test")
+        
+        # Create test student via Excel upload
+        import pandas as pd
+        import io
+        
+        df = pd.DataFrame([{
+            'SuSVorn': 'TestDuplicate2',
+            'SuSNachn': 'Student2',
+            'SuSKl': '99z',
+            'SuSStrHNr': 'Test Street 1',
+            'SuSPLZ': '12345',
+            'SuSOrt': 'Test City'
+        }])
+        
+        excel_buffer = io.BytesIO()
+        df.to_excel(excel_buffer, index=False)
+        excel_buffer.seek(0)
+        
+        files = {"file": ("duplicate_test_student2.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+        response = self.make_request("POST", "/students/upload", token=self.admin_token, files=files)
+        
+        if response and response.status_code == 200:
+            # Get the newly created student
+            students_response = self.make_request("GET", "/students/available-for-assignment", token=self.admin_token)
+            if students_response and students_response.status_code == 200:
+                available_students = students_response.json()
+                test_student = next((s for s in available_students if s["name"] == "TestDuplicate2 Student2"), None)
+                if not test_student:
+                    self.log_test("Duplicate Assignment Prevention", False, "Failed to create test student for duplicate test")
                     return False
             else:
-                self.log_test("Duplicate Assignment Prevention", False, "Failed to create test student")
+                self.log_test("Duplicate Assignment Prevention", False, "Failed to get created test student")
                 return False
         else:
-            test_student = available_students[0]
+            self.log_test("Duplicate Assignment Prevention", False, "Failed to create test student")
+            return False
         
         # Try to assign the already assigned iPad to another student
         duplicate_assignment_data = {
