@@ -1345,6 +1345,38 @@ async def manual_assign(
     except HTTPException:
         raise
     except Exception as e:
+
+@api_router.get("/students/available-for-assignment")
+async def get_available_students(current_user: dict = Depends(get_current_user)):
+    """Get students without current iPad assignment"""
+    user_filter = await get_user_filter(current_user)
+    students = await db.students.find({
+        **user_filter,
+        "current_assignment_id": None
+    }, {"_id": 0}).to_list(length=None)
+    
+    return [{
+        "id": s["id"],
+        "name": f"{s['sus_vorn']} {s['sus_nachn']}",
+        "klasse": s.get("sus_kl", "N/A")
+    } for s in students]
+
+@api_router.get("/ipads/available-for-assignment")
+async def get_available_ipads(current_user: dict = Depends(get_current_user)):
+    """Get iPads without current assignment"""
+    user_filter = await get_user_filter(current_user)
+    ipads = await db.ipads.find({
+        **user_filter,
+        "current_assignment_id": None
+    }, {"_id": 0}).to_list(length=None)
+    
+    return [{
+        "id": i["id"],
+        "itnr": i["itnr"],
+        "snr": i.get("snr", "N/A"),
+        "status": i.get("status", "ok")
+    } for i in ipads]
+
         raise HTTPException(status_code=500, detail=f"Fehler bei manueller Zuordnung: {str(e)}")
 
 @api_router.get("/assignments", response_model=List[Assignment])
