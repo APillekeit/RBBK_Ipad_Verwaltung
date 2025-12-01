@@ -2084,7 +2084,8 @@ class iPadManagementTester:
             "ipad_id": existing_assignment["ipad_id"]
         }
         
-        response = self.make_request("POST", "/assignments/manual", token=self.admin_token, data=duplicate_assignment_data)
+        # The endpoint expects query parameters
+        response = self.make_request("POST", f"/assignments/manual?student_id={test_student['id']}&ipad_id={existing_assignment['ipad_id']}", token=self.admin_token)
         
         # Should get 400 error with message "iPad ist bereits zugewiesen"
         if response and response.status_code == 400:
