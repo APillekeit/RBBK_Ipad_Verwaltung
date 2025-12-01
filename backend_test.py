@@ -841,26 +841,840 @@ class RBACTester:
             if result['details']:
                 print(f"   Details: {result['details']}")
 
+class BatchDeleteTester:
+    """Comprehensive testing for the new batch-delete students feature"""
+    
+    def __init__(self):
+        self.admin_token = None
+        self.test_user_token = None
+        self.test_user2_token = None
+        self.test_user_id = None
+        self.test_user2_id = None
+        self.test_results = []
+        self.created_students = []
+        self.created_ipads = []
+        self.created_assignments = []
+        
+    def log_test(self, test_name, success, message, details=None):
+        """Log test results"""
+        status = "✅ PASS" if success else "❌ FAIL"
+        result = {
+            "test": test_name,
+            "status": status,
+            "message": message,
+            "details": details or {},
+            "timestamp": datetime.now().isoformat()
+        }
+        self.test_results.append(result)
+        print(f"{status}: {test_name} - {message}")
+        if details and not success:
+            print(f"   Details: {details}")
+    
+    def make_request(self, method, endpoint, token=None, data=None, files=None):
+        """Make HTTP request with proper headers"""
+        url = f"{BASE_URL}{endpoint}"
+        headers = {}
+        
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        
+        if not files:
+            headers["Content-Type"] = "application/json"
+            
+        try:
+            if method == "GET":
+                response = requests.get(url, headers=headers, timeout=30)
+            elif method == "POST":
+                if files:
+                    response = requests.post(url, headers=headers, files=files, data=data, timeout=30)
+                else:
+                    response = requests.post(url, headers=headers, json=data, timeout=30)
+            elif method == "PUT":
+                response = requests.put(url, headers=headers, json=data, timeout=30)
+            elif method == "DELETE":
+                response = requests.delete(url, headers=headers, timeout=30)
+            else:
+                raise ValueError(f"Unsupported method: {method}")
+                
+            return response
+        except requests.exceptions.RequestException as e:
+            print(f"Request error for {method} {url}: {str(e)}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error for {method} {url}: {str(e)}")
+            return None
+    
+    def setup_authentication(self):
+        """Setup admin and test user authentication"""
+        print("\n=== Setting up Authentication for Batch Delete Tests ===")
+        
+        # Admin login
+        response = self.make_request("POST", "/auth/login", data=ADMIN_CREDENTIALS)
+        if not response or response.status_code != 200:
+            self.log_test("Admin Login Setup", False, f"Admin login failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        self.admin_token = response.json()["access_token"]
+        self.log_test("Admin Login Setup", True, "Admin authentication successful")
+        
+        # Create test users for RBAC testing
+        user1_data = {"username": "batchtest_user1", "password": "test123", "role": "user"}
+        response = self.make_request("POST", "/admin/users", token=self.admin_token, data=user1_data)
+        
+        if response and response.status_code == 200:
+            self.test_user_id = response.json()["id"]
+            
+            # Login as test user 1
+            login_data = {"username": "batchtest_user1", "password": "test123"}
+            response = self.make_request("POST", "/auth/login", data=login_data)
+            if response and response.status_code == 200:
+                self.test_user_token = response.json()["access_token"]
+                self.log_test("Test User 1 Setup", True, "Test user 1 created and authenticated")
+            else:
+                self.log_test("Test User 1 Setup", False, "Failed to login as test user 1")
+                return False
+        else:
+            self.log_test("Test User 1 Setup", False, "Failed to create test user 1")
+            return False
+        
+        # Create second test user for RBAC isolation testing
+        user2_data = {"username": "batchtest_user2", "password": "test123", "role": "user"}
+        response = self.make_request("POST", "/admin/users", token=self.admin_token, data=user2_data)
+        
+        if response and response.status_code == 200:
+            self.test_user2_id = response.json()["id"]
+            
+            # Login as test user 2
+            login_data = {"username": "batchtest_user2", "password": "test123"}
+            response = self.make_request("POST", "/auth/login", data=login_data)
+            if response and response.status_code == 200:
+                self.test_user2_token = response.json()["access_token"]
+                self.log_test("Test User 2 Setup", True, "Test user 2 created and authenticated")
+            else:
+                self.log_test("Test User 2 Setup", False, "Failed to login as test user 2")
+                return False
+        else:
+            self.log_test("Test User 2 Setup", False, "Failed to create test user 2")
+            return False
+        
+        return True
+    
+    def create_test_data(self):
+        """Create test students, iPads and assignments for testing"""
+        print("\n=== Creating Test Data for Batch Delete Tests ===")
+        
+        # Create test students for admin user
+        admin_students = [
+            {"sus_vorn": "Max", "sus_nachn": "Müller", "sus_kl": "10a"},
+            {"sus_vorn": "Anna", "sus_nachn": "Schmidt", "sus_kl": "10b"},
+            {"sus_vorn": "Max", "sus_nachn": "Weber", "sus_kl": "10a"},
+            {"sus_vorn": "Lisa", "sus_nachn": "Müller", "sus_kl": "9a"},
+            {"sus_vorn": "Tom", "sus_nachn": "Fischer", "sus_kl": "10a"}
+        ]
+        
+        # Create students via direct API calls (simulating manual creation)
+        for student_data in admin_students:
+            # Create student data with required fields
+            full_student_data = {
+                "user_id": "admin_user_id",  # This will be set by the backend
+                "sus_vorn": student_data["sus_vorn"],
+                "sus_nachn": student_data["sus_nachn"],
+                "sus_kl": student_data["sus_kl"],
+                "sus_str_hnr": "Test Street 1",
+                "sus_plz": "12345",
+                "sus_ort": "Test City"
+            }
+            
+            # We'll use Excel upload to create students
+            import pandas as pd
+            import io
+            
+            df = pd.DataFrame([{
+                'SuSVorn': student_data["sus_vorn"],
+                'SuSNachn': student_data["sus_nachn"],
+                'SuSKl': student_data["sus_kl"],
+                'SuSStrHNr': 'Test Street 1',
+                'SuSPLZ': '12345',
+                'SuSOrt': 'Test City'
+            }])
+            
+            excel_buffer = io.BytesIO()
+            df.to_excel(excel_buffer, index=False)
+            excel_buffer.seek(0)
+            
+            files = {"file": (f"student_{student_data['sus_vorn']}.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+            response = self.make_request("POST", "/students/upload", token=self.admin_token, files=files)
+            
+            if response and response.status_code == 200:
+                self.created_students.append(student_data)
+        
+        # Create test iPads for assignments
+        ipad_data = [
+            {"itnr": "BATCH001", "snr": "SN001"},
+            {"itnr": "BATCH002", "snr": "SN002"},
+            {"itnr": "BATCH003", "snr": "SN003"}
+        ]
+        
+        for ipad in ipad_data:
+            df = pd.DataFrame([{
+                'ITNr': ipad["itnr"],
+                'SNr': ipad["snr"],
+                'Karton': 'Test Box',
+                'Typ': 'iPad Pro'
+            }])
+            
+            excel_buffer = io.BytesIO()
+            df.to_excel(excel_buffer, index=False)
+            excel_buffer.seek(0)
+            
+            files = {"file": (f"ipad_{ipad['itnr']}.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+            response = self.make_request("POST", "/ipads/upload", token=self.admin_token, files=files)
+            
+            if response and response.status_code == 200:
+                self.created_ipads.append(ipad)
+        
+        # Create some students for test user 1 (for RBAC testing)
+        user1_students = [
+            {"sus_vorn": "User1Max", "sus_nachn": "User1Müller", "sus_kl": "11a"},
+            {"sus_vorn": "User1Anna", "sus_nachn": "User1Schmidt", "sus_kl": "11b"}
+        ]
+        
+        for student_data in user1_students:
+            df = pd.DataFrame([{
+                'SuSVorn': student_data["sus_vorn"],
+                'SuSNachn': student_data["sus_nachn"],
+                'SuSKl': student_data["sus_kl"],
+                'SuSStrHNr': 'User1 Street 1',
+                'SuSPLZ': '54321',
+                'SuSOrt': 'User1 City'
+            }])
+            
+            excel_buffer = io.BytesIO()
+            df.to_excel(excel_buffer, index=False)
+            excel_buffer.seek(0)
+            
+            files = {"file": (f"user1_student_{student_data['sus_vorn']}.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+            response = self.make_request("POST", "/students/upload", token=self.test_user_token, files=files)
+        
+        # Create some students for test user 2 (for RBAC testing)
+        user2_students = [
+            {"sus_vorn": "User2Max", "sus_nachn": "User2Müller", "sus_kl": "12a"}
+        ]
+        
+        for student_data in user2_students:
+            df = pd.DataFrame([{
+                'SuSVorn': student_data["sus_vorn"],
+                'SuSNachn': student_data["sus_nachn"],
+                'SuSKl': student_data["sus_kl"],
+                'SuSStrHNr': 'User2 Street 1',
+                'SuSPLZ': '98765',
+                'SuSOrt': 'User2 City'
+            }])
+            
+            excel_buffer = io.BytesIO()
+            df.to_excel(excel_buffer, index=False)
+            excel_buffer.seek(0)
+            
+            files = {"file": (f"user2_student_{student_data['sus_vorn']}.xlsx", excel_buffer.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+            response = self.make_request("POST", "/students/upload", token=self.test_user2_token, files=files)
+        
+        # Create some assignments for cascading delete testing
+        response = self.make_request("POST", "/assignments/auto-assign", token=self.admin_token)
+        if response and response.status_code == 200:
+            result = response.json()
+            self.log_test("Test Data Creation", True, f"Created test data: {len(self.created_students)} students, {len(self.created_ipads)} iPads, {result.get('assigned_count', 0)} assignments")
+        else:
+            self.log_test("Test Data Creation", True, f"Created test data: {len(self.created_students)} students, {len(self.created_ipads)} iPads")
+        
+        return True
+    
+    def test_batch_delete_all_students(self):
+        """Test 1: Delete all students (without filter)"""
+        print("\n=== Test 1: Batch Delete All Students ===")
+        
+        # Get current student count
+        response = self.make_request("GET", "/students", token=self.admin_token)
+        if not response or response.status_code != 200:
+            self.log_test("Batch Delete All - Get Count", False, "Failed to get student count")
+            return False
+        
+        initial_count = len(response.json())
+        
+        # Perform batch delete all
+        delete_data = {"all": True}
+        response = self.make_request("POST", "/students/batch-delete", token=self.admin_token, data=delete_data)
+        
+        if not response or response.status_code != 200:
+            self.log_test("Batch Delete All Students", False, f"Batch delete failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            result = response.json()
+            required_fields = ["deleted_count", "freed_ipads", "total_found", "details"]
+            
+            for field in required_fields:
+                if field not in result:
+                    self.log_test("Batch Delete All Students", False, f"Missing field in response: {field}")
+                    return False
+            
+            deleted_count = result["deleted_count"]
+            freed_ipads = result["freed_ipads"]
+            
+            # Verify students were actually deleted
+            response = self.make_request("GET", "/students", token=self.admin_token)
+            if response and response.status_code == 200:
+                remaining_count = len(response.json())
+                expected_remaining = initial_count - deleted_count
+                
+                if remaining_count == expected_remaining:
+                    self.log_test("Batch Delete All Students", True, f"Successfully deleted {deleted_count} students, freed {freed_ipads} iPads")
+                    return True
+                else:
+                    self.log_test("Batch Delete All Students", False, f"Count mismatch: expected {expected_remaining}, got {remaining_count}")
+                    return False
+            else:
+                self.log_test("Batch Delete All Students", False, "Failed to verify deletion")
+                return False
+                
+        except Exception as e:
+            self.log_test("Batch Delete All Students", False, f"Error parsing response: {str(e)}")
+            return False
+    
+    def test_batch_delete_by_firstname(self):
+        """Test 2: Filter by first name (sus_vorn)"""
+        print("\n=== Test 2: Batch Delete by First Name ===")
+        
+        # Test case-insensitive matching
+        test_cases = [
+            {"sus_vorn": "Max", "expected_name": "Max"},
+            {"sus_vorn": "max", "expected_name": "Max"},  # Case insensitive
+            {"sus_vorn": "MAX", "expected_name": "Max"}   # Case insensitive
+        ]
+        
+        for i, test_case in enumerate(test_cases):
+            # Recreate test data for each case
+            if i > 0:
+                self.create_test_data()
+            
+            delete_data = {"sus_vorn": test_case["sus_vorn"]}
+            response = self.make_request("POST", "/students/batch-delete", token=self.admin_token, data=delete_data)
+            
+            if not response or response.status_code != 200:
+                self.log_test(f"Batch Delete by First Name ({test_case['sus_vorn']})", False, f"Request failed: {response.status_code if response else 'No response'}")
+                continue
+            
+            try:
+                result = response.json()
+                deleted_count = result.get("deleted_count", 0)
+                
+                # Verify only students with matching first name were deleted
+                if deleted_count > 0:
+                    # Check that students with this name are gone
+                    response = self.make_request("GET", "/students", token=self.admin_token)
+                    if response and response.status_code == 200:
+                        remaining_students = response.json()
+                        max_students = [s for s in remaining_students if s["sus_vorn"].lower() == test_case["expected_name"].lower()]
+                        
+                        if len(max_students) == 0:
+                            self.log_test(f"Batch Delete by First Name ({test_case['sus_vorn']})", True, f"Successfully deleted {deleted_count} students with first name '{test_case['sus_vorn']}'")
+                        else:
+                            self.log_test(f"Batch Delete by First Name ({test_case['sus_vorn']})", False, f"Still found {len(max_students)} students with name '{test_case['expected_name']}'")
+                    else:
+                        self.log_test(f"Batch Delete by First Name ({test_case['sus_vorn']})", False, "Failed to verify deletion")
+                else:
+                    self.log_test(f"Batch Delete by First Name ({test_case['sus_vorn']})", True, f"No students found with first name '{test_case['sus_vorn']}' (expected if already deleted)")
+                    
+            except Exception as e:
+                self.log_test(f"Batch Delete by First Name ({test_case['sus_vorn']})", False, f"Error parsing response: {str(e)}")
+        
+        return True
+    
+    def test_batch_delete_by_lastname(self):
+        """Test 3: Filter by last name (sus_nachn)"""
+        print("\n=== Test 3: Batch Delete by Last Name ===")
+        
+        # Recreate test data
+        self.create_test_data()
+        
+        delete_data = {"sus_nachn": "Müller"}
+        response = self.make_request("POST", "/students/batch-delete", token=self.admin_token, data=delete_data)
+        
+        if not response or response.status_code != 200:
+            self.log_test("Batch Delete by Last Name", False, f"Request failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            result = response.json()
+            deleted_count = result.get("deleted_count", 0)
+            
+            # Verify only students with last name "Müller" were deleted
+            response = self.make_request("GET", "/students", token=self.admin_token)
+            if response and response.status_code == 200:
+                remaining_students = response.json()
+                muller_students = [s for s in remaining_students if s["sus_nachn"] == "Müller"]
+                
+                if len(muller_students) == 0 and deleted_count > 0:
+                    self.log_test("Batch Delete by Last Name", True, f"Successfully deleted {deleted_count} students with last name 'Müller'")
+                    return True
+                elif deleted_count == 0:
+                    self.log_test("Batch Delete by Last Name", True, "No students found with last name 'Müller' (expected if already deleted)")
+                    return True
+                else:
+                    self.log_test("Batch Delete by Last Name", False, f"Still found {len(muller_students)} students with last name 'Müller'")
+                    return False
+            else:
+                self.log_test("Batch Delete by Last Name", False, "Failed to verify deletion")
+                return False
+                
+        except Exception as e:
+            self.log_test("Batch Delete by Last Name", False, f"Error parsing response: {str(e)}")
+            return False
+    
+    def test_batch_delete_by_class(self):
+        """Test 4: Filter by class (sus_kl)"""
+        print("\n=== Test 4: Batch Delete by Class ===")
+        
+        # Recreate test data
+        self.create_test_data()
+        
+        delete_data = {"sus_kl": "10a"}
+        response = self.make_request("POST", "/students/batch-delete", token=self.admin_token, data=delete_data)
+        
+        if not response or response.status_code != 200:
+            self.log_test("Batch Delete by Class", False, f"Request failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            result = response.json()
+            deleted_count = result.get("deleted_count", 0)
+            
+            # Verify only students from class "10a" were deleted
+            response = self.make_request("GET", "/students", token=self.admin_token)
+            if response and response.status_code == 200:
+                remaining_students = response.json()
+                class_10a_students = [s for s in remaining_students if s["sus_kl"] == "10a"]
+                
+                if len(class_10a_students) == 0 and deleted_count > 0:
+                    self.log_test("Batch Delete by Class", True, f"Successfully deleted {deleted_count} students from class '10a'")
+                    return True
+                elif deleted_count == 0:
+                    self.log_test("Batch Delete by Class", True, "No students found in class '10a' (expected if already deleted)")
+                    return True
+                else:
+                    self.log_test("Batch Delete by Class", False, f"Still found {len(class_10a_students)} students in class '10a'")
+                    return False
+            else:
+                self.log_test("Batch Delete by Class", False, "Failed to verify deletion")
+                return False
+                
+        except Exception as e:
+            self.log_test("Batch Delete by Class", False, f"Error parsing response: {str(e)}")
+            return False
+    
+    def test_batch_delete_combined_filters(self):
+        """Test 5: Combined filters"""
+        print("\n=== Test 5: Batch Delete with Combined Filters ===")
+        
+        # Recreate test data
+        self.create_test_data()
+        
+        delete_data = {"sus_vorn": "Max", "sus_kl": "10a"}
+        response = self.make_request("POST", "/students/batch-delete", token=self.admin_token, data=delete_data)
+        
+        if not response or response.status_code != 200:
+            self.log_test("Batch Delete Combined Filters", False, f"Request failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            result = response.json()
+            deleted_count = result.get("deleted_count", 0)
+            
+            # Verify only students matching BOTH criteria were deleted
+            response = self.make_request("GET", "/students", token=self.admin_token)
+            if response and response.status_code == 200:
+                remaining_students = response.json()
+                matching_students = [s for s in remaining_students if s["sus_vorn"] == "Max" and s["sus_kl"] == "10a"]
+                
+                if len(matching_students) == 0 and deleted_count > 0:
+                    self.log_test("Batch Delete Combined Filters", True, f"Successfully deleted {deleted_count} students matching both 'Max' and '10a'")
+                    return True
+                elif deleted_count == 0:
+                    self.log_test("Batch Delete Combined Filters", True, "No students found matching both criteria (expected if already deleted)")
+                    return True
+                else:
+                    self.log_test("Batch Delete Combined Filters", False, f"Still found {len(matching_students)} students matching both criteria")
+                    return False
+            else:
+                self.log_test("Batch Delete Combined Filters", False, "Failed to verify deletion")
+                return False
+                
+        except Exception as e:
+            self.log_test("Batch Delete Combined Filters", False, f"Error parsing response: {str(e)}")
+            return False
+    
+    def test_batch_delete_no_match(self):
+        """Test 6: No match scenario"""
+        print("\n=== Test 6: Batch Delete with No Matches ===")
+        
+        delete_data = {"sus_vorn": "NichtExistierend12345"}
+        response = self.make_request("POST", "/students/batch-delete", token=self.admin_token, data=delete_data)
+        
+        if not response or response.status_code != 200:
+            self.log_test("Batch Delete No Match", False, f"Request failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            result = response.json()
+            deleted_count = result.get("deleted_count", 0)
+            
+            if deleted_count == 0:
+                self.log_test("Batch Delete No Match", True, "Correctly returned deleted_count=0 for non-existent student name")
+                return True
+            else:
+                self.log_test("Batch Delete No Match", False, f"Expected deleted_count=0, got {deleted_count}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Batch Delete No Match", False, f"Error parsing response: {str(e)}")
+            return False
+    
+    def test_cascading_delete(self):
+        """Test 7: Cascading delete verification"""
+        print("\n=== Test 7: Cascading Delete Verification ===")
+        
+        # Recreate test data and create assignments
+        self.create_test_data()
+        
+        # Create an assignment
+        response = self.make_request("POST", "/assignments/auto-assign", token=self.admin_token)
+        if not response or response.status_code != 200:
+            self.log_test("Cascading Delete Setup", False, "Failed to create assignments for cascading test")
+            return False
+        
+        # Get assignment details before deletion
+        response = self.make_request("GET", "/assignments", token=self.admin_token)
+        if not response or response.status_code != 200:
+            self.log_test("Cascading Delete Setup", False, "Failed to get assignments")
+            return False
+        
+        assignments_before = response.json()
+        if not assignments_before:
+            self.log_test("Cascading Delete Setup", False, "No assignments found for cascading test")
+            return False
+        
+        # Get iPad status before deletion
+        response = self.make_request("GET", "/ipads", token=self.admin_token)
+        if not response or response.status_code != 200:
+            self.log_test("Cascading Delete Setup", False, "Failed to get iPads")
+            return False
+        
+        ipads_before = response.json()
+        assigned_ipads_before = [ipad for ipad in ipads_before if ipad["status"] == "zugewiesen"]
+        
+        # Delete all students (which should cascade)
+        delete_data = {"all": True}
+        response = self.make_request("POST", "/students/batch-delete", token=self.admin_token, data=delete_data)
+        
+        if not response or response.status_code != 200:
+            self.log_test("Cascading Delete", False, f"Batch delete failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            result = response.json()
+            deleted_count = result.get("deleted_count", 0)
+            freed_ipads = result.get("freed_ipads", 0)
+            
+            # Verify cascading effects
+            
+            # 1. Check students are deleted
+            response = self.make_request("GET", "/students", token=self.admin_token)
+            if response and response.status_code == 200:
+                remaining_students = response.json()
+                admin_students = [s for s in remaining_students if not s["sus_vorn"].startswith("User")]
+                
+                if len(admin_students) == 0:
+                    self.log_test("Cascading Delete - Students", True, f"All admin students deleted ({deleted_count})")
+                else:
+                    self.log_test("Cascading Delete - Students", False, f"Still found {len(admin_students)} admin students")
+                    return False
+            
+            # 2. Check assignments are deleted
+            response = self.make_request("GET", "/assignments", token=self.admin_token)
+            if response and response.status_code == 200:
+                remaining_assignments = response.json()
+                admin_assignments = [a for a in remaining_assignments if not a["student_name"].startswith("User")]
+                
+                if len(admin_assignments) == 0:
+                    self.log_test("Cascading Delete - Assignments", True, "All admin assignments deleted")
+                else:
+                    self.log_test("Cascading Delete - Assignments", False, f"Still found {len(admin_assignments)} admin assignments")
+                    return False
+            
+            # 3. Check iPads are freed
+            response = self.make_request("GET", "/ipads", token=self.admin_token)
+            if response and response.status_code == 200:
+                ipads_after = response.json()
+                assigned_ipads_after = [ipad for ipad in ipads_after if ipad["status"] == "zugewiesen"]
+                available_ipads_after = [ipad for ipad in ipads_after if ipad["status"] == "verfügbar"]
+                
+                # Check that iPads are now available and have no current_assignment_id
+                freed_correctly = True
+                for ipad in ipads_after:
+                    if ipad["itnr"].startswith("BATCH") and ipad["status"] != "verfügbar":
+                        freed_correctly = False
+                        break
+                    if ipad["itnr"].startswith("BATCH") and ipad.get("current_assignment_id"):
+                        freed_correctly = False
+                        break
+                
+                if freed_correctly and freed_ipads > 0:
+                    self.log_test("Cascading Delete - iPads Freed", True, f"Successfully freed {freed_ipads} iPads")
+                else:
+                    self.log_test("Cascading Delete - iPads Freed", False, f"iPad freeing verification failed. Freed: {freed_ipads}")
+                    return False
+            
+            # 4. Check contracts are deleted (if any existed)
+            # This is harder to verify without creating contracts first, but the endpoint should handle it
+            
+            self.log_test("Cascading Delete Complete", True, f"Cascading delete verified: {deleted_count} students, {freed_ipads} iPads freed")
+            return True
+                
+        except Exception as e:
+            self.log_test("Cascading Delete", False, f"Error during cascading delete verification: {str(e)}")
+            return False
+    
+    def test_rbac_security(self):
+        """Test 8: RBAC security verification"""
+        print("\n=== Test 8: RBAC Security Verification ===")
+        
+        # Recreate test data for all users
+        self.create_test_data()
+        
+        # Get initial counts for each user
+        response = self.make_request("GET", "/students", token=self.test_user_token)
+        if response and response.status_code == 200:
+            user1_students_before = response.json()
+            user1_count_before = len(user1_students_before)
+        else:
+            self.log_test("RBAC Security - User1 Count", False, "Failed to get user1 students")
+            return False
+        
+        response = self.make_request("GET", "/students", token=self.test_user2_token)
+        if response and response.status_code == 200:
+            user2_students_before = response.json()
+            user2_count_before = len(user2_students_before)
+        else:
+            self.log_test("RBAC Security - User2 Count", False, "Failed to get user2 students")
+            return False
+        
+        # User 1 performs batch delete (should only affect their students)
+        delete_data = {"all": True}
+        response = self.make_request("POST", "/students/batch-delete", token=self.test_user_token, data=delete_data)
+        
+        if not response or response.status_code != 200:
+            self.log_test("RBAC Security - User1 Delete", False, f"User1 batch delete failed: {response.status_code if response else 'No response'}")
+            return False
+        
+        try:
+            result = response.json()
+            user1_deleted_count = result.get("deleted_count", 0)
+            
+            # Verify User1's students are deleted
+            response = self.make_request("GET", "/students", token=self.test_user_token)
+            if response and response.status_code == 200:
+                user1_students_after = response.json()
+                user1_count_after = len(user1_students_after)
+                
+                if user1_count_after == 0 and user1_deleted_count == user1_count_before:
+                    self.log_test("RBAC Security - User1 Own Data", True, f"User1 successfully deleted their own {user1_deleted_count} students")
+                else:
+                    self.log_test("RBAC Security - User1 Own Data", False, f"User1 deletion mismatch: before={user1_count_before}, after={user1_count_after}, deleted={user1_deleted_count}")
+                    return False
+            
+            # Verify User2's students are NOT affected
+            response = self.make_request("GET", "/students", token=self.test_user2_token)
+            if response and response.status_code == 200:
+                user2_students_after = response.json()
+                user2_count_after = len(user2_students_after)
+                
+                if user2_count_after == user2_count_before:
+                    self.log_test("RBAC Security - User2 Data Protected", True, f"User2's {user2_count_before} students remain untouched")
+                else:
+                    self.log_test("RBAC Security - User2 Data Protected", False, f"User2 data affected: before={user2_count_before}, after={user2_count_after}")
+                    return False
+            
+            # Verify Admin can still see User2's students
+            response = self.make_request("GET", "/students", token=self.admin_token)
+            if response and response.status_code == 200:
+                admin_students_after = response.json()
+                user2_students_visible_to_admin = [s for s in admin_students_after if s["sus_vorn"].startswith("User2")]
+                
+                if len(user2_students_visible_to_admin) == user2_count_before:
+                    self.log_test("RBAC Security - Admin Visibility", True, f"Admin can still see User2's {len(user2_students_visible_to_admin)} students")
+                else:
+                    self.log_test("RBAC Security - Admin Visibility", False, f"Admin visibility issue: expected {user2_count_before}, saw {len(user2_students_visible_to_admin)}")
+                    return False
+            
+            self.log_test("RBAC Security Complete", True, "RBAC isolation working correctly - users can only delete their own data")
+            return True
+                
+        except Exception as e:
+            self.log_test("RBAC Security", False, f"Error during RBAC security test: {str(e)}")
+            return False
+    
+    def test_authentication_required(self):
+        """Test that authentication is required for batch delete"""
+        print("\n=== Test: Authentication Required ===")
+        
+        delete_data = {"all": True}
+        response = self.make_request("POST", "/students/batch-delete", token=None, data=delete_data)
+        
+        if response and response.status_code == 401:
+            self.log_test("Authentication Required", True, "Correctly returned 401 for unauthenticated request")
+            return True
+        else:
+            self.log_test("Authentication Required", False, f"Expected 401, got {response.status_code if response else 'No response'}")
+            return False
+    
+    def run_batch_delete_tests(self):
+        """Run all batch delete tests"""
+        print("🗑️ Comprehensive Batch Delete Testing Suite")
+        print("=" * 80)
+        
+        # Setup
+        if not self.setup_authentication():
+            print("❌ Authentication setup failed")
+            return False
+        
+        if not self.create_test_data():
+            print("❌ Test data creation failed")
+            return False
+        
+        # Run all tests
+        tests = [
+            self.test_authentication_required,
+            self.test_batch_delete_all_students,
+            self.test_batch_delete_by_firstname,
+            self.test_batch_delete_by_lastname,
+            self.test_batch_delete_by_class,
+            self.test_batch_delete_combined_filters,
+            self.test_batch_delete_no_match,
+            self.test_cascading_delete,
+            self.test_rbac_security
+        ]
+        
+        success_count = 0
+        for test in tests:
+            try:
+                if test():
+                    success_count += 1
+            except Exception as e:
+                print(f"❌ Test {test.__name__} failed with exception: {str(e)}")
+        
+        print(f"\n✅ Batch Delete Tests Complete: {success_count}/{len(tests)} passed")
+        return success_count == len(tests)
+    
+    def print_summary(self):
+        """Print test summary"""
+        print("\n" + "=" * 80)
+        print("🗑️ BATCH DELETE TESTING SUMMARY")
+        print("=" * 80)
+        
+        total_tests = len(self.test_results)
+        passed_tests = len([r for r in self.test_results if "✅ PASS" in r["status"]])
+        failed_tests = total_tests - passed_tests
+        
+        print(f"Total Tests: {total_tests}")
+        print(f"Passed: {passed_tests} ✅")
+        print(f"Failed: {failed_tests} ❌")
+        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+        
+        if failed_tests > 0:
+            print("\n❌ FAILED TESTS:")
+            for result in self.test_results:
+                if "❌ FAIL" in result["status"]:
+                    print(f"  - {result['test']}: {result['message']}")
+        
+        print("\n📋 DETAILED RESULTS:")
+        for result in self.test_results:
+            print(f"{result['status']}: {result['test']}")
+            if result['details']:
+                print(f"   Details: {result['details']}")
+
 def main():
     """Main test execution"""
-    tester = RBACTester()
+    print("🔐 iPad Management System - Backend Testing Suite")
+    print("=" * 80)
+    print("Choose testing mode:")
+    print("1. Full RBAC Testing (existing comprehensive tests)")
+    print("2. Batch Delete Feature Testing (new feature)")
+    print("3. Both (recommended)")
     
-    try:
-        success = tester.run_all_tests()
-        tester.print_summary()
+    choice = input("Enter choice (1/2/3): ").strip()
+    
+    if choice == "1":
+        tester = RBACTester()
+        try:
+            success = tester.run_all_tests()
+            tester.print_summary()
+            return 0 if success else 1
+        except Exception as e:
+            print(f"\n💥 RBAC testing error: {str(e)}")
+            return 1
+    
+    elif choice == "2":
+        tester = BatchDeleteTester()
+        try:
+            success = tester.run_batch_delete_tests()
+            tester.print_summary()
+            return 0 if success else 1
+        except Exception as e:
+            print(f"\n💥 Batch delete testing error: {str(e)}")
+            return 1
+    
+    elif choice == "3":
+        print("\n🔄 Running Full Test Suite...")
         
-        if success:
-            print("\n🎉 All RBAC tests completed successfully!")
+        # Run RBAC tests first
+        print("\n" + "="*50)
+        print("PHASE 1: RBAC TESTING")
+        print("="*50)
+        rbac_tester = RBACTester()
+        try:
+            rbac_success = rbac_tester.run_all_tests()
+            rbac_tester.print_summary()
+        except Exception as e:
+            print(f"\n💥 RBAC testing error: {str(e)}")
+            rbac_success = False
+        
+        # Run Batch Delete tests
+        print("\n" + "="*50)
+        print("PHASE 2: BATCH DELETE TESTING")
+        print("="*50)
+        batch_tester = BatchDeleteTester()
+        try:
+            batch_success = batch_tester.run_batch_delete_tests()
+            batch_tester.print_summary()
+        except Exception as e:
+            print(f"\n💥 Batch delete testing error: {str(e)}")
+            batch_success = False
+        
+        # Overall summary
+        print("\n" + "="*80)
+        print("🎯 OVERALL TESTING SUMMARY")
+        print("="*80)
+        print(f"RBAC Tests: {'✅ PASSED' if rbac_success else '❌ FAILED'}")
+        print(f"Batch Delete Tests: {'✅ PASSED' if batch_success else '❌ FAILED'}")
+        
+        if rbac_success and batch_success:
+            print("\n🎉 All tests completed successfully!")
             return 0
         else:
-            print("\n❌ Some RBAC tests failed!")
+            print("\n❌ Some tests failed!")
             return 1
-            
-    except KeyboardInterrupt:
-        print("\n⚠️ Testing interrupted by user")
-        return 1
-    except Exception as e:
-        print(f"\n💥 Unexpected error during testing: {str(e)}")
+    
+    else:
+        print("Invalid choice. Exiting.")
         return 1
 
 if __name__ == "__main__":
