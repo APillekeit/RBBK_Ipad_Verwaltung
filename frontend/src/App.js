@@ -1117,6 +1117,26 @@ const StudentsManagement = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {!student.current_assignment_id && (
+                            <Select
+                              onValueChange={(ipadId) => handleManualIPadAssignment(student.id, ipadId)}
+                            >
+                              <SelectTrigger className="w-40">
+                                <SelectValue placeholder="iPad zuordnen" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableIPads.length === 0 ? (
+                                  <SelectItem value="none" disabled>Keine iPads verfügbar</SelectItem>
+                                ) : (
+                                  availableIPads.map((ipad) => (
+                                    <SelectItem key={ipad.id} value={ipad.id}>
+                                      {ipad.itnr} ({ipad.status})
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
                           <Button 
                             variant="outline" 
                             size="sm"
