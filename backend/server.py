@@ -1259,7 +1259,7 @@ async def auto_assign_ipads(current_user: dict = Depends(get_current_user)):
         
         await db.ipads.update_one(
             {"id": ipad["id"]},
-            {"$set": {"status": "zugewiesen", "current_assignment_id": assignment.id, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            {"$set": {"current_assignment_id": assignment.id, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
         
         assigned_count += 1
