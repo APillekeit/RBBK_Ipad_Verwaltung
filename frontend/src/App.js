@@ -710,6 +710,24 @@ const StudentsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  
+  // Filter states
+  const [studentVornameFilter, setStudentVornameFilter] = useState('');
+  const [studentNachnameFilter, setStudentNachnameFilter] = useState('');
+  const [studentKlasseFilter, setStudentKlasseFilter] = useState('');
+  
+  // Filtered students
+  const filteredStudents = students.filter(student => {
+    const vornMatch = !studentVornameFilter || 
+      student.sus_vorn?.toLowerCase().includes(studentVornameFilter.toLowerCase());
+    const nachMatch = !studentNachnameFilter || 
+      student.sus_nachn?.toLowerCase().includes(studentNachnameFilter.toLowerCase());
+    const klMatch = !studentKlasseFilter || 
+      student.sus_kl?.toLowerCase().includes(studentKlasseFilter.toLowerCase());
+    
+    return vornMatch && nachMatch && klMatch;
+  });
 
   const loadStudents = async () => {
     setLoading(true);
