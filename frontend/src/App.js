@@ -796,8 +796,6 @@ const StudentsManagement = () => {
     }
   };
 
-  return (
-
   const handleBatchDeleteStudents = async (deleteAll = false) => {
     const count = deleteAll ? students.length : filteredStudents.length;
     const type = deleteAll ? "ALLE" : "gefilterte";
@@ -847,6 +845,8 @@ const StudentsManagement = () => {
       setDeleting(false);
     }
   };
+
+  return (
 
     <div className="space-y-6">
       <Card className="shadow-lg">
