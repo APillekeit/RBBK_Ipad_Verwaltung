@@ -1961,7 +1961,8 @@ class iPadManagementTester:
             "ipad_id": ipad_id
         }
         
-        response = self.make_request("POST", "/assignments/manual", token=self.admin_token, params=assignment_data)
+        # The endpoint expects query parameters
+        response = self.make_request("POST", f"/assignments/manual?student_id={student_id}&ipad_id={ipad_id}", token=self.admin_token)
         
         if not response or response.status_code != 200:
             self.log_test("Manual Assignment Creation", False, f"Failed to create manual assignment: {response.status_code if response else 'No response'}")
