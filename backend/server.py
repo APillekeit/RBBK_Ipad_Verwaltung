@@ -1970,7 +1970,6 @@ async def dissolve_assignment(assignment_id: str, current_user: dict = Depends(g
     await db.ipads.update_one(
         {"id": assignment["ipad_id"]},
         {"$set": {
-            "status": "verfügbar",
             "current_assignment_id": None,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
