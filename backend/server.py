@@ -1081,6 +1081,132 @@ async def delete_student(student_id: str, current_user: dict = Depends(get_curre
     })
     
     # Step 4: Delete the student
+
+
+@api_router.post("/students/batch-delete")
+async def batch_delete_students(
+    filter_params: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Delete multiple students at once (filtered or all)
+    
+    filter_params can include:
+    - "all": true (deletes all user's students)
+    - "sus_vorn": string (filter by first name)
+    - "sus_nachn": string (filter by last name)
+    - "sus_kl": string (filter by class)
+    
+    Cascading deletes:
+    - Dissolves active assignments
+    - Frees assigned iPads
+    - Deletes all assignment history
+    - Deletes all contracts
+    """
+    try:
+        # Apply user filter - CRITICAL for RBAC!
+        user_filter = await get_user_filter(current_user)
+        
+        # Build student filter
+        student_filter = user_filter.copy()
+        
+        # If not "all", apply specific filters
+        if not filter_params.get("all", False):
+            if filter_params.get("sus_vorn"):
+                student_filter["sus_vorn"] = {"$regex": filter_params["sus_vorn"], "$options": "i"}
+            if filter_params.get("sus_nachn"):
+                student_filter["sus_nachn"] = {"$regex": filter_params["sus_nachn"], "$options": "i"}
+            if filter_params.get("sus_kl"):
+                student_filter["sus_kl"] = {"$regex": filter_params["sus_kl"], "$options": "i"}
+        
+        # Get all matching students
+        students = await db.students.find(student_filter).to_list(length=None)
+        
+        if not students:
+            return {
+                "message": "No students found to delete",
+                "deleted_count": 0,
+                "freed_ipads": 0,
+                "details": []
+            }
+        
+        deleted_count = 0
+        freed_ipads = 0
+        details = []
+        
+        # Delete each student with cascading
+        for student in students:
+            try:
+                student_id = student["id"]
+                student_name = f"{student.get('sus_vorn', 'Unknown')} {student.get('sus_nachn', 'Unknown')}"
+                
+                # Step 1: Dissolve active assignment if exists
+                active_assignment = await db.assignments.find_one({
+                    "student_id": student_id,
+                    "is_active": True,
+                    "user_id": current_user["id"]  # Security: ensure it's user's assignment
+                })
+                
+                if active_assignment:
+                    # Move contract to inactive if exists
+                    if active_assignment.get("contract_id"):
+                        await db.contracts.update_one(
+                            {"id": active_assignment["contract_id"]},
+                            {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                        )
+                    
+                    # Mark assignment as inactive
+                    await db.assignments.update_one(
+                        {"id": active_assignment["id"]},
+                        {"$set": {
+                            "is_active": False,
+                            "unassigned_at": datetime.now(timezone.utc).isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+                    
+                    # Update iPad status to available
+                    await db.ipads.update_one(
+                        {"id": active_assignment["ipad_id"]},
+                        {"$set": {
+                            "status": "verfügbar",
+                            "current_assignment_id": None,
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }}
+                    )
+                    
+                    freed_ipads += 1
+                    details.append(f"Student {student_name} - iPad {active_assignment.get('itnr', 'Unknown')} freed")
+                else:
+                    details.append(f"Student {student_name} - no active assignment")
+                
+                # Step 2: Delete all assignments (history) for this student
+                await db.assignments.delete_many({"student_id": student_id})
+                
+                # Step 3: Delete all contracts for this student
+                await db.contracts.delete_many({"student_id": student_id})
+                
+                # Step 4: Delete the student
+                await db.students.delete_one({"id": student_id})
+                
+                deleted_count += 1
+                
+            except Exception as e:
+                details.append(f"Error deleting student {student.get('sus_vorn', 'Unknown')}: {str(e)}")
+        
+        return {
+            "message": f"Successfully deleted {deleted_count} student(s) and freed {freed_ipads} iPad(s)",
+            "deleted_count": deleted_count,
+            "freed_ipads": freed_ipads,
+            "total_found": len(students),
+            "details": details
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during batch delete: {str(e)}")
+
     student_result = await db.students.delete_one({"id": student_id})
     
     return {
