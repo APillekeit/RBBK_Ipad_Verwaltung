@@ -2,11 +2,21 @@
 
 ## ✅ **Methode 1: Mit Script (Empfohlen)**
 
+### **A) Normale Änderungen (App.js, CSS, etc.) - SCHNELL ⚡**
 ```bash
 # Auf dem Produktions-Server:
 cd /home/RBBK_Ipad_Verwaltung-main/frontend
 sudo bash deploy-production.sh
 ```
+**Dauer: 2-3 Minuten** (nutzt Docker Cache)
+
+### **B) package.json geändert - VOLLSTÄNDIG 🔄**
+```bash
+# Nur wenn package.json geändert wurde:
+cd /home/RBBK_Ipad_Verwaltung-main/frontend
+sudo bash deploy-production-full.sh
+```
+**Dauer: 3-5 Minuten** (ohne Cache)
 
 ---
 
