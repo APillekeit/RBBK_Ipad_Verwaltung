@@ -763,6 +763,65 @@ async def delete_user_complete(user_id: str, current_user: dict = Depends(get_cu
             detail=f"Error during deletion process: {str(e)}. Some data may have been partially deleted."
         )
 
+
+@api_router.post("/admin/cleanup-orphaned-data")
+async def cleanup_orphaned_data(current_user: dict = Depends(get_current_user)):
+    """
+    Cleanup orphaned data (iPads, Students, etc.) from deleted users (admin only)
+    This removes data that belongs to non-existent users
+    """
+    require_admin(current_user)
+    
+    try:
+        # Get all existing user IDs
+        existing_users = await db.users.find({}, {"id": 1}).to_list(length=None)
+        existing_user_ids = {user["id"] for user in existing_users}
+        
+        # Find orphaned iPads
+        all_ipads = await db.ipads.find({}, {"id": 1, "user_id": 1, "itnr": 1}).to_list(length=None)
+        orphaned_ipads = [ipad for ipad in all_ipads if ipad["user_id"] not in existing_user_ids]
+        orphaned_ipad_ids = [ipad["id"] for ipad in orphaned_ipads]
+        
+        # Find orphaned Students
+        all_students = await db.students.find({}, {"id": 1, "user_id": 1}).to_list(length=None)
+        orphaned_students = [s for s in all_students if s["user_id"] not in existing_user_ids]
+        orphaned_student_ids = [s["id"] for s in orphaned_students]
+        
+        # Find orphaned Assignments
+        all_assignments = await db.assignments.find({}, {"id": 1, "user_id": 1}).to_list(length=None)
+        orphaned_assignments = [a for a in all_assignments if a["user_id"] not in existing_user_ids]
+        
+        # Find orphaned Contracts
+        all_contracts = await db.contracts.find({}, {"id": 1, "user_id": 1}).to_list(length=None)
+        orphaned_contracts = [c for c in all_contracts if c["user_id"] not in existing_user_ids]
+        
+        # Delete orphaned data
+        deleted_ipads = await db.ipads.delete_many({"id": {"$in": orphaned_ipad_ids}})
+        deleted_students = await db.students.delete_many({"id": {"$in": orphaned_student_ids}})
+        deleted_assignments = await db.assignments.delete_many({"user_id": {"$nin": list(existing_user_ids)}})
+        deleted_contracts = await db.contracts.delete_many({"user_id": {"$nin": list(existing_user_ids)}})
+        
+        return {
+            "message": "Orphaned data cleanup completed",
+            "deleted_resources": {
+                "ipads": deleted_ipads.deleted_count,
+                "students": deleted_students.deleted_count,
+                "assignments": deleted_assignments.deleted_count,
+                "contracts": deleted_contracts.deleted_count
+            },
+            "details": {
+                "orphaned_ipad_itnrs": [ipad["itnr"] for ipad in orphaned_ipads[:10]],  # Show first 10
+                "total_orphaned_ipads": len(orphaned_ipads)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error during cleanup: {str(e)}"
+        )
+
+
 @api_router.post("/admin/users/{user_id}/reset-password")
 async def reset_user_password(user_id: str, current_user: dict = Depends(get_current_user)):
     """Reset user password to a temporary 8-digit code (admin only)"""
