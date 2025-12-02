@@ -573,6 +573,39 @@ const IPadsManagement = () => {
     }
   };
 
+  const handleDeleteIPad = async (ipad) => {
+    // Double-click confirmation
+    const confirmed = window.confirm(
+      `⚠️ WARNUNG: iPad ${ipad.itnr} wirklich löschen?\n\n` +
+      `Dies löscht:\n` +
+      `- Das iPad permanent\n` +
+      `- Alle Zuordnungs-Historie\n` +
+      `- Alle zugehörigen Verträge\n\n` +
+      `Dies kann NICHT rückgängig gemacht werden!`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const response = await api.delete(`/ipads/${ipad.id}`);
+      
+      if (response && response.data) {
+        const msg = response.data.message || 'iPad gelöscht';
+        toast.success(msg);
+      } else {
+        toast.success('iPad erfolgreich gelöscht');
+      }
+      
+      await loadIPads();
+      await loadAvailableStudents();
+      
+    } catch (error) {
+      console.error('Delete iPad error:', error);
+      toast.error(error.response?.data?.detail || 'Fehler beim Löschen des iPads');
+    }
+  };
+
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'ok':
