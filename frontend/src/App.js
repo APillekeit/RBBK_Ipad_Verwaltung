@@ -3153,13 +3153,24 @@ const UserManagement = () => {
                 Benutzerkonten erstellen, bearbeiten und verwalten
               </CardDescription>
             </div>
-            <Button 
-              onClick={() => setShowCreateDialog(true)}
-              className="bg-gradient-to-r from-ipad-teal to-ipad-blue hover:from-ipad-blue hover:to-ipad-dark-blue"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Neuer Benutzer
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleCleanupOrphanedData}
+                variant="outline"
+                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                title="Verwaiste Daten löschen (iPads von gelöschten Usern)"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Cleanup verwaiste Daten
+              </Button>
+              <Button 
+                onClick={() => setShowCreateDialog(true)}
+                className="bg-gradient-to-r from-ipad-teal to-ipad-blue hover:from-ipad-blue hover:to-ipad-dark-blue"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Neuer Benutzer
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
