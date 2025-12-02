@@ -1292,8 +1292,7 @@ async def auto_assign_ipads(current_user: dict = Depends(get_current_user)):
 
 @api_router.post("/assignments/manual")
 async def manual_assign(
-    student_id: str,
-    ipad_id: str,
+    request: ManualAssignmentRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -1305,7 +1304,7 @@ async def manual_assign(
         user_filter = await get_user_filter(current_user)
         
         # Validate student ownership
-        student = await db.students.find_one({"id": student_id, **user_filter})
+        student = await db.students.find_one({"id": request.student_id, **user_filter})
         if not student:
             raise HTTPException(status_code=404, detail="Student not found or access denied")
         
