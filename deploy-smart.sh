@@ -10,17 +10,23 @@ echo "════════════════════════�
 echo ""
 
 # Finde das richtige Verzeichnis
-if [ -d "/home/RBBK_Ipad_Verwaltung-main" ]; then
-    BASE_DIR="/home/RBBK_Ipad_Verwaltung-main"
-elif [ -d "/app" ]; then
-    BASE_DIR="/app"
+if [ -d "/home/RBBK_Ipad_Verwaltung-main/config" ]; then
+    CONFIG_DIR="/home/RBBK_Ipad_Verwaltung-main/config"
+elif [ -d "./config" ]; then
+    CONFIG_DIR="./config"
+elif [ -d "/app/config" ]; then
+    CONFIG_DIR="/app/config"
 else
-    echo "❌ Fehler: Projekt-Verzeichnis nicht gefunden!"
+    echo "❌ Fehler: config-Verzeichnis nicht gefunden!"
+    echo "   Bitte führe das Script aus dem Projekt-Hauptverzeichnis aus:"
+    echo "   cd /home/RBBK_Ipad_Verwaltung-main && sudo bash deploy-smart.sh"
     exit 1
 fi
 
-CONFIG_DIR="$BASE_DIR/config"
-cd "$CONFIG_DIR" || exit 1
+cd "$CONFIG_DIR" || {
+    echo "❌ Fehler: Konnte nicht in $CONFIG_DIR wechseln!"
+    exit 1
+}
 echo "📍 Arbeitsverzeichnis: $CONFIG_DIR"
 echo ""
 
