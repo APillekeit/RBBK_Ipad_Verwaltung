@@ -1,6 +1,27 @@
-# 🚀 Frontend Deployment Anleitung
+# 🚀 Deployment Anleitung
 
-## ✅ **Methode 1: Mit Script (Empfohlen)**
+## 🌟 **NEU: Smart Deployment (Empfohlen!)**
+
+Ein einziges Script für alles - erkennt automatisch, was geändert wurde!
+
+```bash
+cd /home/RBBK_Ipad_Verwaltung-main
+sudo bash deploy-smart.sh
+```
+
+Dann wählen:
+- **1** = Nur Frontend (2-3 Min)
+- **2** = Nur Backend (1-2 Min)
+- **3** = Beides (3-4 Min)
+- **4** = Full Build mit package.json/requirements.txt (5-7 Min)
+
+👉 **[Komplette Anleitung zu Smart Deployment](docs/SMART_DEPLOYMENT.md)**
+
+---
+
+## ✅ **Alternative: Einzelne Scripts**
+
+### **Methode 1: Mit Script (Empfohlen)**
 
 ### **A) Normale Änderungen (App.js, CSS, etc.) - SCHNELL ⚡**
 ```bash
