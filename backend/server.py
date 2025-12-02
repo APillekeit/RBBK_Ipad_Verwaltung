@@ -882,6 +882,43 @@ async def get_ipads(current_user: dict = Depends(get_current_user)):
     ipads = await db.ipads.find(user_filter).to_list(length=None)
     return [iPad(**parse_from_mongo(ipad)) for ipad in ipads]
 
+
+@api_router.delete("/ipads/{ipad_id}")
+async def delete_ipad(ipad_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Delete an iPad permanently from the database.
+    Only allowed if iPad is not currently assigned.
+    """
+    # Get iPad
+    user_filter = await get_user_filter(current_user)
+    ipad = await db.ipads.find_one({"id": ipad_id, **user_filter})
+    
+    if not ipad:
+        raise HTTPException(status_code=404, detail="iPad not found or access denied")
+    
+    # Check if iPad is currently assigned
+    if ipad.get("current_assignment_id"):
+        raise HTTPException(
+            status_code=400, 
+            detail="iPad ist aktuell zugewiesen. Bitte zuerst die Zuordnung auflösen."
+        )
+    
+    # Delete all assignments history for this iPad
+    assignments_result = await db.assignments.delete_many({"ipad_id": ipad_id})
+    
+    # Delete all contracts for this iPad
+    contracts_result = await db.contracts.delete_many({"itnr": ipad["itnr"]})
+    
+    # Delete the iPad
+    await db.ipads.delete_one({"id": ipad_id})
+    
+    return {
+        "message": f"iPad {ipad['itnr']} erfolgreich gelöscht",
+        "deleted_assignments": assignments_result.deleted_count,
+        "deleted_contracts": contracts_result.deleted_count
+    }
+
+
 # Student management endpoints
 @api_router.post("/students/upload", response_model=UploadResponse)
 async def upload_students(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
