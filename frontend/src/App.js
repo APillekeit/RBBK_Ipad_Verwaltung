@@ -889,8 +889,9 @@ const StudentsManagement = () => {
       
       toast.success(`${response.data.message}. Gelöscht: ${response.data.deleted_assignments} Zuordnungen, ${response.data.deleted_contracts} Verträge`);
       
-      // Reload students list
+      // Reload students list AND available iPads (freigegebene iPads!)
       await loadStudents();
+      await loadAvailableIPads();
       
     } catch (error) {
       console.error('Delete student error:', error);
