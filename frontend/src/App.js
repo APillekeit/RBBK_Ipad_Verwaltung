@@ -887,7 +887,14 @@ const StudentsManagement = () => {
       
       const response = await api.delete(`/students/${student.id}`);
       
-      toast.success(`${response.data.message}. Gelöscht: ${response.data.deleted_assignments} Zuordnungen, ${response.data.deleted_contracts} Verträge`);
+      if (response && response.data) {
+        const msg = response.data.message || 'Schüler gelöscht';
+        const assignments = response.data.deleted_assignments || 0;
+        const contracts = response.data.deleted_contracts || 0;
+        toast.success(`${msg}. Gelöscht: ${assignments} Zuordnungen, ${contracts} Verträge`);
+      } else {
+        toast.success('Schüler erfolgreich gelöscht');
+      }
       
       // Reload students list AND available iPads (freigegebene iPads!)
       await loadStudents();
