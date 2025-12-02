@@ -1,29 +1,28 @@
-# Frontend Dockerfile für React
+# Frontend Dockerfile für React (OPTIMIERT)
 FROM node:20-alpine as build
 
 # Arbeitsverzeichnis setzen
 WORKDIR /app
 
-# Package-Dateien kopieren
-COPY package*.json ./
-
 # Yarn Konfiguration für bessere Netzwerk-Stabilität
-RUN yarn config set network-timeout 300000
-RUN yarn config set network-concurrency 1
-RUN yarn config set registry https://registry.npmjs.org/
+RUN yarn config set network-timeout 300000 && \
+    yarn config set registry https://registry.npmjs.org/
 
-# Abhängigkeiten installieren mit mehreren Retry-Versuchen
-# Entferne yarn.lock falls vorhanden für sauberen Build
-RUN rm -f yarn.lock
-RUN yarn install --network-timeout 300000 || \
-    yarn install --network-timeout 300000 || \
+# WICHTIG: Kopiere package.json UND yarn.lock (falls vorhanden)
+# Dies ermöglicht Docker Layer Caching
+COPY package.json yarn.lock* ./
+
+# Abhängigkeiten installieren
+# --frozen-lockfile: Nutzt exakte Versionen aus yarn.lock (schnell!)
+# --prefer-offline: Nutzt lokalen Yarn-Cache
+RUN yarn install --frozen-lockfile --prefer-offline --network-timeout 300000 || \
     yarn install --network-timeout 300000
 
 # Build-Argument für Backend-URL
 ARG REACT_APP_BACKEND_URL
 ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
 
-# Anwendung kopieren
+# Anwendung kopieren (erst jetzt, für besseres Caching)
 COPY . .
 
 # Anwendung bauen
