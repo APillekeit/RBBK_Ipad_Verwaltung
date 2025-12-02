@@ -40,9 +40,9 @@ docker volume rm config_frontend_build 2>/dev/null && echo "✅ Volume gelöscht
 echo ""
 
 # Schritt 4: Frontend neu bauen
-echo "🔨 [4/6] Baue Frontend neu (ohne Cache)..."
-echo "⏳ Dies dauert 2-4 Minuten..."
-docker-compose build --no-cache frontend
+echo "🔨 [4/6] Baue Frontend neu (mit Docker Layer Cache)..."
+echo "⏳ Dies dauert 2-3 Minuten (yarn install wird gecached)..."
+docker-compose build frontend
 
 if [ $? -ne 0 ]; then
     echo "❌ Frontend-Build fehlgeschlagen!"
