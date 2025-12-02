@@ -9,9 +9,22 @@ Das **Smart Deployment Script** erkennt automatisch, was du geändert hast und b
 ## ✅ Verwendung
 
 ### **1. Script starten:**
+
+**Variante A (vom Projekt-Verzeichnis):**
 ```bash
 cd /home/RBBK_Ipad_Verwaltung-main
 sudo bash deploy-smart.sh
+```
+
+**Variante B (direkter Aufruf):**
+```bash
+sudo bash /home/RBBK_Ipad_Verwaltung-main/deploy-smart.sh
+```
+
+**Variante C (aus config-Verzeichnis):**
+```bash
+cd /home/RBBK_Ipad_Verwaltung-main/config
+sudo bash ../deploy-smart.sh
 ```
 
 ### **2. Auswahl treffen:**
