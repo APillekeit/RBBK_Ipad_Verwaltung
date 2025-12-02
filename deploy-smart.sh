@@ -10,16 +10,33 @@ echo "════════════════════════�
 echo ""
 
 # Finde das richtige Verzeichnis
-if [ -d "/home/RBBK_Ipad_Verwaltung-main/config" ]; then
-    CONFIG_DIR="/home/RBBK_Ipad_Verwaltung-main/config"
-elif [ -d "./config" ]; then
+# Prüfe zuerst, ob wir im Hauptverzeichnis sind (wo config/ als Unterverzeichnis liegt)
+if [ -d "./config" ]; then
     CONFIG_DIR="./config"
+    echo "📍 Erkannt: Hauptverzeichnis (./config gefunden)"
+# Oder ob wir bereits im config-Verzeichnis sind
+elif [ -f "./docker-compose.yml" ]; then
+    CONFIG_DIR="."
+    echo "📍 Erkannt: Bereits im config-Verzeichnis"
+# Oder absolute Pfade
+elif [ -d "/home/RBBK_Ipad_Verwaltung-main/config" ]; then
+    CONFIG_DIR="/home/RBBK_Ipad_Verwaltung-main/config"
+    echo "📍 Erkannt: Absoluter Pfad (Produktions-Server)"
 elif [ -d "/app/config" ]; then
     CONFIG_DIR="/app/config"
+    echo "📍 Erkannt: Absoluter Pfad (Entwicklungs-System)"
 else
     echo "❌ Fehler: config-Verzeichnis nicht gefunden!"
-    echo "   Bitte führe das Script aus dem Projekt-Hauptverzeichnis aus:"
+    echo ""
+    echo "   Aktuelles Verzeichnis: $(pwd)"
+    echo "   Inhalt: $(ls -la | head -5)"
+    echo ""
+    echo "   Bitte führe das Script aus:"
     echo "   cd /home/RBBK_Ipad_Verwaltung-main && sudo bash deploy-smart.sh"
+    echo ""
+    echo "   ODER"
+    echo ""
+    echo "   cd /home/RBBK_Ipad_Verwaltung-main/config && sudo bash ../deploy-smart.sh"
     exit 1
 fi
 
@@ -27,7 +44,7 @@ cd "$CONFIG_DIR" || {
     echo "❌ Fehler: Konnte nicht in $CONFIG_DIR wechseln!"
     exit 1
 }
-echo "📍 Arbeitsverzeichnis: $CONFIG_DIR"
+echo "📍 Arbeitsverzeichnis: $(pwd)"
 echo ""
 
 # Frage den Nutzer, was geändert wurde
