@@ -754,25 +754,24 @@ const IPadsManagement = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!ipad.current_assignment_id && (
+                          {!ipad.current_assignment_id && availableStudents.length > 0 && (
                             <Select
                               onValueChange={(studentId) => handleManualAssignment(ipad.id, studentId)}
                             >
                               <SelectTrigger className="w-40">
                                 <SelectValue placeholder="Schüler zuordnen" />
                               </SelectTrigger>
-                              <SelectContent>
-                                {availableStudents.length === 0 ? (
-                                  <SelectItem value="none" disabled>Keine Schüler verfügbar</SelectItem>
-                                ) : (
-                                  availableStudents.map((student) => (
-                                    <SelectItem key={student.id} value={student.id}>
-                                      {student.name} ({student.klasse})
-                                    </SelectItem>
-                                  ))
-                                )}
+                              <SelectContent position="popper" sideOffset={5}>
+                                {availableStudents.map((student) => (
+                                  <SelectItem key={student.id} value={student.id}>
+                                    {student.name} ({student.klasse})
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
+                          )}
+                          {!ipad.current_assignment_id && availableStudents.length === 0 && (
+                            <span className="text-xs text-gray-500">Keine Schüler</span>
                           )}
                         </div>
                       </TableCell>
