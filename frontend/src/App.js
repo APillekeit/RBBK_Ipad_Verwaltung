@@ -2918,6 +2918,42 @@ const UserManagement = () => {
   const [editIsActive, setEditIsActive] = useState(true);
   const [updating, setUpdating] = useState(false);
 
+  
+  const handleCleanupOrphanedData = async () => {
+    const confirmed = window.confirm(
+      '⚠️ WARNUNG: Verwaiste Daten löschen?\n\n' +
+      'Dies löscht alle iPads, Schüler, Zuordnungen und Verträge,\n' +
+      'die zu gelöschten Benutzern gehören.\n\n' +
+      'Dies ist sicher und macht gelöschte ITNr wieder verfügbar.\n\n' +
+      'Fortfahren?'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      toast.info('Cleanup wird ausgeführt...');
+      const response = await api.post('/admin/cleanup-orphaned-data');
+      
+      const { deleted_resources, details } = response.data;
+      
+      toast.success(
+        `✅ Cleanup abgeschlossen!\n` +
+        `iPads: ${deleted_resources.ipads}\n` +
+        `Schüler: ${deleted_resources.students}\n` +
+        `Zuordnungen: ${deleted_resources.assignments}\n` +
+        `Verträge: ${deleted_resources.contracts}`
+      );
+      
+      if (details.total_orphaned_ipads > 0) {
+        console.log('Gelöschte iPad ITNr:', details.orphaned_ipad_itnrs);
+      }
+      
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      toast.error(error.response?.data?.detail || 'Fehler beim Cleanup');
+    }
+  };
+
   const loadUsers = async () => {
     try {
       const response = await api.get('/admin/users');
