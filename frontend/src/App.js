@@ -773,6 +773,17 @@ const IPadsManagement = () => {
                           {!ipad.current_assignment_id && availableStudents.length === 0 && (
                             <span className="text-xs text-gray-500">Keine Schüler</span>
                           )}
+                          {!ipad.current_assignment_id && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleDeleteIPad(ipad)}
+                              title="iPad löschen"
+                              className="hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
