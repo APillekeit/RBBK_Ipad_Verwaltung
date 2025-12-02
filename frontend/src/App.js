@@ -1190,15 +1190,17 @@ const StudentsManagement = () => {
                           {!student.current_assignment_id && availableIPads.length === 0 && (
                             <span className="text-xs text-gray-500">Keine iPads</span>
                           )}
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleDeleteStudent(student)}
-                            title="Schüler löschen (inkl. aller Daten)"
-                            className="hover:bg-red-50 hover:text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {!student.current_assignment_id && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleDeleteStudent(student)}
+                              title="Schüler löschen (inkl. aller Daten)"
+                              className="hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
