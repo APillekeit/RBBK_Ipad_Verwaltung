@@ -916,15 +916,18 @@ const StudentsManagement = () => {
   };
 
   const handleDeleteStudent = async (student) => {
-    console.log('🗑️ DELETE STUDENT CALLED:', student);
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `⚠️ WARNUNG: Schüler ${student.sus_vorn} ${student.sus_nachn} wirklich löschen?\n\n` +
+      `Dies löscht:\n` +
+      `- Den Schüler permanent\n` +
+      `- Alle Zuordnungs-Historie\n` +
+      `- Alle zugehörigen Verträge\n` +
+      `- Gibt zugeordnetes iPad frei\n\n` +
+      `Dies kann NICHT rückgängig gemacht werden!`
+    );
     
-    // Double-click protection
-    const now = Date.now();
-    if (!student._lastDeleteClick || (now - student._lastDeleteClick) > 3000) {
-      student._lastDeleteClick = now;
-      toast.info(`Schüler ${student.sus_vorn} ${student.sus_nachn} löschen? WARNUNG: Alle Zuordnungen, Historie und Verträge werden gelöscht! Klicken Sie nochmal in 3 Sekunden um zu bestätigen.`);
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       toast.info('Lösche Schüler und alle zugehörigen Daten...');
