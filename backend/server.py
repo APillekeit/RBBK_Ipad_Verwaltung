@@ -146,6 +146,11 @@ class AssignmentHistory(BaseModel):
     assignments: List[Assignment]
     contracts: List[Contract]
 
+
+class ManualAssignmentRequest(BaseModel):
+    student_id: str
+    ipad_id: str
+
 # Response Models
 class LoginResponse(BaseModel):
     access_token: str
