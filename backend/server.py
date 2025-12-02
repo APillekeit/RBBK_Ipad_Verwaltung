@@ -1100,6 +1100,13 @@ async def delete_student(student_id: str, current_user: dict = Depends(get_curre
     })
     
     # Step 4: Delete the student
+    student_result = await db.students.delete_one({"id": student_id})
+    
+    return {
+        "message": f"Schüler {student_name} erfolgreich gelöscht",
+        "deleted_assignments": assignments_result.deleted_count,
+        "deleted_contracts": contracts_result.deleted_count
+    }
 
 
 @api_router.post("/students/batch-delete")
