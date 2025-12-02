@@ -557,7 +557,7 @@ const IPadsManagement = () => {
   };
   
   const handleManualAssignment = async (ipadId, studentId) => {
-    if (!studentId) return;
+    if (!studentId || studentId === 'none') return;
     
     try {
       const response = await api.post('/assignments/manual', {
@@ -565,6 +565,7 @@ const IPadsManagement = () => {
         student_id: studentId
       });
       toast.success(response.data.message);
+      // Reload both lists to update availability
       await loadIPads();
       await loadAvailableStudents();
     } catch (error) {
