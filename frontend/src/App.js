@@ -938,8 +938,9 @@ const StudentsManagement = () => {
       
       toast.success(`✅ ${response.data.deleted_count} Schüler gelöscht, ${response.data.freed_ipads} iPads freigegeben!`);
       
-      // Reload data
+      // Reload data AND available iPads (freigegebene iPads!)
       await loadStudents();
+      await loadAvailableIPads();
       
     } catch (error) {
       console.error('Batch delete students error:', error);
