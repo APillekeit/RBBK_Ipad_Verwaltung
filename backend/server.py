@@ -1309,7 +1309,7 @@ async def manual_assign(
             raise HTTPException(status_code=404, detail="Student not found or access denied")
         
         # Validate iPad ownership
-        ipad = await db.ipads.find_one({"id": ipad_id, **user_filter})
+        ipad = await db.ipads.find_one({"id": request.ipad_id, **user_filter})
         if not ipad:
             raise HTTPException(status_code=404, detail="iPad not found or access denied")
         
