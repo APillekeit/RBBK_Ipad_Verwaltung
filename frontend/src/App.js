@@ -2569,56 +2569,6 @@ const Settings = () => {
     }
   };
 
-  const handleInventoryImport = async (file) => {
-    if (!file) return;
-    
-    setImporting(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      toast.info('Importiere Bestandsliste...');
-      
-      const response = await api.post('/imports/inventory', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      
-      toast.success(response.data.message);
-      
-      // Show detailed results if available
-      if (response.data.ipads_created > 0 || response.data.students_created > 0 || response.data.assignments_created > 0) {
-        const details = [];
-        if (response.data.ipads_created > 0) details.push(`${response.data.ipads_created} neue iPads`);
-        if (response.data.students_created > 0) details.push(`${response.data.students_created} neue Schüler`);
-        if (response.data.assignments_created > 0) details.push(`${response.data.assignments_created} neue Zuordnungen`);
-        
-        toast.info(`Erstellt: ${details.join(', ')}`);
-      }
-      
-      // Show skipped items
-      if (response.data.ipads_skipped > 0 || response.data.students_skipped > 0) {
-        const skipped = [];
-        if (response.data.ipads_skipped > 0) skipped.push(`${response.data.ipads_skipped} iPads übersprungen`);
-        if (response.data.students_skipped > 0) skipped.push(`${response.data.students_skipped} Schüler übersprungen`);
-        
-        toast.info(`Übersprungen: ${skipped.join(', ')}`);
-      }
-      
-      // Show errors if any
-      if (response.data.errors && response.data.errors.length > 0) {
-        response.data.errors.forEach(error => {
-          toast.error(error);
-        });
-      }
-      
-    } catch (error) {
-      console.error('Failed to import inventory:', error);
-      toast.error(error.response?.data?.detail || 'Fehler beim Importieren der Bestandsliste');
-    } finally {
-      setImporting(false);
-    }
-  };
-
   const handlePasswordChange = async () => {
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       toast.error('Neue Passwörter stimmen nicht überein');
