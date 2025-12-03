@@ -1207,24 +1207,47 @@ const StudentsManagement = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!student.current_assignment_id && availableIPads.length > 0 && (
-                            <Select
-                              onValueChange={(ipadId) => handleManualIPadAssignment(student.id, ipadId)}
-                            >
-                              <SelectTrigger className="w-40">
-                                <SelectValue placeholder="iPad zuordnen" />
-                              </SelectTrigger>
-                              <SelectContent position="popper" sideOffset={5}>
-                                {availableIPads.map((ipad) => (
-                                  <SelectItem key={ipad.id} value={ipad.id}>
-                                    {ipad.itnr} ({ipad.status})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          {!student.current_assignment_id && availableIPads.length === 0 && (
-                            <span className="text-xs text-gray-500">Keine iPads</span>
+                          {!student.current_assignment_id && (
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                placeholder="iPad suchen (ITNr)..."
+                                className="w-48"
+                                onFocus={() => setActiveAutocomplete(`student-${student.id}`)}
+                                onBlur={() => setTimeout(() => setActiveAutocomplete(null), 200)}
+                                onChange={(e) => setIpadSearchQuery(e.target.value)}
+                              />
+                              {activeAutocomplete === `student-${student.id}` && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                                  {availableIPads
+                                    .filter(ipad => 
+                                      !ipadSearchQuery || 
+                                      ipad.itnr.toLowerCase().includes(ipadSearchQuery.toLowerCase())
+                                    )
+                                    .map((ipad) => (
+                                      <div
+                                        key={ipad.id}
+                                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                                        onClick={() => {
+                                          handleManualIPadAssignment(student.id, ipad.id);
+                                          setActiveAutocomplete(null);
+                                          setIpadSearchQuery('');
+                                        }}
+                                      >
+                                        {ipad.itnr} <span className="text-gray-500">({ipad.status})</span>
+                                      </div>
+                                    ))}
+                                  {availableIPads.filter(ipad => 
+                                    !ipadSearchQuery || 
+                                    ipad.itnr.toLowerCase().includes(ipadSearchQuery.toLowerCase())
+                                  ).length === 0 && (
+                                    <div className="px-3 py-2 text-gray-500 text-sm">
+                                      Keine iPads gefunden
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           )}
                           {!student.current_assignment_id && (
                             <Button 
