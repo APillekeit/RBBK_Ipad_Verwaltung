@@ -1872,10 +1872,29 @@ const AssignmentsManagement = () => {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Zuordnungen verwalten ({filteredAssignments.length} von {assignments.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Zuordnungen verwalten ({filteredAssignments.length} von {assignments.length})
+            </CardTitle>
+            <div className="border-2 border-dashed border-blue-300 rounded-lg p-3 hover:border-blue-400 transition-colors">
+              <Input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => e.target.files[0] && handleInventoryImport(e.target.files[0])}
+                disabled={importing}
+                className="text-sm"
+              />
+              {importing && (
+                <div className="text-xs text-blue-600 mt-1">
+                  Importiere Bestandsliste...
+                </div>
+              )}
+            </div>
+          </div>
+          <CardDescription>
+            Bestandsliste-Import: Importiert vollständige Daten (iPads, Schüler, Zuordnungen) aus Excel (.xlsx Format)
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {/* Filter Controls */}
