@@ -787,24 +787,49 @@ const IPadsManagement = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!ipad.current_assignment_id && availableStudents.length > 0 && (
-                            <Select
-                              onValueChange={(studentId) => handleManualAssignment(ipad.id, studentId)}
-                            >
-                              <SelectTrigger className="w-40">
-                                <SelectValue placeholder="Schüler zuordnen" />
-                              </SelectTrigger>
-                              <SelectContent position="popper" sideOffset={5}>
-                                {availableStudents.map((student) => (
-                                  <SelectItem key={student.id} value={student.id}>
-                                    {student.name} ({student.klasse})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          {!ipad.current_assignment_id && availableStudents.length === 0 && (
-                            <span className="text-xs text-gray-500">Keine Schüler</span>
+                          {!ipad.current_assignment_id && (
+                            <div className="relative">
+                              <Input
+                                type="text"
+                                placeholder="Schüler suchen..."
+                                className="w-48"
+                                onFocus={() => setActiveAutocomplete(`ipad-${ipad.id}`)}
+                                onBlur={() => setTimeout(() => setActiveAutocomplete(null), 200)}
+                                onChange={(e) => setStudentSearchQuery(e.target.value)}
+                              />
+                              {activeAutocomplete === `ipad-${ipad.id}` && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
+                                  {availableStudents
+                                    .filter(s => 
+                                      !studentSearchQuery || 
+                                      s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
+                                      s.klasse.toLowerCase().includes(studentSearchQuery.toLowerCase())
+                                    )
+                                    .map((student) => (
+                                      <div
+                                        key={student.id}
+                                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+                                        onClick={() => {
+                                          handleManualAssignment(ipad.id, student.id);
+                                          setActiveAutocomplete(null);
+                                          setStudentSearchQuery('');
+                                        }}
+                                      >
+                                        {student.name} <span className="text-gray-500">({student.klasse})</span>
+                                      </div>
+                                    ))}
+                                  {availableStudents.filter(s => 
+                                    !studentSearchQuery || 
+                                    s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
+                                    s.klasse.toLowerCase().includes(studentSearchQuery.toLowerCase())
+                                  ).length === 0 && (
+                                    <div className="px-3 py-2 text-gray-500 text-sm">
+                                      Keine Schüler gefunden
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           )}
                           {!ipad.current_assignment_id && (
                             <Button 
