@@ -2683,29 +2683,6 @@ const Settings = () => {
               </Button>
             </div>
 
-            {/* Import Section */}
-            <div className="border-l-4 border-blue-400 bg-blue-50 p-4 rounded">
-              <h4 className="font-medium text-blue-800 mb-2">Bestandsliste-Import (Datenwiederherstellung)</h4>
-              <p className="text-sm text-blue-700 mb-4">
-                Importiert vollständige Bestandsliste aus Excel-Datei (.xlsx/.xls) mit iPads, Schülern und Zuordnungen.
-                Bereits vorhandene iPads (ITNr) und Schüler (Name + Klasse) werden übersprungen.
-                Neue Zuordnungen werden automatisch erstellt.
-              </p>
-              <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
-                <Input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={(e) => e.target.files[0] && handleInventoryImport(e.target.files[0])}
-                  disabled={importing}
-                  className="mb-2"
-                />
-                {importing && (
-                  <div className="text-sm text-blue-600">
-                    Bestandsliste wird importiert...
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
