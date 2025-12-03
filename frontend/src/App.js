@@ -489,6 +489,10 @@ const IPadsManagement = () => {
   const [itnrFilter, setItnrFilter] = useState('');
   const [snrFilter, setSnrFilter] = useState('');
   
+  // Autocomplete states
+  const [activeAutocomplete, setActiveAutocomplete] = useState(null);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  
   // Filtered iPads
   const filteredIPads = ipads.filter(ipad => {
     const itnrMatch = !itnrFilter || ipad.itnr?.toLowerCase().includes(itnrFilter.toLowerCase());
