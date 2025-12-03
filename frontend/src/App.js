@@ -877,6 +877,10 @@ const StudentsManagement = () => {
   const [deleting, setDeleting] = useState(false);
   const [availableIPads, setAvailableIPads] = useState([]);
   
+  // Autocomplete states
+  const [activeAutocomplete, setActiveAutocomplete] = useState(null);
+  const [ipadSearchQuery, setIpadSearchQuery] = useState('');
+  
   // Filter states
   const [studentVornameFilter, setStudentVornameFilter] = useState('');
   const [studentNachnameFilter, setStudentNachnameFilter] = useState('');
